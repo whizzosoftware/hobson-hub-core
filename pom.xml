@@ -146,6 +146,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.javax.mail</artifactId>
+            <version>1.4.1_5</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.servicemix.specs</groupId>
+            <artifactId>org.apache.servicemix.specs.activation-api-1.1</artifactId>
+            <version>2.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api</artifactId>
             <version>0.1.7-SNAPSHOT</version>
@@ -253,7 +265,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.commons.httpclient.*,javax.inject.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
+                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.commons.httpclient.*,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
                         <Bundle-Activator>com.whizzosoftware.hobson.bootstrap.Activator</Bundle-Activator>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*</Export-Package>

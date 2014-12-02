@@ -16,8 +16,12 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.trigger.TriggerManager;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.api.action.EmailAction;
+import com.whizzosoftware.hobson.bootstrap.api.action.LogAction;
 import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
+import com.whizzosoftware.hobson.bootstrap.api.action.SendCommandToDeviceAction;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
 import com.whizzosoftware.hobson.bootstrap.api.disco.OSGIDiscoManager;
 import com.whizzosoftware.hobson.bootstrap.api.event.OSGIEventManager;
@@ -100,13 +104,17 @@ public class Activator extends DependencyActivatorBase {
             public Object addingService(ServiceReference ref) {
                 HubManager hubManager = (HubManager)context.getService(ref);
 
-                boolean useSSL = Boolean.parseBoolean(System.getProperty("useSSL", "false"));
+                // publish the default actions
+                publishDefaultActions(
+                    context.getBundle().getSymbolicName(),
+                    (ActionManager)context.getService(context.getServiceReference(ActionManager.class.getName())),
+                    hubManager
+                );
 
+                // start up the HTTP/HTTPS server
                 List<Protocol> protocols = new ArrayList<>();
                 Server server;
-
-                // configure it for HTTP or HTTPS based on system property
-                if (useSSL) {
+                if (Boolean.parseBoolean(System.getProperty("useSSL", "false"))) {
                     Engine.getInstance().getRegisteredServers().add(new HttpsServerHelper(null));
                     protocols.add(Protocol.HTTPS);
                     server = new Server(null, protocols, null, 8183, null, "org.restlet.ext.jetty.HttpsServerHelper");
@@ -224,8 +232,8 @@ public class Activator extends DependencyActivatorBase {
         org.apache.felix.dm.Component c = manager.createComponent();
         c.setInterface(ActionManager.class.getName(), null);
         c.setImplementation(OSGIActionManager.class);
-        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 
@@ -258,6 +266,7 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(HubManager.class.getName(), null);
         c.setImplementation(OSGIHubManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
+        c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 
@@ -292,6 +301,12 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
+    }
+
+    private void publishDefaultActions(String pluginId, ActionManager manager, HubManager hubManager) {
+        manager.publishAction(new EmailAction(pluginId, hubManager.getHubEmailConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)));
+        manager.publishAction(new LogAction(pluginId));
+        manager.publishAction(new SendCommandToDeviceAction(pluginId));
     }
 
     private void startAdvertiser() {
