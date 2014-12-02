@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 	<groupId>com.whizzosoftware.hobson.hub</groupId>
     <artifactId>hobson-hub-core</artifactId>
-    <version>0.1.7</version>
+    <version>0.1.8-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>Hobson Hub Core</name>
     <dependencies>
@@ -312,7 +312,7 @@
     <scm>
         <connection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-core.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-core.git</developerConnection>
-        <tag>hobson-hub-core-0.1.7</tag>
+        <tag>HEAD</tag>
     </scm>
     <distributionManagement>
         <repository>
