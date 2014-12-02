@@ -101,6 +101,18 @@ public class OSGITriggerManager implements TriggerManager {
         }
     }
 
+    @Override
+    public void executeTrigger(String userId, String hubId, String providerId, String triggerId) {
+        final HobsonTrigger trigger = getTrigger(userId, hubId, providerId, triggerId);
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                trigger.execute();
+            }
+        });
+        t.start();
+    }
+
     public void addTrigger(String userId, String hubId, String providerId, Object trigger) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + TriggerProvider.class.getName() + ")(providerId=" + providerId + "))");
