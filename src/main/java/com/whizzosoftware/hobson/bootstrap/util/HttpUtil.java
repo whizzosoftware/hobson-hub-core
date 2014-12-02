@@ -35,6 +35,7 @@ public class HttpUtil {
      * @param contentLength the total length of the content
      *
      * @return a ContentRange instance (or null if the range can't be parsed)
+     * @throws ParseException on failure
      */
     static public ContentRange createRange(String range, long contentLength) throws ParseException {
         if (range != null) {

@@ -42,6 +42,7 @@ public class EmailAction extends AbstractHobsonAction {
      * Constructor.
      *
      * @param pluginId the plugin ID creating this action
+     * @param config the e-mail configuration to use for the action
      *
      * @since hobson-hub-api 0.1.6
      */
