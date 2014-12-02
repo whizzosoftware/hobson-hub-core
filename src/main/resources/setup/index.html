@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Hobson Hub Setup Wizard</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet"/>
+        <link href="css/bootstrap-theme.min.css" rel="stylesheet"/>
+        <link href="css/fuelux.min.css" rel="stylesheet"/>
+    </head>
+    <body class="fuelux">
+        <div class="container">
+            <nav class="navbar navbar-default" role="navigation">
+                <a class="navbar-brand" href="#">Hobson Hub Setup Wizard</a>
+            </nav>
+            <div id="alertbox" class="alert alert-danger hide">
+                <span class="glyphicon glyphicon-exclamation-sign"></span>&nbsp;&nbsp;<span id="alerttext">An error has occurred.</span>
+            </div>
+            <div class="wizard" data-initialize="wizard" id="setupWizard">
+                <ul class="steps">
+                    <li data-step="1" class="active">
+                        <span class="badge">1</span>Hub Name<span class="chevron"></span>
+                    </li>
+                    <li data-step="2">
+                        <span class="badge">2</span>Plugins<span class="chevron"></span>
+                    </li>
+                    <li data-step="3">
+                        <span class="badge">3</span>E-mail<span class="chevron"></span>
+                    </li>
+                    <li data-step="4">
+                        <span class="badge">4</span>Password<span class="chevron"></span>
+                    </li>
+                    <li data-step="5">
+                        <span class="badge">5</span>Finished!<span class="chevron"></span>
+                    </li>
+                </ul>
+                <div class="actions">
+                    <button class="btn btn-default btn-next" data-last="Complete">Next<span class="glyphicon glyphicon-arrow-right"></span></button>
+                </div>
+                <div class="step-content">
+                    <div class="step-pane active sample-pane alert" data-step="1">
+                        <form role="form-horizontal" role="form">
+                            <h4 style="margin-bottom: 15px;">Welcome to Hobson.</h4>
+                            <p>You'll need a few minutes to get rolling. Start by entering a nickname for your home and your address. We'll use these as a unique identifier.</p>
+                            <div id="hubName-group" class="form-group">
+                                <label for="hubName">Hub Name</label>
+                                <input type="text" class="form-control" id="hubName" placeholder="e.g. Home or Office">
+                                <p id="hubName-help" class="help-block"></p>
+                            </div>
+                            <div id="address-group" class="form-group">
+                                <label for="address">Address</label>
+                                <input type="text" class="form-control" id="address" placeholder="e.g. 490 West 96th St, New York, NY 10012">
+                                <p id="address-help" class="help-block">Separate your address, city and state with commas as shown in the example.</p>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="step-pane active sample-pane alert" data-step="2">
+                        <p style="margin-bottom: 20px;">The Hobson Hub uses plugins to talk with external devices such as lights and thermostats. Select the plugins below for the devices you want Hobson to control. Don't worry &mdash; you can always add more later.</p>
+                        <div id="plugin-loader" style="margin: 25px;">
+                            <center>
+                                <p><strong>Searching for available plugins...</strong></p>
+                                <div class="loader" data-initialize="loader"></div>
+                            </center>
+                        </div>
+                        <div class="panel panel-default">
+                            <table id="plugin-table" class="table">
+                            </table>
+                        </div>
+                    </div>
+                    <div class="step-pane active sample-pane alert" data-step="3">
+                        <form class="form-horizontal" role="form">
+                            <p>Enter e-mail account information that Hobson can use to send notification e-mails.</p>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Server Type</label>
+                                <div class="col-sm-10">
+                                    <label class="radio-inline">
+                                        <input type="radio" name="radioMailType" value="none" checked>None
+                                    </label>
+                                    <label class="radio-inline">
+                                        <input type="radio" name="radioMailType" value="gmail">Gmail
+                                    </label>
+                                    <label class="radio-inline">
+                                        <input type="radio" name="radioMailType" value="smtp">Other (SMTP)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Server Hostname</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputMailServer" disabled>
+                                    <p class="help-block">Enter the host name or IP address of your mail server.</p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label"></label>
+                                <div class="col-sm-10">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" id="checkboxMailSecure" disabled>
+                                            Use secure connection? (SSL/TLS)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Username</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputMailUser" disabled>
+                                    <p class="help-block">Enter the user name used to login to the mail server.</p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Password</label>
+                                <div class="col-sm-10">
+                                    <input type="password" class="form-control" id="inputMailPassword" disabled>
+                                    <p class="help-block">Enter the password used to login to the mail server.</p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Sender Address</label>
+                                <div class="col-sm-10">
+                                    <input type="text" class="form-control" id="inputSenderAddress">
+                                    <p class="help-block">Enter the reply address for sent e-mails.</p>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="step-pane active sample-pane alert" data-step="4">
+                        <form role="form">
+                            <p>Enter an administrator password for this Hub. This will be used for the management console as well as an API access.</p>
+                            <div class="form-group">
+                                <label for="inputPassword1">Password</label>
+                                <input type="password" class="form-control" id="inputPassword1">
+                            </div>
+                            <div id="adminPass-group" class="form-group">
+                                <label for="inputPassword2">Repeat Password</label>
+                                <input type="password" class="form-control" id="inputPassword2">
+                                <p id="adminPass-help" class="help-block"></p>
+                            </div>
+                    </div>
+                    <div class="step-pane active sample-pane alert" data-step="5">
+                        <h4>Congratulations!</h4>
+                        <p>Your new Hobson Hub is now ready to use. Click the Complete button above to be taken to the Hub management console.</p>
+                        <br/>
+                        <p>
+                            <strong>Note: You will most likely be prompted for a username and password.</strong>
+                            <br/><br/>
+                            <pre>Username: admin
+Password: The password you entered on the previous screen</pre>
+                        </p>
+                    </div>
+                </div>
+           </div>
+        </div>
+        <script src="js/jquery-1.11.1.min.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script src="js/fuelux.min.js"></script>
+        <script type="application/javascript">
+            $(function() {
+                var loadingPlugins;
+                var completedPlugins;
+                var pluginMap;
+                var defaultUsername = 'admin';
+                var defaultPassword = 'admin';
+                var setupWizard = $('#setupWizard');
+
+                setupWizard.on('actionclicked.fu.wizard', function(event) {
+                    var step = $('#setupWizard').wizard('selectedItem').step;
+                    switch (step) {
+                        case 1:
+                            event.preventDefault();
+                            onHubNameNext();
+                            break;
+                        case 2:
+                            event.preventDefault();
+                            onPluginsNext();
+                            break;
+                        case 3:
+                            event.preventDefault();
+                            onMailNext();
+                            break;
+                        case 4:
+                            event.preventDefault();
+                            onAdminPasswordNext();
+                            break;
+                    }
+                });
+
+                setupWizard.on('changed.fu.wizard', function() {
+                    var step = $('#setupWizard').wizard('selectedItem').step;
+                    switch (step) {
+                        case 2:
+                            onPluginsLoad();
+                            break;
+                    }
+                });
+
+                setupWizard.on('finished.fu.wizard', function() {
+                    $.ajax({
+                        type: "PUT",
+                        url: "/api/v1/users/local/hubs/local/configuration",
+                        username: defaultUsername,
+                        password: defaultPassword,
+                        contentType: "application/json",
+                        data: JSON.stringify({setupComplete: true})
+                    })
+                    .done(function(data) {
+                        window.location.replace("/console/index.html");
+                    });
+                });
+
+                $('input[type=radio][name=radioMailType]').change(function(o) {
+                    if (this.value == 'gmail') {
+                        $('#inputMailServer').val('smtp.gmail.com');
+                        $('#inputMailServer').prop('disabled', true);
+                        $('#inputMailUser').prop('disabled', false);
+                        $('#inputMailPassword').prop('disabled', false);
+                        $('#checkboxMailSecure').prop('checked', true);
+                        $('#checkboxMailSecure').prop('disabled', true);
+                        $('#inputMailUser').focus();
+                    } else if (this.value == 'smtp') {
+                        $('#inputMailServer').val('');
+                        $('#inputMailServer').prop('disabled', false);
+                        $('#inputMailUser').prop('disabled', false);
+                        $('#inputMailPassword').prop('disabled', false);
+                        $('#checkboxMailSecure').prop('checked', false);
+                        $('#checkboxMailSecure').prop('disabled', false);
+                        $('#inputMailServer').focus();
+                    } else {
+                        $('#inputMailServer').val('');
+                        $('#inputMailServer').prop('disabled', true);
+                        $('#inputMailUser').val('');
+                        $('#inputMailUser').prop('disabled', true);
+                        $('#inputMailPassword').val('');
+                        $('#inputMailPassword').prop('disabled', true);
+                        $('#checkboxMailSecure').prop('disabled', true);
+                    }
+                });
+
+                $('input#hubName').keypress(function(event) {
+                    var keycode = (event.keyCode ? event.keyCode : event.which);
+                    if (keycode == '13') {
+                        event.preventDefault();
+                        onHubNameNext();
+                    }
+                });
+
+                $('input#inputPassword2').keypress(function(event) {
+                    var keycode = (event.keyCode ? event.keyCode : event.which);
+                    if (keycode == '13') {
+                        event.preventDefault();
+                        onAdminPasswordNext();
+                    }
+                });
+
+                $('input#hubName').focus();
+
+                function onHubNameNext() {
+                    var hubName = $('#hubName').val();
+                    var address = $('#address').val();
+                    if (hubName) {
+                        hideWizardError();
+                        clearValidationError('hubName');
+                        var data = {name: hubName};
+                        if (address) {
+                            data.location = {text: address};
+                        }
+                        console.log(data);
+                        $.ajax({
+                            type: "PUT",
+                            url: "/api/v1/users/local/hubs/local/configuration",
+                            username: defaultUsername,
+                            password: defaultPassword,
+                            contentType: "application/json",
+                            data: JSON.stringify(data)
+                        })
+                        .error(function() {
+                            showWizardError('Unable to set the Hub name. Please check that the Hub is running and try clicking Next again.');
+                        })
+                        .success(function() {
+                            gotoWizardStep(2);
+                        });
+                    } else {
+                        showValidationError('hubName', 'You must enter a Hub name before proceeding to the next step.');
+                        $('#hubName').focus();
+                    }
+                }
+
+                function onPluginsLoad() {
+                    $('table#plugin-table').empty();
+                    $('#plugin-loader').removeClass('hide');
+                    $.ajax({
+                        type: "GET",
+                        username: defaultUsername,
+                        password: defaultPassword,
+                        url: "/api/v1/users/local/hubs/local/plugins?remote=true&details=true"
+                    })
+                    .error(function() {
+                        showWizardError('Unable to retrieve the list of available plugins. Please check that your Internet connection is working and try again.');
+                    })
+                    .success(function(data) {
+                        $('#plugin-list').empty();
+                        pluginMap = {};
+                        for (var i=0; i < data.length; i++) {
+                            if (data[i].status.status == 'NOT_INSTALLED' && data[i].type == 'PLUGIN') {
+                                var html = '<tr';
+                                html += '><td width="1%"><input id="' + data[i].links.install + '" class="pluginCheckbox" type="checkbox"';
+                                html += '></td><td><strong>' + data[i].name + '</strong>';
+                                if (data[i].description) {
+                                    html += '<p><small>' + data[i].description + '</small></p>';
+                                }
+                                html += '</td><td width="1%"><span id="plugin-refresh-' + i + '" class="glyphicon glyphicon-refresh hide"></span></td></tr>';
+                                $('#plugin-table').append(html);
+                                pluginMap[data[i].links.install] = i;
+                            }
+                        }
+                        $('#plugin-loader').addClass("hide");
+                    });
+                }
+
+                function onPluginsNext() {
+                    loadingPlugins = [];
+                    completedPlugins = [];
+                    $('input[type=checkbox][class=pluginCheckbox]:checked').each(function() {
+                        loadingPlugins.push(this.id);
+                    });
+                    console.log('plugin map: ' + pluginMap);
+                    console.log('plugins to load: ' + loadingPlugins);
+                    for (var i=0; i < loadingPlugins.length; i++) {
+                        console.log($('#plugin-status-' + pluginMap[loadingPlugins[i]]));
+                        $('#plugin-refresh-' + pluginMap[loadingPlugins[i]]).removeClass('hide');
+                        $.ajax({
+                            type: "POST",
+                            url: loadingPlugins[i],
+                            username: defaultUsername,
+                            password: defaultPassword,
+                            beforeSend: function(jqxhr) {
+                                console.log('Installing plugin ' + this.url);
+                            }
+                        })
+                        .error(function(jqxhr, status, error) {
+                            console.log('error loading plugin ' + this.url);
+                            updatePluginStatus(this.url, false);
+                        })
+                        .success(function(data, status, jqxhr) {
+                            console.log('plugin load completed for ' + this.url);
+                            updatePluginStatus(this.url, true);
+                        });
+                    }
+                    if (loadingPlugins.length === 0) {
+                        console.log('jump to wizard step 3');
+                        gotoWizardStep(3);
+                    }
+                }
+
+                function onMailNext() {
+                    if ($('input:radio[name=radioMailType]:checked').val() != 'none') {
+                        hideWizardError();
+                        $.ajax({
+                            type: "PUT",
+                            url: "/api/v1/users/local/hubs/local/configuration",
+                            username: defaultUsername,
+                            password: defaultPassword,
+                            contentType: "application/json",
+                            data: JSON.stringify({email: {server: $('#inputMailServer').val(), senderAddress: $('#inputSenderAddress').val(), username: $('#inputMailUser').val(), password: $('#inputMailPassword').val(), secure: $("#checkboxMailSecure").is(':checked')}})
+                        })
+                        .error(function() {
+                            showWizardError('Unable to set the e-mail information. Please check that the Hub is running and try again.');
+                        })
+                        .success(function() {
+                            gotoWizardStep(4);
+                        });
+                    } else {
+                        gotoWizardStep(4);
+                    }
+                }
+
+                function onAdminPasswordNext() {
+                    var pass1 = $('#inputPassword1');
+                    if (pass1.val() && pass1.val() == $('#inputPassword2').val()) {
+                        hideWizardError();
+                        clearValidationError('adminPass');
+                        $.ajax({
+                            type: "POST",
+                            url: "/api/v1/users/local/hubs/local/configuration/password",
+                            username: defaultUsername,
+                            password: defaultPassword,
+                            contentType: "application/json",
+                            data: JSON.stringify({currentPassword: "admin", newPassword: pass1.val()})
+                        })
+                                .error(function() {
+                                    showWizardError('Unable to set the administrator password. Please check that the Hub is running and try again.');
+                                })
+                                .success(function() {
+                                    gotoWizardStep(5);
+                                });
+                    } else {
+                        showValidationError('adminPass', 'The passwords do not match. Please try again.');
+                        pass1.focus();
+                    }
+                }
+
+                function updatePluginStatus(url, success) {
+                    var span = $('#plugin-refresh-' + pluginMap[url]);
+                    span.removeClass('glyphicon-refresh');
+                    if (success) {
+                        span.addClass('glyphicon-ok-sign');
+                        span.addClass('text-success');
+                    } else {
+                        span.addClass('glyphicon-exclamation-sign');
+                        span.addClass('text-danger');
+                    }
+                    completedPlugins.push(url);
+                    if (completedPlugins.length == loadingPlugins.length) {
+                        gotoWizardStep(3);
+                    }
+                }
+            });
+            function showWizardError(text) {
+                $('#alertbox').removeClass('hide');
+                $('#alerttext').text(text);
+            }
+            function hideWizardError() {
+                $('#alertbox').addClass('hide');
+            }
+            function gotoWizardStep(num) {
+                hideWizardError();
+                $('#setupWizard').wizard('selectedItem', {
+                    step: num
+                });
+            }
+            function showValidationError(groupName, msg) {
+                $('#' + groupName + '-group').addClass('has-error');
+                $('p#' + groupName + '-help').text(msg);
+            }
+            function clearValidationError(groupName) {
+                $('#' + groupName + '-group').removeClass('has-error');
+                $('p#' + groupName + '-help').text('');
+            }
+        </script>
+    </body>
+</html>
