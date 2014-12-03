@@ -15,13 +15,22 @@ import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
+import org.apache.felix.bundlerepository.RepositoryAdmin;
+import org.apache.felix.bundlerepository.Resolver;
+import org.apache.felix.bundlerepository.Resource;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.cm.ManagedService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An OSGi implementation of PluginManager.
@@ -29,12 +38,16 @@ import java.util.*;
  * @author Dan Noguerol
  */
 public class OSGIPluginManager implements PluginManager {
+    private static final Logger logger = LoggerFactory.getLogger(OSGIPluginManager.class);
+
     volatile private BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
 
     private final static String DEVICE_PID_SEPARATOR = ".";
 
     private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
+    private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<PluginRef>();
+    static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
     @Override
     public PluginList getPlugins(String userId, String hubId, boolean includeRemoteInfo) {
@@ -144,7 +157,47 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public void installPlugin(String userId, String hubId, String pluginId, String pluginVersion) {
+        logger.debug("Queuing plugin " + pluginId + " for installation");
 
+        BundleContext context = FrameworkUtil.getBundle(OSGIPluginManager.class).getBundleContext();
+        ServiceReference sr = context.getServiceReference(RepositoryAdmin.class.getName());
+        final RepositoryAdmin repoAdmin = (RepositoryAdmin) context.getService(sr);
+
+        synchronized (queuedResources) {
+            queuedResources.add(new PluginRef(pluginId, pluginVersion));
+
+            try {
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        logger.debug("Plugin installer is executing");
+
+                        PluginRef ref = nextRef();
+
+                        while (ref != null) {
+                            try {
+                                deployResource(repoAdmin, findResource(repoAdmin, ref));
+                            } catch (IllegalStateException ise) {
+                                // this exception is caught specifically since Felix occasionally throws this exception
+                                // even though the plugin can technically be installed. This appears to be the
+                                // cause of the problem: https://issues.apache.org/jira/browse/FELIX-3422.
+                                logger.debug("Temporary error installing plugin " + ref.symbolicName + "; will retry");
+                                queuedResources.push(ref);
+                            } catch (Exception e) {
+                                logger.error("Failed to install plugin " + ref.symbolicName, e);
+                            }
+
+                            ref = nextRef();
+                        }
+
+                        logger.debug("Plugin installer is finished");
+                    }
+                });
+            } catch (RejectedExecutionException ignored) {
+                // The assumption here is that since the currently executing Runnable will drain the queue before
+                // exiting, there is no need to have more than one pending runnable in the work queue
+            }
+        }
     }
 
     @Override
@@ -231,6 +284,66 @@ public class OSGIPluginManager implements PluginManager {
             config.update(d);
         } catch (IOException e) {
             throw new ConfigurationException("Error updating plugin configuration", e);
+        }
+    }
+
+    /**
+     * Returns the next PluginRef queued for installation.
+     *
+     * @return a PluginRef instance
+     */
+    private PluginRef nextRef() {
+        synchronized (queuedResources) {
+            return queuedResources.poll();
+        }
+    }
+
+    /**
+     * Deploys as OSGi resource to the runtime framework.
+     *
+     * @param repoAdmin the repository admin
+     * @param r the repository resource to install
+     */
+    private void deployResource(RepositoryAdmin repoAdmin, Resource r) {
+        logger.debug("Attempting to install plugin: " + r.getSymbolicName());
+        Resolver resolver = repoAdmin.resolver();
+        resolver.add(r);
+        if (resolver.resolve()) {
+            resolver.deploy(Resolver.START);
+        }
+        logger.info("Plugin completed installation: " + r.getSymbolicName());
+    }
+
+    /**
+     * Finds a Resource in a repository.
+     *
+     * @param repoAdmin the repository to search
+     * @param pluginRef the plugin reference
+     *
+     * @return a Resource instance or null if not found
+     *
+     * @throws InvalidSyntaxException
+     */
+    static private Resource findResource(RepositoryAdmin repoAdmin, PluginRef pluginRef) throws InvalidSyntaxException {
+        Resource[] resources = repoAdmin.discoverResources("(symbolicname=" + pluginRef.symbolicName + ")");
+        for (Resource r : resources) {
+            if (pluginRef.symbolicName.equals(r.getSymbolicName()) && pluginRef.version.equals(r.getVersion().toString())) {
+                return r;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A class that references a plugin ID and version string.
+     */
+    static class PluginRef {
+        public String symbolicName;
+        public String version;
+
+        public PluginRef(String symbolicName, String version) {
+            this.symbolicName = symbolicName;
+            this.version = version;
         }
     }
 }

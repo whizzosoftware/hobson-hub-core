@@ -6,6 +6,7 @@
     <version>0.1.8-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>Hobson Hub Core</name>
+    <description>Provides foundational capabilities for the Hobson Hub.</description>
     <dependencies>
         <dependency>
             <groupId>org.apache.felix</groupId>
@@ -165,7 +166,7 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-restv1</artifactId>
-            <version>0.1.7</version>
+            <version>0.1.8</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
