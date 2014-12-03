@@ -12,6 +12,7 @@ import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
 import com.whizzosoftware.hobson.api.plugin.PluginStatus;
 import com.whizzosoftware.hobson.api.plugin.PluginType;
 import com.whizzosoftware.hobson.api.util.VersionUtil;
+import org.apache.felix.bundlerepository.Capability;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
 import org.apache.felix.bundlerepository.Resource;
 import org.osgi.framework.BundleContext;
@@ -52,7 +53,12 @@ public class OSGIRepoPluginListSource implements PluginListSource {
         for (Resource repoResource : resources) {
             String sname = repoResource.getSymbolicName();
 
-            PluginType pluginType = PluginType.PLUGIN;
+            PluginType pluginType = PluginType.FRAMEWORK;
+            if (isCorePlugin(repoResource)) {
+                pluginType = PluginType.CORE;
+            } else if (isPlugin(repoResource)) {
+                pluginType = PluginType.PLUGIN;
+            }
 
             // TODO: check result map for existing version and compare before replacing...
             PluginDescriptor oldPd = resultMap.get(sname);
@@ -75,5 +81,23 @@ public class OSGIRepoPluginListSource implements PluginListSource {
             }
         }
         return description;
+    }
+
+    protected boolean isCorePlugin(Resource resource) {
+        for (String c : resource.getCategories()) {
+            if (c.contains("hobson-core-plugin")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected boolean isPlugin(Resource resource) {
+        for (String c : resource.getCategories()) {
+            if (c.contains("hobson-plugin")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

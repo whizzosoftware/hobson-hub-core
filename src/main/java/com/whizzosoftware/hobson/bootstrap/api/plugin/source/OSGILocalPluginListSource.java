@@ -68,21 +68,41 @@ public class OSGILocalPluginListSource implements PluginListSource {
     }
 
     protected PluginDescriptor createPluginDescriptor(Bundle bundle, String pluginId) {
-        HobsonPlugin plugin = getHobsonPlugin(bundleContext, bundle.getSymbolicName());
-
         String name = createDisplayNameFromSymbolicName(bundle.getHeaders(), bundle.getSymbolicName());
 
-        PluginType pluginType;
-        PluginStatus pluginStatus;
-        if (plugin != null) {
-            pluginType = plugin.getType();
-            pluginStatus = plugin.getStatus();
-        } else {
-            pluginType = PluginType.FRAMEWORK;
-            pluginStatus = BundleUtil.createPluginStatusFromBundleState(bundle.getState());
+        PluginType pluginType = PluginType.FRAMEWORK;
+
+        // determine if this is any sort of Hobson plugin
+        Dictionary headers = bundle.getHeaders();
+        if (isCorePlugin(headers)) {
+            pluginType = PluginType.CORE;
+        } else if (isPlugin(headers)) {
+            pluginType = PluginType.PLUGIN;
         }
 
-        return new PluginDescriptor(pluginId, name, null, pluginType, pluginStatus, bundle.getVersion().toString());
+        return new PluginDescriptor(
+            pluginId,
+            name,
+            null,
+            pluginType,
+            BundleUtil.createPluginStatusFromBundleState(bundle.getState()), bundle.getVersion().toString()
+        );
+    }
+
+    protected boolean isCorePlugin(Dictionary headers) {
+        if (headers != null) {
+            String categories = (String)headers.get("Bundle-Category");
+            return (categories != null && categories.contains("hobson-core-plugin"));
+        }
+        return false;
+    }
+
+    protected boolean isPlugin(Dictionary headers) {
+        if (headers != null) {
+            String categories = (String)headers.get("Bundle-Category");
+            return (categories != null && categories.contains("hobson-plugin"));
+        }
+        return false;
     }
 
     protected boolean isConfigurable(Bundle bundle, String pluginId) {
@@ -98,20 +118,5 @@ public class OSGILocalPluginListSource implements PluginListSource {
             }
         }
         return bundleSymbolicName;
-    }
-
-    protected HobsonPlugin getHobsonPlugin(BundleContext context, String symbolicName) {
-        // determine if the bundle is a Hobson plugin
-        HobsonPlugin plugin = null;
-
-        try {
-            Filter filter = context.createFilter("(&(objectClass=" + HobsonPlugin.class.getName() + ")(pluginId=" + symbolicName + "))");
-            ServiceReference[] references = context.getAllServiceReferences(null, filter.toString());
-            if (references != null && references.length == 1) {
-                plugin = (HobsonPlugin)context.getService(references[0]);
-            }
-        } catch (InvalidSyntaxException ignored) {}
-
-        return plugin;
     }
 }
