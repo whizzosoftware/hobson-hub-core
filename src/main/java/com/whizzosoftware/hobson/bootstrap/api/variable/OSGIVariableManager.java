@@ -12,6 +12,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateRequestEvent;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -188,19 +189,31 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
+    public Collection<String> getDeviceVariableChangeIds(String userId, String hubId, String pluginId, String deviceId) {
+        List<String> eventIds = new ArrayList<>();
+
+        Collection<HobsonVariable> deviceVars = getDeviceVariables(userId, hubId, pluginId, deviceId);
+        for (HobsonVariable v : deviceVars) {
+            VariableChangeIdHelper.populateChangeIdsForVariableName(v.getName(), eventIds);
+        }
+
+        return eventIds;
+    }
+
+    @Override
     public HobsonVariable getDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name) {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
                 ServiceReference[] refs = bundleContext.getServiceReferences(null, "(&(objectClass=" +
-                                HobsonVariable.class.getName() +
-                                ")(pluginId=" +
-                                pluginId +
-                                ")(deviceId=" +
-                                deviceId +
-                                ")(name=" +
-                                name +
-                                "))"
+                    HobsonVariable.class.getName() +
+                    ")(pluginId=" +
+                    pluginId +
+                    ")(deviceId=" +
+                    deviceId +
+                    ")(name=" +
+                    name +
+                    "))"
                 );
                 if (refs != null && refs.length == 1) {
                     return (HobsonVariable) bundleContext.getService(refs[0]);

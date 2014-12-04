@@ -15,7 +15,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
-import com.whizzosoftware.hobson.api.trigger.TriggerManager;
+import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.action.EmailAction;
@@ -28,7 +28,7 @@ import com.whizzosoftware.hobson.bootstrap.api.event.OSGIEventManager;
 import com.whizzosoftware.hobson.bootstrap.api.hub.OSGIHubManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
-import com.whizzosoftware.hobson.bootstrap.api.trigger.OSGITriggerManager;
+import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.discovery.Advertiser;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
@@ -286,10 +286,10 @@ public class Activator extends DependencyActivatorBase {
         manager.add(c);
         registeredComponents.add(c);
 
-        // register trigger manager
+        // register task manager
         c = manager.createComponent();
-        c.setInterface(TriggerManager.class.getName(), null);
-        c.setImplementation(OSGITriggerManager.class);
+        c.setInterface(TaskManager.class.getName(), null);
+        c.setImplementation(OSGITaskManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);

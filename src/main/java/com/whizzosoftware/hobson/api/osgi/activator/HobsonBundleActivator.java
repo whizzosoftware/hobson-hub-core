@@ -14,7 +14,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
-import com.whizzosoftware.hobson.api.trigger.TriggerManager;
+import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import org.apache.felix.dm.Component;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -56,7 +56,7 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
             c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
-            c.add(createServiceDependency().setService(TriggerManager.class).setRequired(true));
+            c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
             c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
             manager.add(c);
         } else {

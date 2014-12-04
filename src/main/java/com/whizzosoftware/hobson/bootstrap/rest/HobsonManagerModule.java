@@ -16,7 +16,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
-import com.whizzosoftware.hobson.api.trigger.TriggerManager;
+import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -68,8 +68,8 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
-    public TriggerManager provideTriggerManager() {
-        return (TriggerManager)getManager(TriggerManager.class);
+    public TaskManager provideTaskManager() {
+        return (TaskManager)getManager(TaskManager.class);
     }
 
     @Provides
