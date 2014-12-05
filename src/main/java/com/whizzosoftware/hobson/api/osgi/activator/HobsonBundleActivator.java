@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 
 /**
  * An OSGi bundle activator that instantiates a plugin class (defined by the Provide-Capability OSGi manifest header)
@@ -58,6 +59,7 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
             c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
             c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
+            c.add(createServiceDependency().setService(ExecutorService.class).setRequired(true));
             manager.add(c);
         } else {
             logger.error("No hobson.plugin provided capability found for plugin {}", context.getBundle().getSymbolicName());

@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 /**
  * An OSGi implementation of TaskManager.
@@ -28,6 +29,7 @@ public class OSGITaskManager implements TaskManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
+    private volatile ExecutorService executorService;
 
     @Override
     public void publishTaskProvider(String userId, String hubId, TaskProvider provider) {
@@ -106,13 +108,13 @@ public class OSGITaskManager implements TaskManager {
     @Override
     public void executeTask(String userId, String hubId, String providerId, String taskId) {
         final HobsonTask task = getTask(userId, hubId, providerId, taskId);
-        Thread t = new Thread(new Runnable() {
+        executorService.submit(new Runnable() {
             @Override
             public void run() {
                 task.execute();
+
             }
         });
-        t.start();
     }
 
     @Override

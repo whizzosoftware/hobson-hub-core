@@ -8,27 +8,31 @@
 package com.whizzosoftware.hobson.bootstrap.api.disco;
 
 import com.whizzosoftware.hobson.api.disco.*;
+import com.whizzosoftware.hobson.api.event.DeviceAdvertisementListenerPublishedEvent;
+import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 
 /**
  * An OSGi implementation of DiscoManager.
  *
- * Note: This is currently a very naive, brute-force implementation of the mechanism and doesn't have any
- * optimizations yet.
+ * Note: This is currently an in-memory implementation.
  *
  * @author Dan Noguerol
  */
-public class OSGIDiscoManager implements DiscoManager, DeviceBridgeDetectionContext {
+public class OSGIDiscoManager implements DiscoManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
+    private volatile EventManager eventManager;
+    private volatile ExecutorService executorService;
 
-    private final Map<String,DeviceBridge> bridgeMap = new HashMap<String,DeviceBridge>();
-    private final Map<String,ServiceRegistration> detectorRegistrationMap = new HashMap<String,ServiceRegistration>();
+    private final Map<String,List<DeviceAdvertisementListener>> listenerMap = new HashMap<>();
 
     public void start() {
         logger.debug("OSGIDiscoManager starting");
@@ -37,96 +41,50 @@ public class OSGIDiscoManager implements DiscoManager, DeviceBridgeDetectionCont
     public void stop() {
         logger.debug("OSGIDiscoManager stopping");
 
-        synchronized (detectorRegistrationMap) {
-            for (ServiceRegistration reg : detectorRegistrationMap.values()) {
-                reg.unregister();
+        listenerMap.clear();
+    }
+
+    @Override
+    public void publishDeviceAdvertisementListener(String userId, String hubId, String protocolId, DeviceAdvertisementListener listener) {
+        synchronized (listenerMap) {
+            List<DeviceAdvertisementListener> listenerList = listenerMap.get(protocolId);
+            if (listenerList == null) {
+                listenerList = new ArrayList<DeviceAdvertisementListener>();
+                listenerMap.put(protocolId, listenerList);
             }
-            detectorRegistrationMap.clear();
-        }
-    }
-
-    @Override
-    public Collection<DeviceBridge> getDeviceBridges(String userId, String hubId) {
-        ArrayList<DeviceBridge> results = new ArrayList<DeviceBridge>();
-        synchronized (bridgeMap) {
-            for (DeviceBridge disco : bridgeMap.values()) {
-                results.add(disco);
+            if (!listenerList.contains(listener)) {
+                listenerList.add(listener);
             }
         }
-        return results;
+        eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceAdvertisementListenerPublishedEvent(listener));
     }
 
     @Override
-    public void publishDeviceBridgeDetector(String userId, String hubId, DeviceBridgeDetector detector) {
-        logger.trace("Adding device bridge detector: {}", detector.getId());
-        synchronized (detectorRegistrationMap) {
-            Dictionary dic = new Hashtable();
-            dic.put("id", detector.getId());
-            dic.put("pluginId", detector.getPluginId());
-            detectorRegistrationMap.put(
-                    detector.getId(),
-                    bundleContext.registerService(DeviceBridgeDetector.class.getName(), detector, dic)
-            );
-            refreshScanners();
-        }
-    }
-
-    @Override
-    public void unpublishDeviceBridgeDetector(String userId, String hubId, String detectorId) {
-        logger.trace("Removing device bridge detector: {}", detectorId);
-        synchronized (detectorRegistrationMap) {
-            ServiceRegistration reg = detectorRegistrationMap.get(detectorId);
-            if (reg != null) {
-                reg.unregister();
-                detectorRegistrationMap.remove(detectorId);
+    public void unpublishDeviceAdvertisementListener(String userId, String hubId, DeviceAdvertisementListener listener) {
+        synchronized (listenerMap) {
+            for (String protocolId : listenerMap.keySet()) {
+                List<DeviceAdvertisementListener> listenerList = listenerMap.get(protocolId);
+                if (listenerList != null && listenerList.contains(listener)) {
+                    listenerList.remove(listener);
+                }
             }
         }
     }
 
     @Override
-    public void processDeviceBridgeMetaData(String userId, String hubId, DeviceBridgeMetaData meta) {
-        try {
-            ServiceReference[] refs = bundleContext.getServiceReferences(DeviceBridgeDetector.class.getName(), null);
-            if (refs != null) {
-                for (ServiceReference ref : refs) {
-                    DeviceBridgeDetector di = (DeviceBridgeDetector)bundleContext.getService(ref);
-                    if (di.identify(this, meta)) {
-                        break;
+    public void fireDeviceAdvertisement(String userId, String hubId, final DeviceAdvertisement advertisement) {
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                synchronized (listenerMap) {
+                    List<DeviceAdvertisementListener> listeners = listenerMap.get(advertisement.getProtocolId());
+                    if (listeners != null) {
+                        for (DeviceAdvertisementListener listener : listeners) {
+                            listener.onDeviceAdvertisement(advertisement);
+                        }
                     }
                 }
             }
-        } catch (InvalidSyntaxException e) {
-            logger.error("Error attempting to perform discovery", e);
-        }
-    }
-
-    @Override
-    public void addDeviceBridge(DeviceBridge bridge) {
-        synchronized (bridgeMap) {
-            logger.debug("Added device bridge: {} ({})", bridge.getValue(), bridge.getName());
-            bridgeMap.put(bridge.getValue(), bridge);
-        }
-    }
-
-    @Override
-    public void removeDeviceBridge(String bridgeId) {
-        synchronized (bridgeMap) {
-            logger.debug("Removed device bridge: {}", bridgeId);
-            bridgeMap.remove(bridgeId);
-        }
-    }
-
-    private void refreshScanners() {
-        try {
-            ServiceReference[] refs = bundleContext.getServiceReferences(DeviceBridgeScanner.class.getName(), null);
-            if (refs != null) {
-                for (ServiceReference ref : refs) {
-                    DeviceBridgeScanner scanner = (DeviceBridgeScanner)bundleContext.getService(ref);
-                    scanner.refresh();
-                }
-            }
-        } catch (InvalidSyntaxException e) {
-            logger.error("An error occurred refreshing DeviceBridgeScanners", e);
-        }
+        });
     }
 }

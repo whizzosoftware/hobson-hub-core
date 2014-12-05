@@ -65,6 +65,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * The OSGi activator for the core bundle. This sets up the Hobson foundation such as registering manager objects,
@@ -75,6 +77,7 @@ import java.util.List;
 public class Activator extends DependencyActivatorBase {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
+    private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final List<org.apache.felix.dm.Component> registeredComponents = new ArrayList<>();
     private ServiceTracker presenceTracker;
     private ServiceTracker applicationTracker;
@@ -85,6 +88,9 @@ public class Activator extends DependencyActivatorBase {
     @Override
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         logger.info("Hobson core is starting");
+
+        // create a shared ExecutorService service
+        context.registerService(ExecutorService.class.getName(), executorService, null);
 
         // create all OSGi managers
         createManagers(manager);
@@ -250,6 +256,8 @@ public class Activator extends DependencyActivatorBase {
         c = manager.createComponent();
         c.setInterface(DiscoManager.class.getName(), null);
         c.setImplementation(OSGIDiscoManager.class);
+        c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorService.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 
@@ -291,6 +299,7 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(TaskManager.class.getName(), null);
         c.setImplementation(OSGITaskManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorService.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 
