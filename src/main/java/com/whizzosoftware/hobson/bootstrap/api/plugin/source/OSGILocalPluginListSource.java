@@ -83,7 +83,7 @@ public class OSGILocalPluginListSource implements PluginListSource {
         return new PluginDescriptor(
             pluginId,
             name,
-            null,
+            (String)headers.get(Constants.BUNDLE_DESCRIPTION),
             pluginType,
             BundleUtil.createPluginStatusFromBundleState(bundle.getState()), bundle.getVersion().toString()
         );
@@ -91,7 +91,7 @@ public class OSGILocalPluginListSource implements PluginListSource {
 
     protected boolean isCorePlugin(Dictionary headers) {
         if (headers != null) {
-            String categories = (String)headers.get("Bundle-Category");
+            String categories = (String)headers.get(Constants.BUNDLE_CATEGORY);
             return (categories != null && categories.contains("hobson-core-plugin"));
         }
         return false;
@@ -99,7 +99,7 @@ public class OSGILocalPluginListSource implements PluginListSource {
 
     protected boolean isPlugin(Dictionary headers) {
         if (headers != null) {
-            String categories = (String)headers.get("Bundle-Category");
+            String categories = (String)headers.get(Constants.BUNDLE_CATEGORY);
             return (categories != null && categories.contains("hobson-plugin"));
         }
         return false;
@@ -112,7 +112,7 @@ public class OSGILocalPluginListSource implements PluginListSource {
 
     protected String createDisplayNameFromSymbolicName(Dictionary bundleHeaders, String bundleSymbolicName) {
         if (bundleHeaders != null) {
-            Object o = bundleHeaders.get("Bundle-Name");
+            Object o = bundleHeaders.get(Constants.BUNDLE_NAME);
             if (o != null) {
                 return o.toString();
             }
