@@ -96,7 +96,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
         setDeviceManager(deviceManager);
         setDiscoManager(discoManager);
         setEventManager(eventManager);
-        setExecutorService(executorService);
         setHubManager(hubManager);
         setPluginManager(pluginManager);
         setTaskManager(taskManager);
@@ -275,11 +274,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
     }
 
     @Override
-    public void setExecutorService(ExecutorService executorService) {
-        plugin.setExecutorService(executorService);
-    }
-
-    @Override
     public void setHubManager(HubManager hubManager) {
         plugin.setHubManager(hubManager);
     }
@@ -307,11 +301,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
     @Override
     public Future submitInEventLoop(Runnable runnable) {
         return plugin.submitInEventLoop(runnable);
-    }
-
-    @Override
-    public void execute(Runnable runnable) {
-        plugin.execute(runnable);
     }
 
     @Override
