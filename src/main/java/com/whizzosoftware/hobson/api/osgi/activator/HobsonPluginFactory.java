@@ -8,7 +8,7 @@
 package com.whizzosoftware.hobson.api.osgi.activator;
 
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
-import com.whizzosoftware.hobson.api.plugin.HobsonPluginEventLoopWrapper;
+import com.whizzosoftware.hobson.bootstrap.api.plugin.HobsonPluginEventLoopWrapper;
 import org.osgi.framework.BundleContext;
 
 import java.lang.reflect.Constructor;

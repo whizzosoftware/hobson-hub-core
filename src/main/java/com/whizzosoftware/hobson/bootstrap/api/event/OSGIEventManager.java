@@ -18,7 +18,6 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
@@ -35,22 +34,27 @@ public class OSGIEventManager implements EventManager {
     private final Map<EventListener,ServiceRegistration> serviceRegMap = new HashMap<EventListener,ServiceRegistration>();
 
     @Override
-    public void addListener(EventListener listener, Collection<String> topics) {
+    public void addListener(String userId, String hubId, EventListener listener, String[] topics) {
         Hashtable ht = new Hashtable();
-        ht.put(EventConstants.EVENT_TOPIC, topics.toArray(new String[topics.size()]));
+        ht.put(EventConstants.EVENT_TOPIC, topics);
         synchronized (serviceRegMap) {
             if (serviceRegMap.containsKey(listener)) {
                 serviceRegMap.get(listener).unregister();
             }
             serviceRegMap.put(
-                    listener,
-                    bundleContext.registerService(EventHandler.class.getName(), new EventHandlerAdapter(listener), ht)
+                listener,
+                bundleContext.registerService(EventHandler.class.getName(), new EventHandlerAdapter(listener), ht)
             );
         }
     }
 
     @Override
-    public void removeListener(EventListener listener) {
+    public void removeListener(String userId, String hubId, EventListener listener, String[] topics) {
+        // TODO
+    }
+
+    @Override
+    public void removeListenerFromAllTopics(String userId, String hubId, EventListener listener) {
         synchronized (serviceRegMap) {
             ServiceRegistration reg = serviceRegMap.get(listener);
             if (reg != null) {
@@ -87,6 +91,8 @@ public class OSGIEventManager implements EventManager {
                 listener.onHobsonEvent(new VariableUpdateRequestEvent(props));
             } else if (PresenceUpdateEvent.ID.equals(HobsonEvent.readEventId(props))) {
                 listener.onHobsonEvent(new PresenceUpdateEvent(props));
+            } else if (DeviceAdvertisementEvent.ID.equals(HobsonEvent.readEventId(props))) {
+                listener.onHobsonEvent(new DeviceAdvertisementEvent(props));
             }
         }
     }
