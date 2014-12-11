@@ -82,7 +82,7 @@ public class OSGIDiscoManager implements DiscoManager {
                 // send the advertisement to interested listeners
                 eventManager.postEvent(userId, hubId, new DeviceAdvertisementEvent(advertisement));
             } else {
-                logger.debug("Ignoring duplicate advertisement: {}/{}", advertisement.getProtocolId(), advertisement.getId());
+                logger.trace("Ignoring duplicate advertisement: {}/{}", advertisement.getProtocolId(), advertisement.getId());
             }
         } catch (InvalidSyntaxException e) {
             logger.error("Error querying for advertisement services", e);

@@ -81,7 +81,7 @@ public class OSGIEventManager implements EventManager {
         @Override
         public void handleEvent(Event event) {
             // TODO: find a more elegant way to perform OSGi -> Hobson event conversion
-            logger.debug("Received event: {}", event);
+            logger.trace("Received event: {}", event);
 
             Map<String,Object> props = EventUtil.createMapFromEvent(event);
 

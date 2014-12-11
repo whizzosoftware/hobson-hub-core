@@ -36,6 +36,8 @@ import com.whizzosoftware.hobson.bootstrap.rest.HobsonVerifier;
 import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.rest.v1.ApiV1Application;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.felix.dm.DependencyActivatorBase;
 import org.apache.felix.dm.DependencyManager;
 import org.osgi.framework.BundleContext;
@@ -85,6 +87,9 @@ public class Activator extends DependencyActivatorBase {
     @Override
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         logger.info("Hobson core is starting");
+
+        // set the Netty log factory
+        InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
 
         // create all OSGi managers
         createManagers(manager);
