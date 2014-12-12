@@ -166,9 +166,14 @@ public class OSGIDeviceManager implements DeviceManager {
     synchronized public void publishDevice(final String userId, final String hubId, final HobsonPlugin plugin, final HobsonDevice device) {
         BundleContext context = BundleUtil.getBundleContext(getClass(), device.getPluginId());
 
+        // check that the device ID is legal
+        if (device.getId() == null || device.getId().contains(",") || device.getId().contains(":")) {
+            throw new HobsonRuntimeException("Unable to publish device \"" + device.getId() + "\": the ID is either null or contains an invalid character");
+        }
+
         // check that the device doesn't already exist
         if (hasDevice(userId, hubId, device.getPluginId(), device.getId())) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getId() + ", " + device.getId());
+            throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getPluginId() + "." + device.getId());
         }
 
         if (context != null) {

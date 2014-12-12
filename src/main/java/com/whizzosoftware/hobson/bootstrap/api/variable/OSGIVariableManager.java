@@ -14,10 +14,18 @@ import com.whizzosoftware.hobson.api.event.VariableUpdateRequestEvent;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
+import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
+import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.osgi.framework.*;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
 import java.util.*;
 
 /**
@@ -30,8 +38,11 @@ public class OSGIVariableManager implements VariableManager {
     private static final Logger logger = LoggerFactory.getLogger(OSGIVariableManager.class);
 
     private volatile EventManager eventManager;
+    private volatile ConfigurationAdmin configAdmin;
 
     private static final String GLOBAL_NAME = "$GLOBAL$";
+    private static final String TELEMETRY_PID = "com.whizzosoftware.hobson.hub.telemetry";
+    private static final String TELEMETRY_DELIMITER = ":";
 
     private final Map<String,List<VariableRegistration>> variableRegistrations = new HashMap<>();
 
@@ -78,6 +89,11 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public void publishDeviceVariable(String userId, String hubId, String pluginId, String deviceId, HobsonVariable var) {
+        // make sure the variable name is legal
+        if (var.getName() == null || var.getName().contains(",") || var.getName().contains(":")) {
+            throw new HobsonRuntimeException("Unable to publish variable \"" + var.getName() + "\": name is either null or contains an invalid character");
+        }
+
         // make sure variable doesn't already exist
         if (hasDeviceVariable(userId, hubId, pluginId, deviceId, var.getName())) {
             throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + pluginId + "," + deviceId + "," + var.getName());
@@ -265,6 +281,108 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
+    public void enableDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, boolean enabled) {
+        try {
+            Configuration c = configAdmin.getConfiguration(TELEMETRY_PID);
+            Dictionary d = c.getProperties();
+            if (d == null) {
+                d = new Hashtable();
+            }
+            d.put(createDeviceVariableString(pluginId, deviceId, name), enabled);
+            c.update(d);
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error updating device variable telemetry configuration", e);
+        }
+    }
+
+    @Override
+    public Collection<DeviceVariableRef> getTelemetryEnabledDeviceVariables(String userId, String hubId) {
+        try {
+            List<DeviceVariableRef> results = new ArrayList<>();
+            Configuration c = configAdmin.getConfiguration(TELEMETRY_PID);
+            Dictionary d = c.getProperties();
+            if (d != null) {
+                Enumeration e = d.keys();
+                while (e.hasMoreElements()) {
+                    String name = (String)e.nextElement();
+                    Boolean enabled = false;
+                    Object o = d.get(name);
+                    if (o instanceof Boolean) {
+                        enabled = (Boolean)o;
+                    } else if (o instanceof String) {
+                        enabled = Boolean.parseBoolean((String)o);
+                    }
+                    if (enabled) {
+                        results.add(createDeviceVariableRef(name));
+                    }
+                }
+            }
+            return results;
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error retrieving device variable telemetry configuration", e);
+        }
+    }
+
+    @Override
+    public void writeDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, Object value, long time) {
+        File file = getTelemetryFile(pluginId, deviceId, name);
+
+        PrintWriter out = null;
+        try {
+            if (!file.exists()) {
+                if (!file.createNewFile()) {
+                    throw new HobsonRuntimeException("Unable to create telemetry file");
+                }
+            }
+
+            out = new PrintWriter(new BufferedWriter(new FileWriter(file, true)));
+            out.println(Long.toString(time) + "," + value);
+            out.close();
+            out = null;
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error writing to telemetry file", e);
+        } finally {
+            if (out != null) {
+                out.close();
+            }
+        }
+    }
+
+    @Override
+    public Collection<TemporalValue> getDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, long startTime, TelemetryInterval interval) {
+        List<TemporalValue> results = new ArrayList<>();
+        File file = getTelemetryFile(pluginId, deviceId, name);
+
+        if (file.exists()) {
+            BufferedReader reader = null;
+            try {
+                reader = new BufferedReader(new FileReader(file));
+                String line;
+
+
+                while ((line = reader.readLine()) != null) {
+                    results.add(createTemporalValue(line));
+                }
+
+                reader.close();
+                reader = null;
+            } catch (IOException e) {
+                throw new HobsonRuntimeException("Error reading from telemetry file", e);
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                        logger.error("Error closing telemetry file", e);
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
+    @Override
     public void fireVariableUpdateNotification(final String userId, final String hubId, HobsonPlugin plugin, final VariableUpdate update) {
         plugin.executeInEventLoop(new Runnable() {
             @Override
@@ -331,6 +449,27 @@ public class OSGIVariableManager implements VariableManager {
             }
             regs.add(new VariableRegistration(pluginId, deviceId, name, reg));
         }
+    }
+
+    private DeviceVariableRef createDeviceVariableRef(String s) {
+        StringTokenizer tok = new StringTokenizer(s, TELEMETRY_DELIMITER);
+        return new DeviceVariableRef(tok.nextToken(), tok.nextToken(), tok.nextToken());
+    }
+
+    private String createDeviceVariableString(String pluginId, String deviceId, String name) {
+        return pluginId + TELEMETRY_DELIMITER + deviceId + TELEMETRY_DELIMITER + name;
+    }
+
+    private TemporalValue createTemporalValue(String csv) {
+        int ix = csv.indexOf(",");
+        Long time = Long.parseLong(csv.substring(0, ix));
+        String value = csv.substring(ix+1);
+        return new TemporalValue(time, value);
+    }
+
+    private File getTelemetryFile(String pluginId, String deviceId, String name) {
+        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        return context.getDataFile("telemetry-" + createDeviceVariableString(pluginId, deviceId, name));
     }
 
     private class VariableRegistration {

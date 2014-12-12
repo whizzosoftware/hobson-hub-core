@@ -116,7 +116,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
                     plugin.scheduleAtFixedRateInEventLoop(new Runnable() {
                         @Override
                         public void run() {
-                            plugin.onRefresh();
+                            try {
+                                plugin.onRefresh();
+                            } catch (Exception e) {
+                                logger.error("Error refreshing plugin " + plugin.getId(), e);
+                            }
                         }
                     }, 0, plugin.getRefreshInterval(), TimeUnit.SECONDS);
                 }
