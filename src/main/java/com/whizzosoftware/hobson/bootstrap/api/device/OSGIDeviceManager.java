@@ -19,16 +19,26 @@ import com.whizzosoftware.hobson.api.device.HobsonDevice;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableRef;
+import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
+import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.cm.ManagedService;
+import org.rrd4j.ConsolFun;
+import org.rrd4j.DsType;
+import org.rrd4j.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.*;
+
+import static org.rrd4j.ConsolFun.AVERAGE;
 
 /**
  * An OSGi implementation of DeviceManager.
@@ -39,13 +49,17 @@ public class OSGIDeviceManager implements DeviceManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final static String DEVICE_PID_SEPARATOR = ".";
+    private static final String TELEMETRY_PID = "com.whizzosoftware.hobson.hub.telemetry";
+    private static final String TELEMETRY_DELIMITER = ":";
 
     volatile private BundleContext bundleContext;
     volatile private EventManager eventManager;
     volatile private ConfigurationAdmin configAdmin;
+    volatile private VariableManager variableManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
     private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
+    private final Map<String,Object> telemetryMutexes = new HashMap<>();
 
     @Override
     public Collection<HobsonDevice> getAllDevices(String userId, String hubId) {
@@ -163,6 +177,28 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
+    public Object getDeviceConfigurationProperty(String userId, String hubId, String pluginId, String deviceId, String name) {
+        try {
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (pluginId.equals(bundle.getSymbolicName())) {
+                    if (configAdmin != null) {
+                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(pluginId + "." + deviceId, bundle.getLocation());
+                        Dictionary dic = config.getProperties();
+                        if (dic != null) {
+                            return dic.get(name);
+                        }
+                    } else {
+                        throw new ConfigurationException("Unable to get device configuration property: ConfigurationAdmin service is not available");
+                    }
+                }
+            }
+            return null;
+        } catch (IOException e) {
+            throw new ConfigurationException("Error obtaining configuration", e);
+        }
+    }
+
+    @Override
     synchronized public void publishDevice(final String userId, final String hubId, final HobsonPlugin plugin, final HobsonDevice device) {
         BundleContext context = BundleUtil.getBundleContext(getClass(), device.getPluginId());
 
@@ -269,6 +305,49 @@ public class OSGIDeviceManager implements DeviceManager {
                         }
                     }, dic)
             );
+        }
+    }
+
+    @Override
+    public Collection<HobsonDevice> getAllTelemetryEnabledDevices(String userId, String hubId) {
+        List<HobsonDevice> results = new ArrayList<HobsonDevice>();
+        for (HobsonDevice device : getAllDevices(userId, hubId)) {
+            if (isDeviceTelemetryEnabled(userId, hubId, device.getPluginId(), device.getId())) {
+                results.add(device);
+            }
+        }
+        return results;
+    }
+
+    @Override
+    public boolean isDeviceTelemetryEnabled(String userId, String hubId, String pluginId, String deviceId) {
+        Boolean b = (Boolean)getDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "telemetry");
+        return (b != null && b);
+    }
+
+    @Override
+    public void enableDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, boolean enabled) {
+        setDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "telemetry", enabled, true);
+    }
+
+    @Override
+    public Map<String, Collection<TemporalValue>> getDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, long endTime, TelemetryInterval interval) {
+        Map<String,Collection<TemporalValue>> results = new HashMap<>();
+        HobsonDevice device = getDevice(userId, hubId, pluginId, deviceId);
+        String[] variables = device.getTelemetryVariableNames();
+        if (variables != null) {
+            for (String varName : variables) {
+                results.put(varName, variableManager.getDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, endTime, interval));
+            }
+        }
+        return results;
+    }
+
+    @Override
+    public void writeDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, Map<String, TemporalValue> values) {
+        for (String varName : values.keySet()) {
+            TemporalValue value = values.get(varName);
+            variableManager.writeDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, value.getValue(), value.getTime());
         }
     }
 

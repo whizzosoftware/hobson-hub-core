@@ -248,6 +248,7 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIDeviceManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

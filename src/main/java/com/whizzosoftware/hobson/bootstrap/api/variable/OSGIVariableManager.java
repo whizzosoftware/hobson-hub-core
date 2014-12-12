@@ -284,49 +284,6 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void enableDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, boolean enabled) {
-        try {
-            Configuration c = configAdmin.getConfiguration(TELEMETRY_PID);
-            Dictionary d = c.getProperties();
-            if (d == null) {
-                d = new Hashtable();
-            }
-            d.put(createDeviceVariableString(pluginId, deviceId, name), enabled);
-            c.update(d);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error updating device variable telemetry configuration", e);
-        }
-    }
-
-    @Override
-    public Collection<DeviceVariableRef> getTelemetryEnabledDeviceVariables(String userId, String hubId) {
-        try {
-            List<DeviceVariableRef> results = new ArrayList<>();
-            Configuration c = configAdmin.getConfiguration(TELEMETRY_PID);
-            Dictionary d = c.getProperties();
-            if (d != null) {
-                Enumeration e = d.keys();
-                while (e.hasMoreElements()) {
-                    String name = (String)e.nextElement();
-                    Boolean enabled = false;
-                    Object o = d.get(name);
-                    if (o instanceof Boolean) {
-                        enabled = (Boolean)o;
-                    } else if (o instanceof String) {
-                        enabled = Boolean.parseBoolean((String)o);
-                    }
-                    if (enabled) {
-                        results.add(createDeviceVariableRef(name));
-                    }
-                }
-            }
-            return results;
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error retrieving device variable telemetry configuration", e);
-        }
-    }
-
-    @Override
     public void writeDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, Object value, long time) {
         try {
             Object mutex = getTelemetryMutex(pluginId, deviceId, name);
