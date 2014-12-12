@@ -16,17 +16,19 @@ import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
 import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
 import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONTokener;
 import org.osgi.framework.*;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
+import org.rrd4j.ConsolFun;
+import org.rrd4j.DsType;
+import org.rrd4j.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
+
+import static org.rrd4j.ConsolFun.AVERAGE;
 
 /**
  * A VariableManager implementation that publishes variables as OSGi services and uses OSGi events to
@@ -45,6 +47,7 @@ public class OSGIVariableManager implements VariableManager {
     private static final String TELEMETRY_DELIMITER = ":";
 
     private final Map<String,List<VariableRegistration>> variableRegistrations = new HashMap<>();
+    private final Map<String,Object> telemetryMutexes = new HashMap<>();
 
     @Override
     public void publishGlobalVariable(String userId, String hubId, String pluginId, HobsonVariable var) {
@@ -105,9 +108,9 @@ public class OSGIVariableManager implements VariableManager {
         props.setProperty("deviceId", deviceId);
         props.setProperty("name", var.getName());
         addVariableRegistration(pluginId, deviceId, var.getName(), getBundleContext().registerService(
-                HobsonVariable.class.getName(),
-                var,
-                props
+            HobsonVariable.class.getName(),
+            var,
+            props
         ));
     }
 
@@ -251,14 +254,14 @@ public class OSGIVariableManager implements VariableManager {
         if (bundleContext != null) {
             try {
                 ServiceReference[] refs = bundleContext.getServiceReferences(null, "(&(objectClass=" +
-                                HobsonVariable.class.getName() +
-                                ")(pluginId=" +
-                                pluginId +
-                                ")(deviceId=" +
-                                deviceId +
-                                ")(name=" +
-                                name +
-                                "))"
+                    HobsonVariable.class.getName() +
+                    ")(pluginId=" +
+                    pluginId +
+                    ")(deviceId=" +
+                    deviceId +
+                    ")(name=" +
+                    name +
+                    "))"
                 );
                 if (refs != null && refs.length == 1) {
                     return true;
@@ -325,61 +328,52 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public void writeDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, Object value, long time) {
-        File file = getTelemetryFile(pluginId, deviceId, name);
-
-        PrintWriter out = null;
         try {
-            if (!file.exists()) {
-                if (!file.createNewFile()) {
-                    throw new HobsonRuntimeException("Unable to create telemetry file");
-                }
+            Object mutex = getTelemetryMutex(pluginId, deviceId, name);
+            synchronized (mutex) {
+                File file = getTelemetryFile(pluginId, deviceId, name);
+                RrdDb db = new RrdDb(file.getAbsolutePath(), false);
+                Sample sample = db.createSample();
+                sample.setAndUpdate(Long.toString(time) + ":" + value);
+                db.close();
             }
-
-            out = new PrintWriter(new BufferedWriter(new FileWriter(file, true)));
-            out.println(Long.toString(time) + "," + value);
-            out.close();
-            out = null;
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error writing to telemetry file", e);
-        } finally {
-            if (out != null) {
-                out.close();
-            }
         }
     }
 
     @Override
-    public Collection<TemporalValue> getDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, long startTime, TelemetryInterval interval) {
-        List<TemporalValue> results = new ArrayList<>();
-        File file = getTelemetryFile(pluginId, deviceId, name);
-
-        if (file.exists()) {
-            BufferedReader reader = null;
-            try {
-                reader = new BufferedReader(new FileReader(file));
-                String line;
-
-
-                while ((line = reader.readLine()) != null) {
-                    results.add(createTemporalValue(line));
-                }
-
-                reader.close();
-                reader = null;
-            } catch (IOException e) {
-                throw new HobsonRuntimeException("Error reading from telemetry file", e);
-            } finally {
-                if (reader != null) {
+    public Collection<TemporalValue> getDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, long endTime, TelemetryInterval interval) {
+        try {
+            List<TemporalValue> results = new ArrayList<>();
+            File file = getTelemetryFile(pluginId, deviceId, name);
+            if (file.exists()) {
+                Object mutex = getTelemetryMutex(pluginId, deviceId, name);
+                synchronized (mutex) {
+                    RrdDb db = new RrdDb(file.getAbsolutePath(), true);
                     try {
-                        reader.close();
-                    } catch (IOException e) {
-                        logger.error("Error closing telemetry file", e);
+                        FetchRequest fetch = db.createFetchRequest(ConsolFun.AVERAGE, calculateStartTime(endTime, interval), endTime);
+                        FetchData data = fetch.fetchData();
+
+                        long[] timestamps = data.getTimestamps();
+                        double[] values = data.getValues(0);
+
+                        if (timestamps.length == values.length) {
+                            for (int i = 0; i < timestamps.length; i++) {
+                                results.add(new TemporalValue(timestamps[i], values[i]));
+                            }
+                        } else {
+                            throw new HobsonRuntimeException("Timestamp and value count is different; telemetry file may be corrupted?");
+                        }
+                    } finally {
+                        db.close();
                     }
                 }
             }
+            return results;
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error retrieving device telemetry", e);
         }
-
-        return results;
     }
 
     @Override
@@ -460,16 +454,40 @@ public class OSGIVariableManager implements VariableManager {
         return pluginId + TELEMETRY_DELIMITER + deviceId + TELEMETRY_DELIMITER + name;
     }
 
-    private TemporalValue createTemporalValue(String csv) {
-        int ix = csv.indexOf(",");
-        Long time = Long.parseLong(csv.substring(0, ix));
-        String value = csv.substring(ix+1);
-        return new TemporalValue(time, value);
+    private Object getTelemetryMutex(String pluginId, String deviceId, String name) {
+        synchronized (telemetryMutexes) {
+            String key = createDeviceVariableString(pluginId, deviceId, name);
+            Object mutex = telemetryMutexes.get(key);
+            if (mutex == null) {
+                mutex = new Object();
+                telemetryMutexes.put(key, mutex);
+            }
+            return mutex;
+        }
     }
 
-    private File getTelemetryFile(String pluginId, String deviceId, String name) {
+    private File getTelemetryFile(String pluginId, String deviceId, String name) throws IOException {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        return context.getDataFile("telemetry-" + createDeviceVariableString(pluginId, deviceId, name));
+        File file = context.getDataFile(createDeviceVariableString(pluginId, deviceId, name) + ".rrd");
+        if (!file.exists()) {
+            RrdDef rrdDef = new RrdDef(file.getAbsolutePath(), 300);
+            rrdDef.addDatasource(name, DsType.GAUGE, 300, Double.NaN, Double.NaN);
+            rrdDef.addArchive(AVERAGE, 0.5, 1, 2016);
+            RrdDb db = new RrdDb(rrdDef);
+            db.close();
+        }
+        return file;
+    }
+
+    private long calculateStartTime(long endTime, TelemetryInterval interval) {
+        switch (interval) {
+            case DAYS_7:
+                return endTime - (7 * 24 * 60 * 60L);
+            case DAYS_30:
+                return endTime - (30 * 24 * 60 * 60L);
+            default:
+                return endTime - (24 * 60 * 60L);
+        }
     }
 
     private class VariableRegistration {
