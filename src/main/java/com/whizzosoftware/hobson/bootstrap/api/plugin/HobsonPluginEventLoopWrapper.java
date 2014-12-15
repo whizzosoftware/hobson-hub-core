@@ -23,6 +23,10 @@ import com.whizzosoftware.hobson.api.variable.HobsonVariable;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import io.netty.util.concurrent.Future;
+import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Dan Noguerol
  */
-public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigurationListener, EventListener {
+public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigurationListener, EventListener, ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     // these will be dependency injected by the OSGi runtime
@@ -54,7 +58,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
     private volatile VariableManager variableManager;
 
     private HobsonPlugin plugin;
-    private boolean starting = true;
 
     /**
      * Constructor.
@@ -77,20 +80,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
         // register plugin for configuration updates
         pluginManager.registerForPluginConfigurationUpdates(getId(), this);
 
-        // register plugin for necessary events
-        int otherTopicsCount = 0;
-        String[] otherTopics = plugin.getEventTopics();
-        if (otherTopics != null) {
-            otherTopicsCount = otherTopics.length;
-        }
-
-        String[] topics = new String[otherTopicsCount + 1];
-        topics[0] = EventTopics.VARIABLES_TOPIC; // all plugins need to listen for variable events
-        if (otherTopicsCount > 0) {
-            System.arraycopy(otherTopics, 0, topics, 1, otherTopicsCount);
-        }
-        eventManager.addListener(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, this, topics);
-
         // inject manager dependencies
         setActionManager(actionManager);
         setDeviceManager(deviceManager);
@@ -101,46 +90,22 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
         setTaskManager(taskManager);
         setVariableManager(variableManager);
 
-        // start the event loop
-        Future f = plugin.submitInEventLoop(new Runnable() {
-            @Override
-            public void run() {
-                // start the plugin
-                onStartup(pluginManager.getPluginConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin).getPropertyDictionary());
-
-                // post plugin started event
-                eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginStartedEvent(getId()));
-
-                // schedule the refresh callback if the plugin's refresh interval > 0
-                if (plugin.getRefreshInterval() > 0) {
-                    plugin.scheduleAtFixedRateInEventLoop(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                plugin.onRefresh();
-                            } catch (Exception e) {
-                                logger.error("Error refreshing plugin " + plugin.getId(), e);
-                            }
-                        }
-                    }, 0, plugin.getRefreshInterval(), TimeUnit.SECONDS);
-                }
-            }
-        });
-
-        // wait for the async task to complete so that the OSGi framework knows that we've really started
+        // wait for service to become registered before performing final initialization
         try {
-            f.get();
-        } catch (Exception e) {
-            logger.error("Error waiting for plugin to start", e);
+            String filter = "(&(objectclass=" + HobsonPlugin.class.getName() + ")(pluginId=" + getId() + "))";
+            FrameworkUtil.getBundle(getClass()).getBundleContext().addServiceListener(this, filter);
+        } catch (InvalidSyntaxException e) {
+            logger.error("Error registering service listener for plugin " + getId(), e);
         }
-
-        starting = false;
     }
 
     /**
      * Called when the OSGi service is stopped. This will stop the plugin event loop.
      */
     public void stop() {
+        // remove the service listener
+        FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
+
         // shutdown the plugin
         Future f = plugin.submitInEventLoop(new Runnable() {
             @Override
@@ -182,18 +147,16 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
 
     @Override
     public void onPluginConfigurationUpdate(final Dictionary config) {
-        if (!starting) { // ignore events when the plugin is still starting up
-            plugin.executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        plugin.onPluginConfigurationUpdate(config);
-                    } catch (Exception e) {
-                        logger.error("An error occurred updating plugin configuration", e);
-                    }
+        plugin.executeInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    plugin.onPluginConfigurationUpdate(config);
+                } catch (Exception e) {
+                    logger.error("An error occurred updating plugin configuration", e);
                 }
-            });
-        }
+            }
+        });
     }
 
     /*
@@ -202,18 +165,16 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
 
     @Override
     public void onDeviceConfigurationUpdate(final String deviceId, final Dictionary config) {
-        if (!starting) { // ignore events when the plugin is still starting up
-            plugin.executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        plugin.onDeviceConfigurationUpdate(deviceId, config);
-                    } catch (Exception e) {
-                        logger.error("An error occurred updating device configuration", e);
-                    }
+        plugin.executeInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    plugin.onDeviceConfigurationUpdate(deviceId, config);
+                } catch (Exception e) {
+                    logger.error("An error occurred updating device configuration", e);
                 }
-            });
-        }
+            }
+        });
     }
 
     /*
@@ -222,20 +183,16 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
 
     @Override
     public void onHobsonEvent(final HobsonEvent event) {
-        if (!starting) { // ignore events when the plugin is still starting up
-            plugin.executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        plugin.onHobsonEvent(event);
-                    } catch (Exception e) {
-                        logger.error("An error occurred processing an event", e);
-                    }
+        plugin.executeInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    plugin.onHobsonEvent(event);
+                } catch (Exception e) {
+                    logger.error("An error occurred processing an event", e);
                 }
-            });
-        } else {
-            logger.info("Ignoring event {} for plugin {}", event, plugin);
-        }
+            }
+        });
     }
 
     /*
@@ -400,5 +357,56 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
     @Override
     public boolean isConfigurable() {
         return plugin.isConfigurable();
+    }
+
+    @Override
+    public void serviceChanged(ServiceEvent serviceEvent) {
+        if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
+            // register plugin for necessary event topics
+            int otherTopicsCount = 0;
+            String[] otherTopics = plugin.getEventTopics();
+            if (otherTopics != null) {
+                otherTopicsCount = otherTopics.length;
+            }
+            String[] topics = new String[otherTopicsCount + 1];
+            topics[0] = EventTopics.VARIABLES_TOPIC; // all plugins need to listen for variable events
+            if (otherTopicsCount > 0) {
+                System.arraycopy(otherTopics, 0, topics, 1, otherTopicsCount);
+            }
+            eventManager.addListener(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, this, topics);
+
+            // start the event loop
+            Future f = plugin.submitInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    // start the plugin
+                    onStartup(pluginManager.getPluginConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin).getPropertyDictionary());
+
+                    // post plugin started event
+                    eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginStartedEvent(getId()));
+
+                    // schedule the refresh callback if the plugin's refresh interval > 0
+                    if (plugin.getRefreshInterval() > 0) {
+                        plugin.scheduleAtFixedRateInEventLoop(new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    plugin.onRefresh();
+                                } catch (Exception e) {
+                                    logger.error("Error refreshing plugin " + plugin.getId(), e);
+                                }
+                            }
+                        }, 0, plugin.getRefreshInterval(), TimeUnit.SECONDS);
+                    }
+                }
+            });
+
+            // wait for the async task to complete so that the OSGi framework knows that we've really started
+            try {
+                f.get();
+            } catch (Exception e) {
+                logger.error("Error waiting for plugin to start", e);
+            }
+        }
     }
 }
