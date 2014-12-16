@@ -40,6 +40,7 @@ public class OSGIHubManager implements HubManager {
     public static final String HUB_NAME = "hub.name";
     public static final String ADMIN_PASSWORD = "admin.password";
     public static final String SETUP_COMPLETE = "setup.complete";
+    public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
 
     volatile private ConfigurationAdmin configAdmin;
 
@@ -172,13 +173,13 @@ public class OSGIHubManager implements HubManager {
 
     @Override
     public String getLogLevel(String userId, String hubId) {
-        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        Logger root = (Logger) LoggerFactory.getLogger(HOBSON_LOGGER);
         return root.getLevel().toString();
     }
 
     @Override
     public void setLogLevel(String userId, String hubId, String level) {
-        Logger root = (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+        Logger root = (Logger) LoggerFactory.getLogger(HOBSON_LOGGER);
         root.setLevel(Level.toLevel(level));
     }
 

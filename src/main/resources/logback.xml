@@ -5,6 +5,7 @@
             <pattern>%date %level [%thread] %logger{10} [%file:%line] %msg%n</pattern>
         </encoder>
     </appender>
+    <logger name="com.whizzosoftware.hobson" level="INFO" />
     <root level="INFO">
         <appender-ref ref="FILE" />
     </root>
