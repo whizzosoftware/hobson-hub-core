@@ -211,6 +211,8 @@ public class Activator extends DependencyActivatorBase {
 
     @Override
     public void destroy(BundleContext context, DependencyManager manager) throws Exception {
+        logger.info("Hobson core is shutting down");
+
         for (org.apache.felix.dm.Component c : registeredComponents) {
             manager.remove(c);
         }

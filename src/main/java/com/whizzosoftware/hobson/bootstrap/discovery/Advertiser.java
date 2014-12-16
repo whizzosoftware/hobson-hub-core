@@ -32,7 +32,7 @@ public class Advertiser {
     public void start() throws IOException {
         jmdns = JmDNS.create();
         jmdns.registerService(ServiceInfo.create("_hobson._tcp.local.", name, 8080, 0, 0, " "));
-        logger.info("JmDNS advertiser started");
+        logger.debug("JmDNS advertiser started");
     }
 
     public void stop() throws IOException {
