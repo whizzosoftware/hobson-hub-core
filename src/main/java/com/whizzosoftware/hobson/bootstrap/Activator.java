@@ -249,6 +249,7 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

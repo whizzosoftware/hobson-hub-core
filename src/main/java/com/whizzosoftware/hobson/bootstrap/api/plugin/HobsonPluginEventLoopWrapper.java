@@ -120,7 +120,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
                 variableManager.unpublishAllPluginVariables(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, getId());
 
                 // stop all devices
-                deviceManager.unpublishAllDevices(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin);
+                deviceManager.unpublishAllDevices(plugin);
 
                 // shut down the plugin
                 onShutdown();
