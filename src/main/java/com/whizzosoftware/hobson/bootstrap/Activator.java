@@ -63,7 +63,9 @@ import org.restlet.util.Series;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Dictionary;
 import java.util.List;
@@ -160,6 +162,26 @@ public class Activator extends DependencyActivatorBase {
 
                     // start the Restlet component
                     component.start();
+
+                    // determine web app URL prefix
+                    String consoleURI;
+                    if (System.getProperty("useSSL") != null) {
+                        consoleURI = "https://localhost:8183";
+                    } else {
+                        consoleURI = "http://localhost:8182";
+                    }
+                    if (hubManager.isSetupWizardComplete(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)) {
+                        consoleURI += "/console/index.html";
+                    } else {
+                        consoleURI += "/setup/index.html";
+                    }
+
+                    // launch a browser
+                    if (Desktop.isDesktopSupported()) {
+                        Desktop.getDesktop().browse(new URI(consoleURI));
+                    } else {
+                        System.out.println("Hobson is now available at " + consoleURI);
+                    }
                 } catch (Exception e) {
                     logger.error("Error starting REST API server", e);
                 }

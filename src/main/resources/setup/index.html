@@ -50,7 +50,7 @@
                             </div>
                             <div id="address-group" class="form-group">
                                 <label for="address">Address</label>
-                                <input type="text" class="form-control" id="address" placeholder="e.g. 490 West 96th St, New York, NY 10012">
+                                <input type="text" class="form-control" id="address" placeholder="e.g. 49 East 96th St, New York, NY 10128">
                                 <p id="address-help" class="help-block">Separate your address, city and state with commas as shown in the example.</p>
                             </div>
                         </form>
@@ -205,7 +205,11 @@ Password: The password you entered on the previous screen</pre>
                         contentType: "application/json",
                         data: JSON.stringify({setupComplete: true})
                     })
-                    .done(function(data) {
+                    .error(function() {
+                        alert('There was an error completing the wizard. You will now be taken to the web console.');
+                        window.location.replace('/console/index.html');
+                    })
+                    .success(function(data) {
                         window.location.replace("/console/index.html");
                     });
                 });
@@ -393,6 +397,7 @@ Password: The password you entered on the previous screen</pre>
                                     showWizardError('Unable to set the administrator password. Please check that the Hub is running and try again.');
                                 })
                                 .success(function() {
+                                    defaultPassword = pass1.val();
                                     gotoWizardStep(5);
                                 });
                     } else {
