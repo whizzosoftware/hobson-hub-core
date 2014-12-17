@@ -17,7 +17,6 @@ import com.whizzosoftware.hobson.api.variable.*;
 import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
 import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
 import org.osgi.framework.*;
-import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.rrd4j.ConsolFun;
 import org.rrd4j.DsType;
@@ -50,8 +49,8 @@ public class OSGIVariableManager implements VariableManager {
     private final Map<String,Object> telemetryMutexes = new HashMap<>();
 
     @Override
-    public void publishGlobalVariable(String userId, String hubId, String pluginId, HobsonVariable var) {
-        publishDeviceVariable(userId, hubId, pluginId, GLOBAL_NAME, var);
+    public void publishGlobalVariable(String userId, String hubId, String pluginId, String name, Object value, HobsonVariable.Mask mask) {
+        publishDeviceVariable(userId, hubId, pluginId, GLOBAL_NAME, name, value, mask);
     }
 
     @Override
@@ -91,25 +90,25 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishDeviceVariable(String userId, String hubId, String pluginId, String deviceId, HobsonVariable var) {
+    public void publishDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name, Object value, HobsonVariable.Mask mask) {
         // make sure the variable name is legal
-        if (var.getName() == null || var.getName().contains(",") || var.getName().contains(":")) {
-            throw new HobsonRuntimeException("Unable to publish variable \"" + var.getName() + "\": name is either null or contains an invalid character");
+        if (name == null || name.contains(",") || name.contains(":")) {
+            throw new HobsonRuntimeException("Unable to publish variable \"" + name + "\": name is either null or contains an invalid character");
         }
 
         // make sure variable doesn't already exist
-        if (hasDeviceVariable(userId, hubId, pluginId, deviceId, var.getName())) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + pluginId + "," + deviceId + "," + var.getName());
+        if (hasDeviceVariable(userId, hubId, pluginId, deviceId, name)) {
+            throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + pluginId + "," + deviceId + "," + name);
         }
 
         // publish the variable
         Properties props = new Properties();
         props.setProperty("pluginId", pluginId);
         props.setProperty("deviceId", deviceId);
-        props.setProperty("name", var.getName());
-        addVariableRegistration(pluginId, deviceId, var.getName(), getBundleContext().registerService(
+        props.setProperty("name", name);
+        addVariableRegistration(pluginId, deviceId, name, getBundleContext().registerService(
             HobsonVariable.class.getName(),
-            var,
+            new HobsonVariableImpl(name, value, mask),
             props
         ));
     }

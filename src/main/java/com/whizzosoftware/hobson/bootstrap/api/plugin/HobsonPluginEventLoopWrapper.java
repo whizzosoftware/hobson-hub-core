@@ -275,13 +275,13 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, PluginConfigu
     }
 
     @Override
-    public void publishGlobalVariable(HobsonVariable variable) {
-        plugin.publishGlobalVariable(variable);
+    public void publishGlobalVariable(String name, Object value, HobsonVariable.Mask mask) {
+        plugin.publishGlobalVariable(name, value, mask);
     }
 
     @Override
-    public void publishDeviceVariable(String deviceId, HobsonVariable variable) {
-        plugin.publishDeviceVariable(deviceId, variable);
+    public void publishDeviceVariable(String deviceId, String name, Object value, HobsonVariable.Mask mask) {
+        plugin.publishDeviceVariable(deviceId, name, value, mask);
     }
 
     @Override

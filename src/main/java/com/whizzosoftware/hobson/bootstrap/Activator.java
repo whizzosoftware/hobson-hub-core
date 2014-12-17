@@ -299,7 +299,9 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(HubManager.class.getName(), null);
         c.setImplementation(OSGIHubManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
+        // ActionManager is a dependency so that the Activator can safely register default actions
         c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

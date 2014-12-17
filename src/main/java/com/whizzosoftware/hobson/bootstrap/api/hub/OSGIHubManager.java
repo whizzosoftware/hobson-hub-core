@@ -16,7 +16,10 @@ import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -35,14 +38,13 @@ import java.util.Properties;
  * @author Dan Noguerol
  */
 public class OSGIHubManager implements HubManager {
-    private static final long READ_SIZE = 40000;
-
     public static final String HUB_NAME = "hub.name";
     public static final String ADMIN_PASSWORD = "admin.password";
     public static final String SETUP_COMPLETE = "setup.complete";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
 
     volatile private ConfigurationAdmin configAdmin;
+    volatile private EventManager eventManager;
 
     @Override
     public String getHubName(String userId, String hubId) {
@@ -57,7 +59,8 @@ public class OSGIHubManager implements HubManager {
             Configuration config = getConfiguration();
             Dictionary props = getConfigurationProperties(config);
             props.put(HUB_NAME, name);
-            config.update(props);
+
+            updateConfiguration(config, props);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub name", e);
         }
@@ -78,7 +81,8 @@ public class OSGIHubManager implements HubManager {
 
             // set the new password
             props.put(ADMIN_PASSWORD, DigestUtils.sha256Hex(change.getNewPassword()));
-            config.update(props);
+
+            updateConfiguration(config, props);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub password", e);
         }
@@ -122,7 +126,8 @@ public class OSGIHubManager implements HubManager {
             if (location.hasLongitude()) {
                 d.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
             }
-            config.update(d);
+
+            updateConfiguration(config, d);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub location", e);
         }
@@ -143,7 +148,8 @@ public class OSGIHubManager implements HubManager {
             d.put(EmailConfiguration.PROP_MAIL_USERNAME, ec.getUsername());
             d.put(EmailConfiguration.PROP_MAIL_PASSWORD, ec.getPassword());
             d.put(EmailConfiguration.PROP_MAIL_SENDER, ec.getSenderAddress());
-            config.update(d);
+
+            updateConfiguration(config, d);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub location", e);
         }
@@ -165,7 +171,8 @@ public class OSGIHubManager implements HubManager {
                 props = new Hashtable();
             }
             props.put(SETUP_COMPLETE, complete);
-            config.update(props);
+
+            updateConfiguration(config, props);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting setup wizard completion status", e);
         }
@@ -259,5 +266,10 @@ public class OSGIHubManager implements HubManager {
             p = new Properties();
         }
         return p;
+    }
+
+    private void updateConfiguration(Configuration config, Dictionary props) throws IOException {
+        config.update(props);
+        eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new HubConfigurationUpdateEvent());
     }
 }

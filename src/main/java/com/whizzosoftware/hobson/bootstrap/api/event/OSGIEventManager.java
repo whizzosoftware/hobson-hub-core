@@ -93,6 +93,8 @@ public class OSGIEventManager implements EventManager {
                 listener.onHobsonEvent(new PresenceUpdateEvent(props));
             } else if (DeviceAdvertisementEvent.ID.equals(HobsonEvent.readEventId(props))) {
                 listener.onHobsonEvent(new DeviceAdvertisementEvent(props));
+            } else if (HubConfigurationUpdateEvent.ID.equals(HobsonEvent.readEventId(props))) {
+                listener.onHobsonEvent(new HubConfigurationUpdateEvent(props));
             }
         }
     }
