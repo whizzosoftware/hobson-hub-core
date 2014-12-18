@@ -266,7 +266,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
+                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
                         <Bundle-Activator>com.whizzosoftware.hobson.bootstrap.Activator</Bundle-Activator>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*</Export-Package>
