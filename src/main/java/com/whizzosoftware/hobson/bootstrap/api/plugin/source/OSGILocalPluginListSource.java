@@ -48,7 +48,12 @@ public class OSGILocalPluginListSource implements PluginListSource {
             String id = bundle.getSymbolicName();
             try {
                 PluginDescriptor pd = createPluginDescriptor(bundle, id);
-                pd.setConfigurable(isConfigurable(bundle, id));
+                HobsonPlugin plugin = com.whizzosoftware.hobson.bootstrap.api.plugin.PluginUtil.getPlugin(bundle.getBundleContext(), id);
+                // set the status to the specific Hobson plugin status if available
+                if (plugin != null) {
+                    pd.setStatus(plugin.getStatus());
+                }
+                pd.setConfigurable((plugin != null) && plugin.isConfigurable());
                 resultMap.put(id, pd);
             } catch (Exception e) {
                 logger.error("Error creating plugin descriptor for " + id, e);
@@ -103,11 +108,6 @@ public class OSGILocalPluginListSource implements PluginListSource {
             return (categories != null && categories.contains("hobson-plugin"));
         }
         return false;
-    }
-
-    protected boolean isConfigurable(Bundle bundle, String pluginId) {
-        HobsonPlugin plugin = com.whizzosoftware.hobson.bootstrap.api.plugin.PluginUtil.getPlugin(bundle.getBundleContext(), pluginId);
-        return (plugin != null && plugin.isConfigurable());
     }
 
     protected String createDisplayNameFromSymbolicName(Dictionary bundleHeaders, String bundleSymbolicName) {
