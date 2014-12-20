@@ -111,12 +111,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-codec-http</artifactId>
-            <version>4.0.21.Final</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.whizzosoftware.osgi</groupId>
             <artifactId>rxtx-osgi</artifactId>
             <version>2.1.7</version>
