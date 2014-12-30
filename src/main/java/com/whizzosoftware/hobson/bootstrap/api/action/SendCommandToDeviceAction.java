@@ -12,6 +12,7 @@ import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValue;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValueParam;
 import com.whizzosoftware.hobson.api.util.UserUtil;
+import com.whizzosoftware.hobson.api.variable.VariableConstants;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     private static final String TURN_OFF = "turnOff";
     private static final String TURN_ON = "turnOn";
     private static final String SET_LEVEL = "setLevel";
+    private static final String SET_TARGET_TEMP_F = "setTargetTempF";
 
     private final Map<String,ActionMetaDataEnumValue> metaEnumValues = new HashMap<>();
 
@@ -59,9 +61,10 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     }
 
     protected void buildMetaEnums() {
-        metaEnumValues.put(TURN_OFF, new ActionMetaDataEnumValue(TURN_OFF, "Turn off", null, "on"));
-        metaEnumValues.put(TURN_ON, new ActionMetaDataEnumValue(TURN_ON, "Turn on", null, "on"));
-        metaEnumValues.put(SET_LEVEL, new ActionMetaDataEnumValue(SET_LEVEL, "Set level", new ActionMetaDataEnumValueParam("Level", "A percentage (0-100) for the device's level", ActionMetaData.Type.NUMBER), "level"));
+        metaEnumValues.put(TURN_OFF, new ActionMetaDataEnumValue(TURN_OFF, "Turn off", null, VariableConstants.ON));
+        metaEnumValues.put(TURN_ON, new ActionMetaDataEnumValue(TURN_ON, "Turn on", null, VariableConstants.ON));
+        metaEnumValues.put(SET_LEVEL, new ActionMetaDataEnumValue(SET_LEVEL, "Set level", new ActionMetaDataEnumValueParam("Level", "A percentage (0-100) for the device's level", ActionMetaData.Type.NUMBER), VariableConstants.LEVEL));
+        metaEnumValues.put(SET_TARGET_TEMP_F, new ActionMetaDataEnumValue(SET_TARGET_TEMP_F, "Set target temperature (F)", new ActionMetaDataEnumValueParam("Temperature", "The target temperature in degrees fahrenheit", ActionMetaData.Type.NUMBER), VariableConstants.TARGET_TEMP_F));
     }
 
     protected VariableUpdate createVariableUpdate(Map<String, Object> properties) {
@@ -89,6 +92,8 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
         } else if (TURN_OFF.equals(commandId)) {
             return false;
         } else if (SET_LEVEL.equals(commandId)) {
+            return param;
+        } else if (SET_TARGET_TEMP_F.equals(commandId)) {
             return param;
         } else {
             throw new IllegalArgumentException("Invalid commandId: " + commandId);

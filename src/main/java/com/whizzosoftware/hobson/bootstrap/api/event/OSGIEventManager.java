@@ -28,10 +28,25 @@ import java.util.Map;
  * @author Dan Noguerol
  */
 public class OSGIEventManager implements EventManager {
+    private static final Logger logger = LoggerFactory.getLogger(OSGIEventManager.class);
+
     volatile private BundleContext bundleContext;
     volatile private EventAdmin eventAdmin;
 
     private final Map<EventListener,ServiceRegistration> serviceRegMap = new HashMap<EventListener,ServiceRegistration>();
+    private final EventFactory eventFactory = new EventFactory();
+
+    public OSGIEventManager() {
+        try {
+            eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
+            eventFactory.addEventClass(VariableUpdateRequestEvent.ID, VariableUpdateRequestEvent.class);
+            eventFactory.addEventClass(PresenceUpdateEvent.ID, PresenceUpdateEvent.class);
+            eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
+            eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
+        } catch (NoSuchMethodException e) {
+            logger.error("An error occurred during event registration", e);
+        }
+    }
 
     @Override
     public void addListener(String userId, String hubId, EventListener listener, String[] topics) {
@@ -80,21 +95,17 @@ public class OSGIEventManager implements EventManager {
 
         @Override
         public void handleEvent(Event event) {
-            // TODO: find a more elegant way to perform OSGi -> Hobson event conversion
             logger.trace("Received event: {}", event);
 
-            Map<String,Object> props = EventUtil.createMapFromEvent(event);
+            Map<String, Object> props = EventUtil.createMapFromEvent(event);
 
-            if (VariableUpdateNotificationEvent.ID.equals(HobsonEvent.readEventId(props))) {
-                listener.onHobsonEvent(new VariableUpdateNotificationEvent(props));
-            } else if (VariableUpdateRequestEvent.ID.equals(HobsonEvent.readEventId(props))) {
-                listener.onHobsonEvent(new VariableUpdateRequestEvent(props));
-            } else if (PresenceUpdateEvent.ID.equals(HobsonEvent.readEventId(props))) {
-                listener.onHobsonEvent(new PresenceUpdateEvent(props));
-            } else if (DeviceAdvertisementEvent.ID.equals(HobsonEvent.readEventId(props))) {
-                listener.onHobsonEvent(new DeviceAdvertisementEvent(props));
-            } else if (HubConfigurationUpdateEvent.ID.equals(HobsonEvent.readEventId(props))) {
-                listener.onHobsonEvent(new HubConfigurationUpdateEvent(props));
+            if (listener != null) {
+                HobsonEvent he = eventFactory.createEvent(props);
+                if (he != null) {
+                    listener.onHobsonEvent(he);
+                }
+            } else {
+                logger.warn("No event listener registered; ignoring event {}", HobsonEvent.readEventId(props));
             }
         }
     }

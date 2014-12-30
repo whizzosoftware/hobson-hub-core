@@ -18,7 +18,7 @@ import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Hashtable;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -36,12 +36,19 @@ public class OSGIDiscoManager implements DiscoManager {
     private volatile EventManager eventManager;
     private volatile ExecutorService executorService;
 
+    private final Map<String,ServiceRegistration> localDiscoveryList = new HashMap<>();
+
     public void start() {
         logger.debug("OSGIDiscoManager starting");
     }
 
     public void stop() {
         logger.debug("OSGIDiscoManager stopping");
+
+        // unregister all previous registered services
+        for (ServiceRegistration sr : localDiscoveryList.values()) {
+            sr.unregister();
+        }
     }
 
     @Override
@@ -66,26 +73,32 @@ public class OSGIDiscoManager implements DiscoManager {
 
     @Override
     synchronized public void fireDeviceAdvertisement(String userId, String hubId, final DeviceAdvertisement advertisement) {
-        try {
-            // check if we've seen this advertisement before
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + "))");
-            if (references == null || references.length == 0) {
-                // publish the advertisement as a service if we haven't already done so
-                Hashtable props = new Hashtable();
-                props.put("protocolId", advertisement.getProtocolId());
-                props.put("id", advertisement.getId());
-                context.registerService(DeviceAdvertisement.class.getName(), advertisement, props);
+        String fqId = advertisement.getProtocolId() + ":" + advertisement.getId();
+        if (!localDiscoveryList.containsKey(fqId)) {
+            try {
+                // check if we've seen this advertisement before
+                BundleContext context = BundleUtil.getBundleContext(getClass(), null);
+                ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + "))");
+                if (references == null || references.length == 0) {
+                    // publish the advertisement as a service if we haven't already done so
+                    Hashtable props = new Hashtable();
+                    props.put("protocolId", advertisement.getProtocolId());
+                    props.put("id", advertisement.getId());
+                    ServiceRegistration sr = context.registerService(DeviceAdvertisement.class.getName(), advertisement, props);
 
-                logger.debug("Registered device advertisement: " + props);
+                    logger.debug("Registered device advertisement: {}", fqId);
+                    localDiscoveryList.put(fqId, sr);
 
-                // send the advertisement to interested listeners
-                eventManager.postEvent(userId, hubId, new DeviceAdvertisementEvent(advertisement));
-            } else {
-                logger.trace("Ignoring duplicate advertisement: {}/{}", advertisement.getProtocolId(), advertisement.getId());
+                    // send the advertisement to interested listeners
+                    eventManager.postEvent(userId, hubId, new DeviceAdvertisementEvent(advertisement));
+                } else {
+                    logger.trace("Ignoring previously registered service: {}", fqId);
+                }
+            } catch (InvalidSyntaxException e) {
+                logger.error("Error querying for advertisement services", e);
             }
-        } catch (InvalidSyntaxException e) {
-            logger.error("Error querying for advertisement services", e);
+        } else {
+            logger.trace("Ignoring duplicate advertisement: {}", fqId);
         }
     }
 }

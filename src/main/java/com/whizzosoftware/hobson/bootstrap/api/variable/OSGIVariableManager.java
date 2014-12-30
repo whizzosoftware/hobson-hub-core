@@ -42,7 +42,6 @@ public class OSGIVariableManager implements VariableManager {
     private volatile ConfigurationAdmin configAdmin;
 
     private static final String GLOBAL_NAME = "$GLOBAL$";
-    private static final String TELEMETRY_PID = "com.whizzosoftware.hobson.hub.telemetry";
     private static final String TELEMETRY_DELIMITER = ":";
 
     private final Map<String,List<VariableRegistration>> variableRegistrations = new HashMap<>();
@@ -278,6 +277,7 @@ public class OSGIVariableManager implements VariableManager {
     public Long setDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name, Object value) {
         HobsonVariable variable = getDeviceVariable(userId, hubId, pluginId, deviceId, name);
         Long lastUpdate = variable.getLastUpdate();
+        logger.debug("Attempting to set variable {}.{}.{} to value {}", pluginId, deviceId, name, value);
         eventManager.postEvent(userId, hubId, new VariableUpdateRequestEvent(pluginId, deviceId, name, value));
         return lastUpdate;
     }
@@ -399,11 +399,6 @@ public class OSGIVariableManager implements VariableManager {
             }
             regs.add(new VariableRegistration(pluginId, deviceId, name, reg));
         }
-    }
-
-    private DeviceVariableRef createDeviceVariableRef(String s) {
-        StringTokenizer tok = new StringTokenizer(s, TELEMETRY_DELIMITER);
-        return new DeviceVariableRef(tok.nextToken(), tok.nextToken(), tok.nextToken());
     }
 
     private String createDeviceVariableString(String pluginId, String deviceId, String name) {
