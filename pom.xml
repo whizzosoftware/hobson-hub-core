@@ -155,12 +155,12 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api</artifactId>
-            <version>0.1.8-SNAPSHOT</version>
+            <version>0.1.8</version>
         </dependency>
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-restv1</artifactId>
-            <version>0.1.9-SNAPSHOT</version>
+            <version>0.1.9</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
