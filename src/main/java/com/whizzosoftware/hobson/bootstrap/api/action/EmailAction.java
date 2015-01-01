@@ -74,6 +74,7 @@ public class EmailAction extends AbstractHobsonAction {
     /**
      * Convenience method to both create and send the e-mail message.
      *
+     * @param hubManager a HubManager instance
      * @param properties the message properties
      *
      * @throws MessagingException on failure
@@ -119,6 +120,7 @@ public class EmailAction extends AbstractHobsonAction {
      * Convenience method for creating an e-mail message from a set of message properties.
      *
      * @param session the mail Session instance to use
+     * @param config the email configuration to use
      * @param properties the message properties
      *
      * @return a Message instance
