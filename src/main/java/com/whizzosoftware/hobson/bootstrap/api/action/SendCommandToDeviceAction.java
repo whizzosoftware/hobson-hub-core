@@ -11,6 +11,7 @@ import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValue;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValueParam;
+import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableConstants;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
@@ -51,7 +52,7 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     }
 
     @Override
-    public void execute(Map<String, Object> properties) {
+    public void execute(HubManager hubManager, Map<String, Object> properties) {
         try {
             VariableUpdate vup = createVariableUpdate(properties);
             getVariableManager().setDeviceVariable(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, vup.getPluginId(), vup.getDeviceId(), vup.getName(), vup.getValue());

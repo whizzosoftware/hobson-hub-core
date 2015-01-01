@@ -111,13 +111,6 @@ public class Activator extends DependencyActivatorBase {
             public Object addingService(ServiceReference ref) {
                 HubManager hubManager = (HubManager)context.getService(ref);
 
-                // publish the default actions
-                publishDefaultActions(
-                    context.getBundle().getSymbolicName(),
-                    (ActionManager)context.getService(context.getServiceReference(ActionManager.class.getName())),
-                    hubManager
-                );
-
                 // start up the HTTP/HTTPS server
                 List<Protocol> protocols = new ArrayList<>();
                 Server server;
@@ -262,6 +255,7 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(ActionManager.class.getName(), null);
         c.setImplementation(OSGIActionManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
         c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
@@ -299,8 +293,6 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(HubManager.class.getName(), null);
         c.setImplementation(OSGIHubManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
-        // ActionManager is a dependency so that the Activator can safely register default actions
-        c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
@@ -337,12 +329,6 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
-    }
-
-    private void publishDefaultActions(String pluginId, ActionManager manager, HubManager hubManager) {
-        manager.publishAction(new EmailAction(pluginId, hubManager.getHubEmailConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)));
-        manager.publishAction(new LogAction(pluginId));
-        manager.publishAction(new SendCommandToDeviceAction(pluginId));
     }
 
     private void startAdvertiser() {

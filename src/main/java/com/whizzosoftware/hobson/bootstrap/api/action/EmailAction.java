@@ -11,6 +11,8 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.hub.EmailConfiguration;
+import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,20 +38,15 @@ public class EmailAction extends AbstractHobsonAction {
     public static final String SUBJECT = "subject";
     public static final String MESSAGE = "message";
 
-    private EmailConfiguration config;
-
     /**
      * Constructor.
      *
      * @param pluginId the plugin ID creating this action
-     * @param config the e-mail configuration to use for the action
      *
      * @since hobson-hub-api 0.1.6
      */
-    public EmailAction(String pluginId, EmailConfiguration config) {
+    public EmailAction(String pluginId) {
         super(pluginId, "sendEmail", "Send E-mail");
-
-        this.config = config;
 
         addMetaData(new ActionMetaData(RECIPIENT_ADDRESS, "Recipient Address", "The address the e-mail will be sent to", ActionMetaData.Type.STRING));
         addMetaData(new ActionMetaData(SUBJECT, "Subject", "The e-mail subject text", ActionMetaData.Type.STRING));
@@ -59,15 +56,16 @@ public class EmailAction extends AbstractHobsonAction {
     /**
      * Executes the action.
      *
+     * @param hubManager a HubManager instance
      * @param properties a Map of action properties
      *
      * @since hobson-hub-api 0.1.6
      */
     @Override
-    public void execute(Map<String, Object> properties) {
+    public void execute(HubManager hubManager, Map<String, Object> properties) {
         try {
             // get the mail configuration
-            createAndSendMessage(properties);
+            createAndSendMessage(hubManager, properties);
         } catch (MessagingException e){
             throw new HobsonRuntimeException("Error sending e-mail", e);
         }
@@ -82,7 +80,8 @@ public class EmailAction extends AbstractHobsonAction {
      *
      * @since hobson-hub-api 0.1.6
      */
-    protected void createAndSendMessage(Map<String,Object> properties) throws MessagingException {
+    protected void createAndSendMessage(HubManager hubManager, Map<String,Object> properties) throws MessagingException {
+        EmailConfiguration config = hubManager.getHubEmailConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB);
         String mailHost = config.getMailServer();
         Boolean mailUseSMTPS = config.isSMTPS();
         String mailUser = config.getUsername();
@@ -102,7 +101,7 @@ public class EmailAction extends AbstractHobsonAction {
         Session session = Session.getDefaultInstance(props, null);
 
         // create the mail message
-        Message msg = createMessage(session, properties);
+        Message msg = createMessage(session, config, properties);
 
         // send the message
         String protocol = mailUseSMTPS ? "smtps" : "smtp";
@@ -126,7 +125,7 @@ public class EmailAction extends AbstractHobsonAction {
      *
      * @since hobson-hub-api 0.1.6
      */
-    protected Message createMessage(Session session, Map<String,Object> properties) {
+    protected Message createMessage(Session session, EmailConfiguration config, Map<String,Object> properties) {
         String recipientAddress = (String) properties.get(RECIPIENT_ADDRESS);
         String subject = (String) properties.get(SUBJECT);
         String message = (String) properties.get(MESSAGE);

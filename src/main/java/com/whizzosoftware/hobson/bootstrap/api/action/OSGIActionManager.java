@@ -11,12 +11,11 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.action.HobsonAction;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.Filter;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +30,18 @@ public class OSGIActionManager implements ActionManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
+    private volatile HubManager hubManager;
     private volatile VariableManager variableManager;
     private volatile EventManager eventManager;
+
+    public void start() {
+        String pluginId = FrameworkUtil.getBundle(getClass()).getSymbolicName();
+
+        // publish default actions
+        publishAction(new EmailAction(pluginId));
+        publishAction(new LogAction(pluginId));
+        publishAction(new SendCommandToDeviceAction(pluginId));
+    }
 
     @Override
     public void publishAction(HobsonAction action) {
@@ -49,9 +58,9 @@ public class OSGIActionManager implements ActionManager {
                 props.setProperty("pluginId", action.getPluginId());
                 props.setProperty("actionId", action.getId());
                 context.registerService(
-                        HobsonAction.class.getName(),
-                        action,
-                        props
+                    HobsonAction.class.getName(),
+                    action,
+                    props
                 );
 
                 // set the action's managers
@@ -71,7 +80,7 @@ public class OSGIActionManager implements ActionManager {
             ServiceReference[] refs = bundleContext.getServiceReferences(HobsonAction.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
                 HobsonAction action = (HobsonAction)bundleContext.getService(refs[0]);
-                action.execute(properties);
+                action.execute(hubManager, properties);
             } else {
                 throw new HobsonRuntimeException("Unable to find action with ID: " + actionId);
             }

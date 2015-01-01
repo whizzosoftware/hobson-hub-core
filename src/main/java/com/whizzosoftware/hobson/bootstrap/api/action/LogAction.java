@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
+import com.whizzosoftware.hobson.api.hub.HubManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,7 @@ public class LogAction extends AbstractHobsonAction {
     }
 
     @Override
-    public void execute(Map<String, Object> properties) {
+    public void execute(HubManager hubManager, Map<String, Object> properties) {
         String message = (String)properties.get("message");
         if (message != null) {
             logger.info(message);
