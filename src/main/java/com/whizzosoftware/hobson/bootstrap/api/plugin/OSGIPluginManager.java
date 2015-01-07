@@ -83,6 +83,16 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
+    public Object getPluginConfigurationProperty(String userId, String hubId, String pluginId, String name) {
+        Configuration c = getPluginConfiguration(userId, hubId, pluginId);
+        if (c != null) {
+            return c.getProperty(name);
+        } else {
+            return null;
+        }
+    }
+
+    @Override
     public Configuration getPluginConfiguration(String userId, String hubId, HobsonPlugin plugin) {
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(plugin.getId());
         Dictionary props = config.getProperties();
@@ -90,17 +100,17 @@ public class OSGIPluginManager implements PluginManager {
         // build a list of ConfigurationProperty objects
         Collection<ConfigurationPropertyMetaData> metas = plugin.getConfigurationPropertyMetaData();
 
-        List<ConfigurationProperty> properties = new ArrayList<>();
+        Configuration ci = new Configuration();
 
         for (ConfigurationPropertyMetaData meta : metas) {
             Object value = null;
             if (props != null) {
                 value = props.get(meta.getId());
             }
-            properties.add(new ConfigurationProperty(meta, value));
+            ci.addProperty(new ConfigurationProperty(meta, value));
         }
 
-        return new Configuration(properties);
+        return ci;
     }
 
     @Override

@@ -142,17 +142,17 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         HobsonDevice device = getDevice(userId, hubId, pluginId, deviceId);
         Collection<ConfigurationPropertyMetaData> metas = device.getConfigurationPropertyMetaData();
 
-        List<ConfigurationProperty> properties = new ArrayList<>();
+        Configuration ci = new Configuration();
 
         for (ConfigurationPropertyMetaData meta : metas) {
             Object value = null;
             if (props != null) {
                 value = props.get(meta.getId());
             }
-            properties.add(new ConfigurationProperty(meta, value));
+            ci.addProperty(new ConfigurationProperty(meta, value));
         }
 
-        return new Configuration(properties);
+        return ci;
     }
 
     @Override
