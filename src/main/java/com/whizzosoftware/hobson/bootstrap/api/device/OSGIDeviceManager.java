@@ -12,10 +12,10 @@ import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
-import com.whizzosoftware.hobson.api.device.DeviceConfigurationListener;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.DeviceNotFoundException;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
+import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -226,6 +226,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                         if (dic.get(name) == null || overwrite) {
                             dic.put(name, value);
                             config.update(dic);
+                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, dic));
                         }
                         return;
                     } else {
@@ -276,7 +277,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                         final HobsonDevice device = reg.getDevice();
                         reg.unregister();
                         // execute the device's shutdown method using its plugin event loop
-                        plugin.executeInEventLoop(new Runnable() {
+                        plugin.getRuntime().executeInEventLoop(new Runnable() {
                             @Override
                             public void run() {
                                 device.onShutdown();
@@ -290,30 +291,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             } finally {
                 serviceRegistrations.remove(plugin.getId());
             }
-        }
-    }
-
-    public void registerForDeviceConfigurationUpdates(String pluginId, final String deviceId, final DeviceConfigurationListener listener) {
-        synchronized (managedServiceRegistrations) {
-            String devicePID = getDevicePID(pluginId, deviceId);
-
-            Dictionary dic = new Hashtable();
-            dic.put("service.pid", devicePID);
-            dic.put("pluginId", pluginId);
-            dic.put("deviceId", deviceId);
-            BundleContext context = BundleUtil.getBundleForSymbolicName(pluginId).getBundleContext();
-            managedServiceRegistrations.put(
-                    devicePID,
-                    context.registerService(ManagedService.class.getName(), new ManagedService() {
-                        @Override
-                        public void updated(Dictionary config) throws org.osgi.service.cm.ConfigurationException {
-                            if (config == null) {
-                                config = new Hashtable();
-                            }
-                            listener.onDeviceConfigurationUpdate(deviceId, config);
-                        }
-                    }, dic)
-            );
         }
     }
 
@@ -336,7 +313,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                     if (device != null && device.getId().equals(deviceId)) {
                         dsr = reg;
                         // execute the device's shutdown method using its plugin event loop
-                        plugin.executeInEventLoop(new Runnable() {
+                        plugin.getRuntime().executeInEventLoop(new Runnable() {
                             @Override
                             public void run() {
                                 device.onShutdown();
@@ -399,27 +376,10 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             final HobsonDevice device = (HobsonDevice)bundleContext.getService(serviceEvent.getServiceReference());
             final HobsonPlugin plugin = pluginManager.getPlugin(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, device.getPluginId());
 
-            // register to monitor device configuration
-            registerForDeviceConfigurationUpdates(
-                    device.getPluginId(),
-                    device.getId(),
-                    new DeviceConfigurationListener() {
-                        @Override
-                        public void onDeviceConfigurationUpdate(final String deviceId, final Dictionary config) {
-                            plugin.executeInEventLoop(new Runnable() {
-                                @Override
-                                public void run() {
-                                    plugin.onDeviceConfigurationUpdate(deviceId, config);
-                                }
-                            });
-                        }
-                    }
-            );
-
             logger.debug("Device {} registered", device.getId());
 
             // execute the device's startup method using its plugin event loop
-            plugin.executeInEventLoop(new Runnable() {
+            plugin.getRuntime().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
                     device.onStartup();

@@ -334,7 +334,7 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public void fireVariableUpdateNotification(final String userId, final String hubId, HobsonPlugin plugin, final VariableUpdate update) {
-        plugin.executeInEventLoop(new Runnable() {
+        plugin.getRuntime().executeInEventLoop(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -348,7 +348,7 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public void fireVariableUpdateNotifications(final String userId, final String hubId, HobsonPlugin plugin, final List<VariableUpdate> updates) {
-        plugin.executeInEventLoop(new Runnable() {
+        plugin.getRuntime().executeInEventLoop(new Runnable() {
             @Override
             public void run() {
                 try {

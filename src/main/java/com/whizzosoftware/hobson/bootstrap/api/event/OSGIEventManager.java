@@ -43,6 +43,8 @@ public class OSGIEventManager implements EventManager {
             eventFactory.addEventClass(PresenceUpdateEvent.ID, PresenceUpdateEvent.class);
             eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
+            eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
+            eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
         } catch (NoSuchMethodException e) {
             logger.error("An error occurred during event registration", e);
         }

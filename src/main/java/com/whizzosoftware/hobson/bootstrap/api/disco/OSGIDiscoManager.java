@@ -61,7 +61,7 @@ public class OSGIDiscoManager implements DiscoManager {
                 for (ServiceReference ref : references) {
                     DeviceAdvertisement adv = (DeviceAdvertisement) context.getService(ref);
                     logger.debug("Resending device advertisement {} to plugin {}", adv.getId(), plugin);
-                    plugin.onHobsonEvent(new DeviceAdvertisementEvent(adv));
+                    plugin.getRuntime().onHobsonEvent(new DeviceAdvertisementEvent(adv));
                 }
             } else {
                 logger.debug("No device advertisements found to re-send");

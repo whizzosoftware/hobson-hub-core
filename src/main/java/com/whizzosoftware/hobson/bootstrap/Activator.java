@@ -302,6 +302,7 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(PluginManager.class.getName(), null);
         c.setImplementation(OSGIPluginManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
+        c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

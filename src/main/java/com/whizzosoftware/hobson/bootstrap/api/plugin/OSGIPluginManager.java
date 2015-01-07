@@ -13,6 +13,9 @@ import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
+import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
@@ -20,7 +23,6 @@ import org.apache.felix.bundlerepository.Resolver;
 import org.apache.felix.bundlerepository.Resource;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +44,7 @@ public class OSGIPluginManager implements PluginManager {
 
     volatile private BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
+    volatile private EventManager eventManager;
 
     private final static String DEVICE_PID_SEPARATOR = ".";
 
@@ -125,7 +128,7 @@ public class OSGIPluginManager implements PluginManager {
         }
 
         // save the new configuration
-        updateOSGIConfiguration(config, props);
+        updateOSGIConfiguration(pluginId, config, props);
     }
 
     @Override
@@ -138,7 +141,7 @@ public class OSGIPluginManager implements PluginManager {
         dic.put(name, value);
 
         // save the new configuration
-        updateOSGIConfiguration(config, dic);
+        updateOSGIConfiguration(pluginId, config, dic);
     }
 
     @Override
@@ -221,48 +224,6 @@ public class OSGIPluginManager implements PluginManager {
         }
     }
 
-    @Override
-    public void registerForPluginConfigurationUpdates(String pluginId, final PluginConfigurationListener listener) {
-        synchronized (managedServiceRegistrations) {
-            Dictionary props = new Hashtable();
-            props.put("service.pid", pluginId);
-            BundleContext context = BundleUtil.getBundleForSymbolicName(pluginId).getBundleContext();
-            managedServiceRegistrations.put(
-                    pluginId,
-                    context.registerService(ManagedService.class.getName(), new ManagedService() {
-                        @Override
-                        public void updated(Dictionary config) throws org.osgi.service.cm.ConfigurationException {
-                            if (config == null) {
-                                config = new Hashtable();
-                            }
-                            listener.onPluginConfigurationUpdate(config);
-                        }
-                    }, props)
-            );
-        }
-    }
-
-    @Override
-    public void unregisterForPluginConfigurationUpdates(String pluginId, PluginConfigurationListener listener) {
-        synchronized (managedServiceRegistrations) {
-            // build a list of keys that need to be unregistered and removed
-            List<String> removalSet = new ArrayList<>();
-            String pluginDevicePrefix = pluginId + DEVICE_PID_SEPARATOR;
-            for (String key : managedServiceRegistrations.keySet()) {
-                if (key.equals(pluginId) || key.startsWith(pluginDevicePrefix)) {
-                    removalSet.add(key);
-                }
-            }
-
-            // unregister and remove keys
-            for (String key : removalSet) {
-                ServiceRegistration reg = managedServiceRegistrations.get(key);
-                reg.unregister();
-                managedServiceRegistrations.remove(key);
-            }
-        }
-    }
-
     private org.osgi.service.cm.Configuration getOSGIConfiguration(String pluginId) {
         if (bundleContext != null) {
             try {
@@ -289,9 +250,10 @@ public class OSGIPluginManager implements PluginManager {
         return d;
     }
 
-    private void updateOSGIConfiguration(org.osgi.service.cm.Configuration config, Dictionary d) {
+    private void updateOSGIConfiguration(String pluginId, org.osgi.service.cm.Configuration config, Dictionary d) {
         try {
             config.update(d);
+            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginConfigurationUpdateEvent(pluginId, d));
         } catch (IOException e) {
             throw new ConfigurationException("Error updating plugin configuration", e);
         }
