@@ -19,3 +19,5 @@ These include:
 * Hub network advertisement via ZeroConf (JmDNS)
 * Manager classes used by all Hobson plugins
 * A RESTful API for Hub control and management
+
+[![Build Status](https://api.travis-ci.org/whizzosoftware/hobson-hub-core.png)](https://api.travis-ci.org/whizzosoftware/hobson-hub-core.png)

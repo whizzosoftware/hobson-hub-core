@@ -284,12 +284,18 @@
     </build>
     <repositories>
         <repository>
+            <id>snapshots</id>
+            <url>http://oss.jfrog.org/artifactory/libs-snapshot</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+        </repository>
+        <repository>
+            <id>hobson-releases</id>
+            <url>http://dl.bintray.com/whizzosoftware/maven</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>
-            <id>hobson-releases</id>
-            <name>libs-release</name>
-            <url>http://dl.bintray.com/whizzosoftware/maven</url>
         </repository>
         <repository>
             <id>maven-restlet</id>
@@ -310,6 +316,11 @@
         <tag>HEAD</tag>
     </scm>
     <distributionManagement>
+        <snapshotRepository>
+            <id>oss-jfrog-artifactory</id>
+            <name>oss-jfrog-artifactory-snapshots</name>
+            <url>http://oss.jfrog.org/artifactory/oss-snapshot-local</url>
+        </snapshotRepository>
         <repository>
             <id>bintray</id>
             <url>https://api.bintray.com/maven/whizzosoftware/maven/hobson-hub-core</url>
