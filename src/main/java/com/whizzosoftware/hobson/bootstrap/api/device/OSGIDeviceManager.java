@@ -13,6 +13,7 @@ import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.device.DevicePublisher;
 import com.whizzosoftware.hobson.api.device.DeviceNotFoundException;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
 import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
@@ -28,7 +29,6 @@ import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +40,7 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIDeviceManager implements DeviceManager, ServiceListener {
+public class OSGIDeviceManager implements DeviceManager, DevicePublisher, ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final static String DEVICE_PID_SEPARATOR = ".";
@@ -178,10 +178,15 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
+    public DevicePublisher getPublisher() {
+        return this;
+    }
+
+    @Override
     public Map<String, Collection<TemporalValue>> getDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, long endTime, TelemetryInterval interval) {
         Map<String,Collection<TemporalValue>> results = new HashMap<>();
         HobsonDevice device = getDevice(userId, hubId, pluginId, deviceId);
-        String[] variables = device.getTelemetryVariableNames();
+        String[] variables = device.getRuntime().getTelemetryVariableNames();
         if (variables != null) {
             for (String varName : variables) {
                 results.put(varName, variableManager.getDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, endTime, interval));
@@ -280,7 +285,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                         plugin.getRuntime().executeInEventLoop(new Runnable() {
                             @Override
                             public void run() {
-                                device.onShutdown();
+                                device.getRuntime().onShutdown();
                                 eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStoppedEvent(device));
                             }
                         });
@@ -316,7 +321,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                         plugin.getRuntime().executeInEventLoop(new Runnable() {
                             @Override
                             public void run() {
-                                device.onShutdown();
+                                device.getRuntime().onShutdown();
                                 eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStoppedEvent(reg.getDevice()));
                             }
                         });
@@ -382,7 +387,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             plugin.getRuntime().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                    device.onStartup();
+                    device.getRuntime().onStartup();
                     eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStartedEvent(device));
                 }
             });
