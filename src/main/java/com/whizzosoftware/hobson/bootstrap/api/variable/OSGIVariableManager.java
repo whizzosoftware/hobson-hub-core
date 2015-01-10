@@ -35,7 +35,7 @@ import static org.rrd4j.ConsolFun.AVERAGE;
  *
  * @author Dan Noguerol
  */
-public class OSGIVariableManager implements VariableManager {
+public class OSGIVariableManager implements VariableManager, VariablePublisher {
     private static final Logger logger = LoggerFactory.getLogger(OSGIVariableManager.class);
 
     private volatile EventManager eventManager;
@@ -330,6 +330,11 @@ public class OSGIVariableManager implements VariableManager {
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error retrieving device telemetry", e);
         }
+    }
+
+    @Override
+    public VariablePublisher getPublisher() {
+        return this;
     }
 
     @Override
