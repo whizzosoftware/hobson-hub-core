@@ -149,6 +149,12 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             if (props != null) {
                 value = props.get(meta.getId());
             }
+
+            // if the name property is null, use the default device name
+            if ("name".equals(meta.getId()) && value == null) {
+                value = device.getName();
+            }
+
             ci.addProperty(new ConfigurationProperty(meta, value));
         }
 
