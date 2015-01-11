@@ -139,10 +139,10 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             @Override
             public void run() {
                 try {
-                    if (event instanceof PluginConfigurationUpdateEvent) {
+                    if (event instanceof PluginConfigurationUpdateEvent && plugin.getId().equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
                         PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
                         plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
-                    } else if (event instanceof DeviceConfigurationUpdateEvent) {
+                    } else if (event instanceof DeviceConfigurationUpdateEvent && plugin.getId().equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
                         DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
                         plugin.getRuntime().onDeviceConfigurationUpdate(dcue.getDeviceId(), dcue.getConfiguration());
                     } else {
