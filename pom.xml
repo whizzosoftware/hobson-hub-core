@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
 	<groupId>com.whizzosoftware.hobson.hub</groupId>
     <artifactId>hobson-hub-core</artifactId>
-    <version>0.2.2-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>Hobson Hub Core</name>
     <description>Provides foundational capabilities for the Hobson Hub.</description>
@@ -155,12 +155,12 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api</artifactId>
-            <version>0.2.1</version>
+            <version>0.3.0</version>
         </dependency>
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-restv1</artifactId>
-            <version>0.2.1</version>
+            <version>0.3.0</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -260,7 +260,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
+                        <Import-Package>org.osgi.framework,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,com.ning.http.client.*,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
                         <Bundle-Activator>com.whizzosoftware.hobson.bootstrap.Activator</Bundle-Activator>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*</Export-Package>
