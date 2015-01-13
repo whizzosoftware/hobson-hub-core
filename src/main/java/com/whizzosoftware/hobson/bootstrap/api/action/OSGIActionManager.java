@@ -49,16 +49,16 @@ public class OSGIActionManager implements ActionManager {
 
         if (context != null) {
             // register device as a service
-            Properties props = new Properties();
+            Dictionary<String,String> props = new Hashtable<>();
             if (action.getPluginId() == null) {
                 logger.error("Unable to publish action with null plugin ID");
             } else if (action.getId() == null) {
                 logger.error("Unable to publish action with null ID");
             } else {
-                props.setProperty("pluginId", action.getPluginId());
-                props.setProperty("actionId", action.getId());
+                props.put("pluginId", action.getPluginId());
+                props.put("actionId", action.getId());
                 context.registerService(
-                    HobsonAction.class.getName(),
+                    HobsonAction.class,
                     action,
                     props
                 );
@@ -111,7 +111,7 @@ public class OSGIActionManager implements ActionManager {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             Filter filter = context.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + pluginId + ")(actionId=" + actionId + "))");
-            ServiceReference[] references = context.getServiceReferences(null, filter.toString());
+            ServiceReference[] references = context.getServiceReferences((String)null, filter.toString());
             if (references != null && references.length > 0) {
                 return (HobsonAction)context.getService(references[0]);
             }

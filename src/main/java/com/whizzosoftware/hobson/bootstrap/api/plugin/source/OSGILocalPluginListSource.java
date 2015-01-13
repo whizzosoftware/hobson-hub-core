@@ -10,7 +10,6 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
-import com.whizzosoftware.hobson.api.plugin.PluginStatus;
 import com.whizzosoftware.hobson.api.plugin.PluginType;
 import org.osgi.framework.*;
 import org.slf4j.Logger;

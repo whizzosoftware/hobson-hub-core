@@ -42,9 +42,9 @@ public class OSGITaskManager implements TaskManager {
 
         if (context != null) {
             // register provider as a service
-            Properties props = new Properties();
-            props.setProperty("pluginId", provider.getPluginId());
-            props.setProperty("providerId", provider.getId());
+            Dictionary<String,String> props = new Hashtable<>();
+            props.put("pluginId", provider.getPluginId());
+            props.put("providerId", provider.getId());
             ServiceRegistration providerReg = context.registerService(
                 TaskProvider.class.getName(),
                 provider,
@@ -60,7 +60,7 @@ public class OSGITaskManager implements TaskManager {
     public boolean hasTaskProvider(String userId, String hubId, String pluginId, String providerId) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + TaskProvider.class.getName() + ")(pluginId=" + pluginId + ")(providerId=" + providerId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + TaskProvider.class.getName() + ")(pluginId=" + pluginId + ")(providerId=" + providerId + "))");
             if (references != null && references.length == 1) {
                 return true;
             } else if (references != null && references.length > 1) {

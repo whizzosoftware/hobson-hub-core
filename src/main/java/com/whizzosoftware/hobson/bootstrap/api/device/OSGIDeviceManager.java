@@ -93,7 +93,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             List<HobsonDevice> results = new ArrayList<HobsonDevice>();
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + "))");
             if (references != null) {
                 for (ServiceReference ref : references) {
                     results.add((HobsonDevice)context.getService(ref));
@@ -120,7 +120,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     public HobsonDevice getDevice(String userId, String hubId, String pluginId, String deviceId) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + ")(deviceId=" + deviceId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + ")(deviceId=" + deviceId + "))");
             if (references != null && references.length == 1) {
                 return (HobsonDevice)context.getService(references[0]);
             } else if (references != null && references.length > 1) {
@@ -205,7 +205,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     public boolean hasDevice(String userId, String hubId, String pluginId, String deviceId) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + ")(deviceId=" + deviceId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + pluginId + ")(deviceId=" + deviceId + "))");
             if (references != null && references.length == 1) {
                 return true;
             } else if (references != null && references.length > 1) {
@@ -266,9 +266,9 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
 
         if (context != null) {
             // register device as a service
-            Properties props = new Properties();
-            props.setProperty("pluginId", device.getPluginId());
-            props.setProperty("deviceId", device.getId());
+            Dictionary<String,String> props = new Hashtable<>();
+            props.put("pluginId", device.getPluginId());
+            props.put("deviceId", device.getId());
             ServiceRegistration deviceReg = context.registerService(
                 HobsonDevice.class.getName(),
                 device,

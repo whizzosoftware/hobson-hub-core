@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
 import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
-import com.whizzosoftware.hobson.bootstrap.api.plugin.source.PluginListSource;
 
 import java.util.HashMap;
 import java.util.Map;

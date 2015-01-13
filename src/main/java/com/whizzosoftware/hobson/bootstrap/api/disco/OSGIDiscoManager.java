@@ -56,7 +56,7 @@ public class OSGIDiscoManager implements DiscoManager {
         try {
             BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
             HobsonPlugin plugin = pluginManager.getPlugin(userId, hubId, pluginId);
-            ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
             if (references != null && references.length > 0) {
                 for (ServiceReference ref : references) {
                     DeviceAdvertisement adv = (DeviceAdvertisement) context.getService(ref);
@@ -78,7 +78,7 @@ public class OSGIDiscoManager implements DiscoManager {
             try {
                 // check if we've seen this advertisement before
                 BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-                ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + "))");
+                ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + "))");
                 if (references == null || references.length == 0) {
                     // publish the advertisement as a service if we haven't already done so
                     Hashtable props = new Hashtable();

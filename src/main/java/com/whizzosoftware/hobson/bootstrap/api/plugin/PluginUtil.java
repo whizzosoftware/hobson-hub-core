@@ -30,7 +30,7 @@ public class PluginUtil {
     static public HobsonPlugin getPlugin(BundleContext context, String pluginId) {
         try {
             if (context != null) {
-                ServiceReference[] references = context.getServiceReferences(null, "(&(objectClass=" + HobsonPlugin.class.getName() + ")(pluginId=" + pluginId + "))");
+                ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + ")(pluginId=" + pluginId + "))");
                 if (references != null && references.length == 1) {
                     return (HobsonPlugin) context.getService(references[0]);
                 } else if (references != null && references.length > 1) {

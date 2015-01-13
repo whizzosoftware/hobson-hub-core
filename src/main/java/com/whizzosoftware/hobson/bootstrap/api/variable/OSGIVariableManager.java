@@ -101,10 +101,10 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
         }
 
         // publish the variable
-        Properties props = new Properties();
-        props.setProperty("pluginId", pluginId);
-        props.setProperty("deviceId", deviceId);
-        props.setProperty("name", name);
+        Dictionary<String,String> props = new Hashtable<>();
+        props.put("pluginId", pluginId);
+        props.put("deviceId", deviceId);
+        props.put("name", name);
         addVariableRegistration(pluginId, deviceId, name, getBundleContext().registerService(
             HobsonVariable.class.getName(),
             new HobsonVariableImpl(name, value, mask),
@@ -222,7 +222,7 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
-                ServiceReference[] refs = bundleContext.getServiceReferences(null, "(&(objectClass=" +
+                ServiceReference[] refs = bundleContext.getServiceReferences((String)null, "(&(objectClass=" +
                     HobsonVariable.class.getName() +
                     ")(pluginId=" +
                     pluginId +
@@ -251,7 +251,7 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
-                ServiceReference[] refs = bundleContext.getServiceReferences(null, "(&(objectClass=" +
+                ServiceReference[] refs = bundleContext.getServiceReferences((String)null, "(&(objectClass=" +
                     HobsonVariable.class.getName() +
                     ")(pluginId=" +
                     pluginId +
