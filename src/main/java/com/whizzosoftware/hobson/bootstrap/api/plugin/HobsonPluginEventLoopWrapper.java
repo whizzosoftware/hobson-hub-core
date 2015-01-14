@@ -148,7 +148,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                     } else {
                         plugin.getRuntime().onHobsonEvent(event);
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.error("An error occurred processing an event", e);
                 }
             }
