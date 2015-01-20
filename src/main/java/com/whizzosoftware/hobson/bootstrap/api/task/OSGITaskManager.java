@@ -134,6 +134,22 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
+    public void updateTask(String userId, String hubId, String providerId, String taskId, Object task) {
+        try {
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
+            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
+            if (refs != null && refs.length == 1) {
+                TaskProvider provider = (TaskProvider)bundleContext.getService(refs[0]);
+                provider.updateTask(taskId, task);
+            } else {
+                throw new TaskException("Unable to find unique task provider for id: " + providerId);
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new TaskException("Error obtaining task providers", e);
+        }
+    }
+
+    @Override
     public void deleteTask(String userId, String hubId, String providerId, String taskId) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
