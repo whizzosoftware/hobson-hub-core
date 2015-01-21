@@ -33,6 +33,7 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     private static final String TURN_ON = "turnOn";
     private static final String SET_LEVEL = "setLevel";
     private static final String SET_TARGET_TEMP_F = "setTargetTempF";
+    private static final String SET_COLOR = "setColor";
 
     private final Map<String,ActionMetaDataEnumValue> metaEnumValues = new HashMap<>();
 
@@ -66,6 +67,7 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
         metaEnumValues.put(TURN_ON, new ActionMetaDataEnumValue(TURN_ON, "Turn on", null, VariableConstants.ON));
         metaEnumValues.put(SET_LEVEL, new ActionMetaDataEnumValue(SET_LEVEL, "Set level", new ActionMetaDataEnumValueParam("Level", "A percentage (0-100) for the device's level", ActionMetaData.Type.NUMBER), VariableConstants.LEVEL));
         metaEnumValues.put(SET_TARGET_TEMP_F, new ActionMetaDataEnumValue(SET_TARGET_TEMP_F, "Set target temperature (F)", new ActionMetaDataEnumValueParam("Temperature", "The target temperature in degrees fahrenheit", ActionMetaData.Type.NUMBER), VariableConstants.TARGET_TEMP_F));
+        metaEnumValues.put(SET_COLOR, new ActionMetaDataEnumValue(SET_COLOR, "Set color", new ActionMetaDataEnumValueParam("Color", "The color to set", ActionMetaData.Type.COLOR), VariableConstants.COLOR));
     }
 
     protected VariableUpdate createVariableUpdate(Map<String, Object> properties) {
@@ -95,6 +97,8 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
         } else if (SET_LEVEL.equals(commandId)) {
             return param;
         } else if (SET_TARGET_TEMP_F.equals(commandId)) {
+            return param;
+        } else if (SET_COLOR.equals(commandId)) {
             return param;
         } else {
             throw new IllegalArgumentException("Invalid commandId: " + commandId);
