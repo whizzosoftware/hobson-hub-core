@@ -252,6 +252,11 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
 
     @Override
     synchronized public void publishDevice(final HobsonPlugin plugin, final HobsonDevice device) {
+        publishDevice(plugin, device, false);
+    }
+
+    @Override
+    synchronized public void publishDevice(HobsonPlugin plugin, HobsonDevice device, boolean republish) {
         BundleContext context = BundleUtil.getBundleContext(getClass(), device.getPluginId());
 
         // check that the device ID is legal
@@ -259,9 +264,16 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             throw new HobsonRuntimeException("Unable to publish device \"" + device.getId() + "\": the ID is either null or contains an invalid character");
         }
 
-        // check that the device doesn't already exist
+        // check if the device already exists
         if (hasDevice(UserUtil.DEFAULT_HUB, UserUtil.DEFAULT_USER, device.getPluginId(), device.getId())) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getPluginId() + "." + device.getId());
+            // if it does and it's an explicit re-publish, remove the current device
+            if (republish) {
+                logger.debug("Removing existing device: {}:{}", device.getPluginId(), device.getId());
+                removeDeviceRegistration(device.getPluginId(), device.getId());
+            // if it does and it's not an explicit re-publish, throw an exception
+            } else {
+                throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getPluginId() + "." + device.getId());
+            }
         }
 
         if (context != null) {
@@ -269,12 +281,15 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             Dictionary<String,String> props = new Hashtable<>();
             props.put("pluginId", device.getPluginId());
             props.put("deviceId", device.getId());
+
+            logger.debug("Registering new device: {}:{}", device.getPluginId(), device.getId());
+
             ServiceRegistration deviceReg = context.registerService(
-                HobsonDevice.class.getName(),
-                device,
-                props
+                    HobsonDevice.class.getName(),
+                    device,
+                    props
             );
-            addServiceRegistration(device.getPluginId(), deviceReg);
+            addDeviceRegistration(device.getPluginId(), deviceReg);
         }
     }
 
@@ -350,13 +365,30 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
         setDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "name", name, true);
     }
 
-    synchronized private void addServiceRegistration(String pluginId, ServiceRegistration deviceRegistration) {
+    synchronized private void addDeviceRegistration(String pluginId, ServiceRegistration deviceRegistration) {
         List<DeviceServiceRegistration> regs = serviceRegistrations.get(pluginId);
         if (regs == null) {
             regs = new ArrayList<>();
             serviceRegistrations.put(pluginId, regs);
         }
         regs.add(new DeviceServiceRegistration(deviceRegistration));
+    }
+
+    synchronized private void removeDeviceRegistration(String pluginId, String deviceId) {
+        DeviceServiceRegistration dr = null;
+        List<DeviceServiceRegistration> regs = serviceRegistrations.get(pluginId);
+        if (regs != null) {
+            for (DeviceServiceRegistration r : regs) {
+                if (r.getDevice().getId().equals(deviceId)) {
+                    dr = r;
+                    break;
+                }
+            }
+            if (dr != null) {
+                dr.unregister();
+                regs.remove(dr);
+            }
+        }
     }
 
     private String getDevicePID(String pluginId, String deviceId) {
