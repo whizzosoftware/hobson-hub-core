@@ -253,7 +253,7 @@ public class OSGIPluginManager implements PluginManager {
     private void updateOSGIConfiguration(String pluginId, org.osgi.service.cm.Configuration config, Dictionary d) {
         try {
             config.update(d);
-            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginConfigurationUpdateEvent(pluginId, d));
+            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginConfigurationUpdateEvent(pluginId, new Configuration(d)));
         } catch (IOException e) {
             throw new ConfigurationException("Error updating plugin configuration", e);
         }

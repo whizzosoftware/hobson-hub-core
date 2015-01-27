@@ -237,7 +237,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
                         if (dic.get(name) == null || overwrite) {
                             dic.put(name, value);
                             config.update(dic);
-                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, dic));
+                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, new Configuration(dic)));
                         }
                         return;
                     } else {
@@ -425,7 +425,8 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             plugin.getRuntime().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                    device.getRuntime().onStartup();
+                    Configuration config = getDeviceConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, device.getPluginId(), device.getId());
+                    device.getRuntime().onStartup(getDeviceConfiguration(config));
                     eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStartedEvent(device));
                 }
             });

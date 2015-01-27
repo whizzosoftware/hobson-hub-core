@@ -1,5 +1,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.util;
 
+import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.device.AbstractHobsonDevice;
 import com.whizzosoftware.hobson.api.device.DeviceType;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
@@ -88,7 +89,7 @@ public class EventUtilTest {
         }
 
         @Override
-        public void onStartup() {
+        public void onStartup(Configuration config) {
 
         }
 
