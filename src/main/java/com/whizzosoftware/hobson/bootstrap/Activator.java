@@ -185,16 +185,20 @@ public class Activator extends DependencyActivatorBase {
         applicationTracker = new ServiceTracker(context, Application.class.getName(), null) {
             @Override
             public Object addingService(ServiceReference ref) {
+                logger.debug("Detected addition of Restlet service: {}", ref);
                 registerRestletApplication(ref);
-                return null;
+                return super.addingService(ref);
             }
 
             @Override
             public void removedService(ServiceReference ref, Object service) {
+                logger.debug("Detected removal of Restlet service: {}", service);
                 if (service instanceof Application) {
-                    logger.warn("Removing Restlet application: {}", service);
-                    component.getDefaultHost().detach((Application)service);
+                    unregisterRestletApplication((Application)service);
+                } else {
+                    logger.debug("Unknown Restlet service unregistered: {}", service);
                 }
+                super.removedService(ref, service);
             }
         };
         applicationTracker.open();
@@ -216,6 +220,7 @@ public class Activator extends DependencyActivatorBase {
 
             @Override
             public void removedService(ServiceReference ref, Object service) {
+                super.removedService(ref, service);
             }
         };
         presenceTracker.open();
@@ -354,7 +359,12 @@ public class Activator extends DependencyActivatorBase {
 
     private void registerRestletApplication(ServiceReference ref) {
         if (ref != null) {
-            registerRestletApplication((Application)getContext().getService(ref), (String)ref.getProperty("path"));
+            Object o = getContext().getService(ref);
+            if (o instanceof Application) {
+                registerRestletApplication((Application)o, (String)ref.getProperty("path"));
+            } else {
+                logger.debug("Ignoring unknown published Restlet service: {}", o);
+            }
         }
     }
 
@@ -365,6 +375,11 @@ public class Activator extends DependencyActivatorBase {
         } else {
             logger.warn("Restlet application {} registered with no path; ignoring", a);
         }
+    }
+
+    private void unregisterRestletApplication(Application a) {
+        logger.debug("Unregistering Restlet application {}", a);
+        component.getDefaultHost().detach(a);
     }
 
     private BundleContext getContext() {
