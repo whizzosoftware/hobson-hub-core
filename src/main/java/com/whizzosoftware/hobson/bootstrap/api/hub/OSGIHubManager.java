@@ -15,18 +15,23 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
+import com.whizzosoftware.hobson.api.image.ImageInputStream;
+import com.whizzosoftware.hobson.api.image.ImageMediaTypes;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.FileUtils;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -42,6 +47,9 @@ public class OSGIHubManager implements HubManager {
     public static final String ADMIN_PASSWORD = "admin.password";
     public static final String SETUP_COMPLETE = "setup.complete";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
+
+    private static final String HUB_JPEG = "hub.jpg";
+    private static final String HUB_PNG = "hub.png";
 
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
@@ -130,6 +138,52 @@ public class OSGIHubManager implements HubManager {
             updateConfiguration(config, d);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub location", e);
+        }
+    }
+
+    @Override
+    public ImageInputStream getHubImage() {
+        BundleContext bc = FrameworkUtil.getBundle(getClass()).getBundleContext();
+
+        // look for a hub image
+        File file = bc.getDataFile(HUB_JPEG);
+        String mediaType = ImageMediaTypes.JPEG;
+        if (!file.exists()) {
+            file = bc.getDataFile(HUB_PNG);
+            mediaType = ImageMediaTypes.PNG;
+            if (!file.exists()) {
+                throw new HobsonNotFoundException("Hub image not found");
+            }
+        }
+
+        try {
+            return new ImageInputStream(mediaType, new FileInputStream(file));
+        } catch (FileNotFoundException e) {
+            throw new HobsonNotFoundException("No hub image found", e);
+        }
+    }
+
+    @Override
+    public void setHubImage(ImageInputStream iis) {
+        String filename = null;
+
+        if (iis.getMediaType().equalsIgnoreCase(ImageMediaTypes.JPEG)) {
+            filename = HUB_JPEG;
+        } else if (iis.getMediaType().equalsIgnoreCase(ImageMediaTypes.PNG)) {
+            filename = HUB_PNG;
+        }
+
+        if (filename != null) {
+            try {
+                FileUtils.copyInputStreamToFile(
+                    iis.getInputStream(),
+                    FrameworkUtil.getBundle(getClass()).getBundleContext().getDataFile(filename)
+                );
+            } catch (IOException e) {
+                throw new HobsonRuntimeException("Error writing hub image", e);
+            }
+        } else {
+            throw new HobsonRuntimeException("Unsupported image media type");
         }
     }
 
