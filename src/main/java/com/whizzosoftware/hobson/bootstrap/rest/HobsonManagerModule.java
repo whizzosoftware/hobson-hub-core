@@ -14,6 +14,7 @@ import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
@@ -50,6 +51,11 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public EventManager provideEventManager() {
         return (EventManager)getManager(EventManager.class);
+    }
+
+    @Provides
+    public ImageManager provideImageManager() {
+        return (ImageManager)getManager(ImageManager.class);
     }
 
     @Provides

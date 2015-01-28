@@ -13,6 +13,7 @@ import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
@@ -23,6 +24,7 @@ import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
 import com.whizzosoftware.hobson.bootstrap.api.disco.OSGIDiscoManager;
 import com.whizzosoftware.hobson.bootstrap.api.event.OSGIEventManager;
 import com.whizzosoftware.hobson.bootstrap.api.hub.OSGIHubManager;
+import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
@@ -296,6 +298,13 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIHubManager.class);
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        manager.add(c);
+        registeredComponents.add(c);
+
+        // register image manager
+        c = manager.createComponent();
+        c.setInterface(ImageManager.class.getName(), null);
+        c.setImplementation(OSGIImageManager.class);
         manager.add(c);
         registeredComponents.add(c);
 

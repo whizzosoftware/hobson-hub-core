@@ -48,9 +48,6 @@ public class OSGIHubManager implements HubManager {
     public static final String SETUP_COMPLETE = "setup.complete";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
 
-    private static final String HUB_JPEG = "hub.jpg";
-    private static final String HUB_PNG = "hub.png";
-
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
 
@@ -138,52 +135,6 @@ public class OSGIHubManager implements HubManager {
             updateConfiguration(config, d);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub location", e);
-        }
-    }
-
-    @Override
-    public ImageInputStream getHubImage() {
-        BundleContext bc = FrameworkUtil.getBundle(getClass()).getBundleContext();
-
-        // look for a hub image
-        File file = bc.getDataFile(HUB_JPEG);
-        String mediaType = ImageMediaTypes.JPEG;
-        if (!file.exists()) {
-            file = bc.getDataFile(HUB_PNG);
-            mediaType = ImageMediaTypes.PNG;
-            if (!file.exists()) {
-                throw new HobsonNotFoundException("Hub image not found");
-            }
-        }
-
-        try {
-            return new ImageInputStream(mediaType, new FileInputStream(file));
-        } catch (FileNotFoundException e) {
-            throw new HobsonNotFoundException("No hub image found", e);
-        }
-    }
-
-    @Override
-    public void setHubImage(ImageInputStream iis) {
-        String filename = null;
-
-        if (iis.getMediaType().equalsIgnoreCase(ImageMediaTypes.JPEG)) {
-            filename = HUB_JPEG;
-        } else if (iis.getMediaType().equalsIgnoreCase(ImageMediaTypes.PNG)) {
-            filename = HUB_PNG;
-        }
-
-        if (filename != null) {
-            try {
-                FileUtils.copyInputStreamToFile(
-                    iis.getInputStream(),
-                    FrameworkUtil.getBundle(getClass()).getBundleContext().getDataFile(filename)
-                );
-            } catch (IOException e) {
-                throw new HobsonRuntimeException("Error writing hub image", e);
-            }
-        } else {
-            throw new HobsonRuntimeException("Unsupported image media type");
         }
     }
 
