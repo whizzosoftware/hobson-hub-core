@@ -124,7 +124,9 @@ public class OSGIHubManager implements HubManager {
         try {
             Configuration config = getConfiguration();
             Dictionary d = getConfigurationProperties(config);
-            d.put(HubLocation.PROP_LOCATION_STRING, location.getText());
+            if (location.getText() != null) {
+                d.put(HubLocation.PROP_LOCATION_STRING, location.getText());
+            }
             if (location.hasLatitude()) {
                 d.put(HubLocation.PROP_LATITUDE, location.getLatitude());
             }
