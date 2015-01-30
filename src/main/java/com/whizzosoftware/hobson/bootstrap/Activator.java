@@ -131,7 +131,7 @@ public class Activator extends DependencyActivatorBase {
                 }
 
                 // create the authenticator
-                ChallengeAuthenticator authenticator = new ChallengeAuthenticator(server.getContext(), ChallengeScheme.HTTP_BASIC, "Hobson");
+                ChallengeAuthenticator authenticator = new ChallengeAuthenticator(server.getContext(), ChallengeScheme.HTTP_BASIC, "Hobson (default is admin/admin)");
                 authenticator.setVerifier(new HobsonVerifier(hubManager));
 
                 try {
