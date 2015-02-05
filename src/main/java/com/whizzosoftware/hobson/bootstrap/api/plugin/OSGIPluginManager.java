@@ -109,8 +109,20 @@ public class OSGIPluginManager implements PluginManager {
             Object value = null;
             if (props != null) {
                 value = props.get(meta.getId());
+                props.remove(meta.getId());
             }
             ci.addProperty(new ConfigurationProperty(meta, value));
+        }
+
+        // On first run, the plugin will not have had its onStartup() method called and so may not have registered
+        // configuration meta data yet. If there are configuration properties set for the plugin that don't have
+        // corresponding meta data, create some "raw" meta data for it and add it to the returned configuration
+        if (props != null && props.size() > 0) {
+            Enumeration e = props.keys();
+            while (e.hasMoreElements()) {
+                String key = (String)e.nextElement();
+                ci.addProperty(new ConfigurationProperty(new ConfigurationPropertyMetaData(key), props.get(key)));
+            }
         }
 
         return ci;
