@@ -15,6 +15,7 @@ import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
@@ -28,6 +29,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -126,6 +129,30 @@ public class OSGIPluginManager implements PluginManager {
         }
 
         return ci;
+    }
+
+    @Override
+    public ImageInputStream getPluginIcon(String userId, String hubId, String pluginId) {
+        try {
+            Bundle bundle = BundleUtil.getBundleForSymbolicName(pluginId);
+            URL url = bundle.getResource("icon.jpg");
+            InputStream is = null;
+            if (url != null) {
+                is = url.openStream();
+            } else {
+                url = FrameworkUtil.getBundle(getClass()).getResource("default-plugin-icon.jpg");
+                if (url != null) {
+                    is = url.openStream();
+                }
+            }
+            if (is != null) {
+                return new ImageInputStream("image/jpeg", is);
+            } else {
+                return null;
+            }
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Unable to read plugin icon", e);
+        }
     }
 
     @Override
@@ -265,7 +292,7 @@ public class OSGIPluginManager implements PluginManager {
     private void updateOSGIConfiguration(String pluginId, org.osgi.service.cm.Configuration config, Dictionary d) {
         try {
             config.update(d);
-            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginConfigurationUpdateEvent(pluginId, d));
+            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginConfigurationUpdateEvent(pluginId, new Configuration(d)));
         } catch (IOException e) {
             throw new ConfigurationException("Error updating plugin configuration", e);
         }

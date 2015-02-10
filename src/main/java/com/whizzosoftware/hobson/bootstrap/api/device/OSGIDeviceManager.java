@@ -237,7 +237,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
                         if (dic.get(name) == null || overwrite) {
                             dic.put(name, value);
                             config.update(dic);
-                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, dic));
+                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, new Configuration(dic)));
                         }
                         return;
                     } else {
@@ -425,14 +425,8 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             plugin.getRuntime().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                    // invoke the plugin's onStartup() lifecycle callback
-                    device.getRuntime().onStartup();
-
-                    // if the device has configuration, pass it to the plugin via its lifecycle callback
-                    Configuration config = getDeviceConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, device.getPluginId(), device.getId());
-                    if (config != null) {
-                        device.getRuntime().onDeviceConfigurationUpdate(config.getPropertyDictionary());
-                    }
+                    // invoke the device's onStartup() lifecycle callback
+                    device.getRuntime().onStartup(getDeviceConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, device.getPluginId(), device.getId()));
 
                     // post a device started event
                     eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStartedEvent(device));

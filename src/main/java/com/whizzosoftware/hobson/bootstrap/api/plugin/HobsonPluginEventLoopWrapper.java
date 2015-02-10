@@ -231,7 +231,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 @Override
                 public void run() {
                     // start the plugin
-                    getRuntime().onStartup(pluginManager.getPluginConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin).getPropertyDictionary());
+                    getRuntime().onStartup(pluginManager.getPluginConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin));
 
                     // post plugin started event
                     eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginStartedEvent(getId()));

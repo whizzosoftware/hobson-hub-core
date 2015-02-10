@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
+import com.whizzosoftware.hobson.api.action.ActionPublisher;
 import com.whizzosoftware.hobson.api.action.HobsonAction;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
@@ -26,7 +27,7 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIActionManager implements ActionManager {
+public class OSGIActionManager implements ActionManager, ActionPublisher {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
@@ -34,17 +35,19 @@ public class OSGIActionManager implements ActionManager {
     private volatile VariableManager variableManager;
     private volatile EventManager eventManager;
 
+    private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
+
     public void start() {
         String pluginId = FrameworkUtil.getBundle(getClass()).getSymbolicName();
 
         // publish default actions
-        publishAction(new EmailAction(pluginId));
-        publishAction(new LogAction(pluginId));
-        publishAction(new SendCommandToDeviceAction(pluginId));
+        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new EmailAction(pluginId));
+        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new LogAction(pluginId));
+        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new SendCommandToDeviceAction(pluginId));
     }
 
     @Override
-    public void publishAction(HobsonAction action) {
+    public void publishAction(String userId, String hubId, HobsonAction action) {
         BundleContext context = BundleUtil.getBundleContext(getClass(), action.getPluginId());
 
         if (context != null) {
@@ -57,11 +60,21 @@ public class OSGIActionManager implements ActionManager {
             } else {
                 props.put("pluginId", action.getPluginId());
                 props.put("actionId", action.getId());
-                context.registerService(
-                    HobsonAction.class,
-                    action,
-                    props
-                );
+
+                synchronized (serviceRegistrationMap) {
+                    List<ServiceRegistration> srl = serviceRegistrationMap.get(action.getPluginId());
+                    if (srl == null) {
+                        srl = new ArrayList<>();
+                        serviceRegistrationMap.put(action.getPluginId(), srl);
+                    }
+                    srl.add(
+                            context.registerService(
+                                    HobsonAction.class,
+                                    action,
+                                    props
+                            )
+                    );
+                }
 
                 // set the action's managers
                 action.setVariableManager(variableManager);
@@ -74,7 +87,20 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
-    public void executeAction(String pluginId, String actionId, Map<String, Object> properties) {
+    public void unpublishAllActions(String userId, String hubId, String pluginId) {
+        synchronized (serviceRegistrationMap) {
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
+            if (srl != null) {
+                for (ServiceRegistration sr : srl) {
+                    sr.unregister();
+                }
+                serviceRegistrationMap.remove(pluginId);
+            }
+        }
+    }
+
+    @Override
+    public void executeAction(String userId, String hubId, String pluginId, String actionId, Map<String, Object> properties) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + pluginId + ")(actionId=" + actionId + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(HobsonAction.class.getName(), filter.toString());
@@ -119,5 +145,10 @@ public class OSGIActionManager implements ActionManager {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error retrieving action", e);
         }
+    }
+
+    @Override
+    public ActionPublisher getPublisher() {
+        return this;
     }
 }

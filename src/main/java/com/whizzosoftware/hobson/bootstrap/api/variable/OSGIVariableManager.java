@@ -283,6 +283,12 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
     }
 
     @Override
+    public Map<String, Long> setDeviceVariables(String userId, String hubId, String pluginId, String deviceId, Map<String, Object> values) {
+        // TODO
+        return null;
+    }
+
+    @Override
     public void writeDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, Object value, long time) {
         try {
             Object mutex = getTelemetryMutex(pluginId, deviceId, name);

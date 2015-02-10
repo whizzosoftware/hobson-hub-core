@@ -86,6 +86,10 @@ public class HobsonManagerModule extends AbstractModule {
     private Object getManager(Class clazz) {
         BundleContext ctx = FrameworkUtil.getBundle(getClass()).getBundleContext();
         ServiceReference ref = ctx.getServiceReference(clazz.getName());
-        return ctx.getService(ref);
+        if (ref != null) {
+            return ctx.getService(ref);
+        } else {
+            return null;
+        }
     }
 }

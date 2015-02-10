@@ -8,10 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.task.HobsonTask;
-import com.whizzosoftware.hobson.api.task.TaskException;
-import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.task.TaskProvider;
+import com.whizzosoftware.hobson.api.task.*;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -25,11 +22,13 @@ import java.util.concurrent.ExecutorService;
  *
  * @author Dan Noguerol
  */
-public class OSGITaskManager implements TaskManager {
+public class OSGITaskManager implements TaskManager, TaskPublisher {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
     private volatile ExecutorService executorService;
+
+    private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
 
     @Override
     public void publishTaskProvider(String userId, String hubId, TaskProvider provider) {
@@ -45,14 +44,37 @@ public class OSGITaskManager implements TaskManager {
             Dictionary<String,String> props = new Hashtable<>();
             props.put("pluginId", provider.getPluginId());
             props.put("providerId", provider.getId());
-            ServiceRegistration providerReg = context.registerService(
-                TaskProvider.class.getName(),
-                provider,
-                props
-            );
-            // TODO: store service registration for later
+
+            synchronized (serviceRegistrationMap) {
+                List<ServiceRegistration> regList = serviceRegistrationMap.get(provider.getPluginId());
+                if (regList == null) {
+                    regList = new ArrayList<>();
+                    serviceRegistrationMap.put(provider.getPluginId(), regList);
+                }
+                regList.add(
+                    context.registerService(
+                            TaskProvider.class.getName(),
+                            provider,
+                            props
+                    )
+                );
+            }
+
 
             logger.debug("Task provider {} registered", provider.getId());
+        }
+    }
+
+    @Override
+    public void unpublishAllTaskProviders(String userId, String hubId, String pluginId) {
+        synchronized (serviceRegistrationMap) {
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
+            if (srl != null) {
+                for (ServiceRegistration sr : srl) {
+                    sr.unregister();
+                }
+                serviceRegistrationMap.remove(pluginId);
+            }
         }
     }
 
@@ -115,6 +137,11 @@ public class OSGITaskManager implements TaskManager {
 
             }
         });
+    }
+
+    @Override
+    public TaskPublisher getPublisher() {
+        return this;
     }
 
     @Override
