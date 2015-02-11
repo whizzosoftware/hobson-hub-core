@@ -20,7 +20,7 @@ public class SetupApplication extends Application {
     @Override
     public Restlet createInboundRoot() {
         Router router = new Router();
-        router.attach("/", new ClassLoaderOverrideDirectory(getContext(), "clap://class/setup/", getClass().getClassLoader()));
+        router.attach("/", new ClassLoaderOverrideDirectory(getContext(), "clap://class/", getClass().getClassLoader()));
         return router;
     }
 }

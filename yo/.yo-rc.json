@@ -1,0 +1,12 @@
+{
+  "generator-backbone": {
+    "appPath": "app",
+    "appName": "ConfigWizard",
+    "coffee": false,
+    "testFramework": "mocha",
+    "templateFramework": "lodash",
+    "compassBootstrap": false,
+    "includeRequireJS": false
+  },
+  "generator-mocha": {}
+}

@@ -215,6 +215,9 @@
                     <exclude>**/version.properties</exclude>
                 </excludes>
             </resource>
+            <resource>
+                <directory>yo/dist</directory>
+            </resource>
         </resources>
         <plugins>
             <plugin>
@@ -266,6 +269,18 @@
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*</Export-Package>
                     </instructions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.trecloux</groupId>
+                <artifactId>yeoman-maven-plugin</artifactId>
+                <version>0.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
