@@ -204,8 +204,18 @@ public class OSGIHubManager implements HubManager {
         try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
             long fileLength = file.length();
 
-            if (fileLength > endIndex) {
+            if (startIndex == -1) {
+                startIndex = fileLength - endIndex - 1;
                 endIndex = fileLength - 1;
+            }
+            if (endIndex == -1) {
+                endIndex = fileLength - 1;
+            }
+            if (startIndex > fileLength - 1) {
+                throw new HobsonRuntimeException("Requested start index is greater than file length");
+            }
+            if (endIndex > fileLength - 1) {
+                throw new HobsonRuntimeException("Requested end index is greater than file length");
             }
 
             // jump to start point in file
