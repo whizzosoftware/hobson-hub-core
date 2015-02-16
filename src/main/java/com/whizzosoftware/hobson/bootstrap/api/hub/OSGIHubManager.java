@@ -15,6 +15,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
+import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -82,6 +83,11 @@ public class OSGIHubManager implements HubManager {
             String hubPassword = (String)props.get(ADMIN_PASSWORD);
             if (hubPassword != null && !hubPassword.equals(shaOld)) {
                 throw new HobsonRuntimeException("The current hub password is invalid");
+            }
+
+            // verify the password meets complexity requirements
+            if (!change.isValid()) {
+                throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
             }
 
             // set the new password
