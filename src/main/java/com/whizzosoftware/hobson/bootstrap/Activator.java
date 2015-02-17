@@ -130,16 +130,12 @@ public class Activator extends DependencyActivatorBase {
                     component.getServers().add(server);
                 }
 
-                // create the authenticator
-                ChallengeAuthenticator authenticator = new ChallengeAuthenticator(server.getContext(), ChallengeScheme.HTTP_BASIC, "Hobson (default is admin/admin)");
-                authenticator.setVerifier(new HobsonVerifier(hubManager));
-
                 try {
                     // register the root application
                     registerRestletApplication(new RootApplication(), "");
 
                     // register the REST API application
-                    registerRestletApplication(new ApiV1Application("/api/v1", authenticator), "/api/v1");
+                    registerRestletApplication(new ApiV1Application(new HobsonVerifier(hubManager)), ApiV1Application.PATH);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");
