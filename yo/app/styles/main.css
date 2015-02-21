@@ -1,8 +1,156 @@
-body {
-    background: #fafafa;
+@import url(/semantic/semantic.css);
+#header #logo img {
+  height: 50px;
 }
 
-.hero-unit {
-    margin: 50px auto 0 auto;
-    width: 300px;
+#header + .ui.grid {
+  padding-top: 6.3rem;
+}
+
+#steps {
+  padding-top: 0;
+}
+#steps > div {
+  text-align: center;
+  min-width: 8rem;
+  min-height: 7rem;
+  position: relative;
+}
+#steps > div:hover {
+  cursor: pointer;
+}
+#steps > div:after {
+  position: absolute;
+  width: 5rem;
+  height: 5rem;
+  background: transparent;
+  content: '';
+  border: 1px solid #14328a;
+  border-radius: 100%;
+  left: 50%;
+  right: auto;
+  margin: 0 auto;
+  margin-left: -35px;
+  bottom: 0;
+}
+#steps > div:before {
+  position: absolute;
+  left: 1.5rem;
+  right: 1.5rem;
+  top: 0;
+  height: 2px;
+  background: #14328a;
+  content: "";
+}
+#steps > div .label {
+  position: relative;
+  top: 4rem;
+  color: #14328a;
+  z-index: 2;
+}
+#steps > div.active:after {
+  background: rgba(20, 50, 138, 0.5);
+}
+#steps > div.active .label {
+  color: white;
+}
+
+.ui.field.file {
+  position: relative;
+}
+.ui.field.file label {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  min-height: 180px;
+  z-index: 1;
+}
+.ui.field.file img {
+  height: 180px;
+  position: relative;
+  z-index: 0;
+}
+.ui.field.file input {
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+#home-image-picker-wrapper .ui.field.file {
+  background: black;
+  border-radius: 0.5rem;
+}
+#home-image-picker-wrapper .ui.field.file label {
+  background: url(/images/home-default-bg.jpg) no-repeat center center;
+  background-size: cover;
+  background-position: center center;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  color: white;
+}
+#home-image-picker-wrapper .ui.field.file label i {
+  display: block;
+  margin: 0 auto;
+  margin-bottom: 0.5rem;
+}
+#home-image-picker-wrapper .ui.field.file .ui.dimmer {
+  border-radius: 0.5rem;
+}
+#home-image-picker-wrapper .ui.field.file.img-loaded label {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+#plugins-container .ui.item {
+  padding: 0.5rem;
+  border: 1px solid #999;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0px 1px 0 rgba(0, 0, 0, 0.2);
+}
+#plugins-container .ui.item:hover {
+  cursor: pointer;
+}
+#plugins-container .ui.item .image {
+  width: 65px;
+}
+#plugins-container .ui.item .description, #plugins-container .ui.item .header {
+  display: block;
+  display: -webkit-box;
+  height: 2.8rem;
+  /* Fallback for non-webkit */
+  margin: 0 auto;
+  font-size: 1rem;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#plugins-container .ui.item .header {
+  height: 1.4rem;
+  text-transform: capitalize;
+}
+#plugins-container .ui.item .content {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+#plugins-container .ui.items {
+  margin: 0;
+}
+#plugins-container .ui.items.active .item {
+  background: #8297bf;
+}
+#plugins-container .ui.items.active .item .header, #plugins-container .ui.items.active .item .content p {
+  color: white;
+  text-shadow: 1px 1px #4a6291;
 }

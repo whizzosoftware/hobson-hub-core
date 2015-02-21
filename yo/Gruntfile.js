@@ -54,6 +54,10 @@ module.exports = function (grunt) {
             test: {
                 files: ['<%= yeoman.app %>/scripts/{,*/}*.js', 'test/spec/**/*.js'],
                 tasks: ['test:true']
+            },
+            scss: {
+                files: ['<%= yeoman.app %>/scss/{,*/}*.scss'],
+                tasks: ['sass']
             }
         },
         connect: {
@@ -73,6 +77,7 @@ module.exports = function (grunt) {
                 options: {
                     middleware: function (connect) {
                         return [
+                            require('grunt-connect-proxy/lib/utils').proxyRequest,
                             lrSnippet,
                             mountFolder(connect, '.tmp'),
                             mountFolder(connect, yeomanConfig.app)
@@ -231,6 +236,16 @@ module.exports = function (grunt) {
                     ]
                 }
             }
+        },
+        sass: {
+            dist: {
+                options: {
+                    style: 'expanded'
+                },
+                files: {
+                    '<%= yeoman.app %>/styles/main.css': '<%= yeoman.app %>/scss/app.scss'
+                }
+            }
         }
     });
 
@@ -263,6 +278,7 @@ module.exports = function (grunt) {
             'clean:server',
             'createDefaultTemplate',
             'jst',
+            'configureProxies:server',
             'connect:livereload',
             'open:server',
             'watch'
@@ -296,6 +312,7 @@ module.exports = function (grunt) {
         'imagemin',
         'htmlmin',
         'concat',
+        'sass',
         'cssmin',
         'uglify',
         'copy',

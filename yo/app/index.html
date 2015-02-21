@@ -9,6 +9,7 @@
         <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
         <!-- build:css(.tmp) styles/main.css -->
         <link rel="stylesheet" href="styles/main.css">
+        <link rel="stylesheet" href="semantic/semantic.min.css">
         <!-- endbuild -->
         <!-- build:js scripts/vendor/modernizr.js -->
         <script src="bower_components/modernizr/modernizr.js"></script>
@@ -19,18 +20,283 @@
             <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
         <![endif]-->
 
+        <div class="ui large menu fixed top" id="header">
+            <div class="item" id="logo"><img src="/images/logo.jpg"></div>
+        </div>
+        <div class="ui centered ten column wide grid">
+            <div class="ui centered row" id="steps">
+                <div class="two column wide" id="step-home">
+                    <div class="label">Start</div>
+                </div>
+                <div class="two column wide" id="step-plugins">
+                    <div class="label">Plugins</div>
+                </div>
+                <div class="two column wide" id="step-email">
+                    <div class="label">Email</div>
+                </div>
+                <div class="two column wide" id="step-password">
+                    <div class="label">Password</div>
+                </div>
+                <div class="two column wide" id="step-complete">
+                    <div class="label">Complete!</div>
+                </div>
+            </div>
+        </div>
 
-        <div class="hero-unit">
-          <h1>'Allo, 'Allo!</h1>
-          <p>You now have</p>
-          <ul>
-            <li>HTML5 Boilerplate</li>
-            <li>jQuery</li>
-            <li>Backbone.js</li>
-            <li>Underscore.js</li>
-            <li>Modernizr</li>
+        <!-- HOME TEMPLATE  -->
+        <div hidden id="template-home">
+            <div class="ui centered row">
+                <div class="ui message twelve wide column center aligned">
+                    <div class="content">
+                        <div class="header">
+                        Welcome to Hobson. You'll need a few minutes to get rolling. Start by entering your address and a nickname for your home. We'll use this as an unique identifier.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui centered row">
+                <div class="ui three wide column" id="home-image-picker-wrapper">
+                    <div class="ui field file">
+                        <img class="ui image rounded" id="home-image-picker-preview">
+                        <label for="home-image-picker">
+                            <i class="huge camera icon"></i>
+                            Upload an image of your home to use on the dashboard, or select one below
+                        </label>
+                        <input type="file" name="home-image-picker">
+                    </div>
+                </div>
+                <div class="ui nine wide column">
+                    <div class="field">
+                        <input type="text" placeholder="Address" name="home-address" id="home-address"/>
+                        <label for="home-address">This is the physical address of your home.</label>
+                    </div>
+                    <div class="ui divider hidden"></div>
+                    <div class="field">
+                        <input type="text" placeholder="Nickname" name="home-nickname" id="home-nickname" />
+                        <label for="home-nickname">This is the short name we'll use to refer to your home throughout the Hobson experience.</label>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <div class="ui twelve wide column">
+                    <div class="ui button active">Homes</div>
+                    <div class="ui button">Bulbs and lamps</div>
+                    <div class="ui button">Etc.</div>
+                </div>
+                <div class="ui twelve wide column basic segment">
+                    <i class="home big icon"></i><i class="building big icon"></i><i class="university big icon"></i>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <button type="submit" class="ui blue button massive right icon">Next <i class="icon angle right"></i></button>
+            </div>
+        </div>
 
-          </ul>
+        <!-- PLUGINS TEMPLATE -->
+        <div hidden id="template-plugins">
+            <div class="ui centered row">
+                <div class="ui message twelve wide column center aligned">
+                    <div class="content">
+                        <div class="header">
+                        Here’s where you define your plugins. Plugins are all the different controllers for the devices you have. We’re always updating our plugins with new device specs!
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui centered row">
+                <div class="ui eleven wide column">
+                    <h2>Plugins</h2>
+                    <h4>Select which plugins you'd like to start with. You can always add more later.</h4>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <div class="ui eleven wide column">
+                    <div class="ui two column wide grid" id="plugins-container"></div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <button type="reset" class="ui blue button massive right icon"><i class="icon angle left"></i> Back</button>
+                <button type="submit" class="ui blue button massive right icon">Next <i class="icon angle right"></i></button>
+            </div>
+        </div>
+
+        <!-- EMAIL TEMPLATE -->
+        <div hidden id="template-email">
+            <div class="ui centered row">
+                <div class="ui message twelve wide column center aligned">
+                    <div class="content">
+                        <div class="header">
+                        You’re almost there. Here’s where we set up your email. <br />Doing so will allow you to receive notifications.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui centered row">
+                <div class="ui twelve wide column">
+                    <h2>Email and Notifications</h2>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <div class="ui twelve wide column" id="email-">
+                    <div class="grouped inline fields" id="email-server">
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" name="email-server-type" value="none">
+                                <label>None</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" name="email-server-type" value="gmail">
+                                <label>Gmail</label>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <div class="ui radio checkbox">
+                                <input type="radio" name="email-server-type" checked="checked" value="other">
+                                <label>Other</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider hidden"></div>
+            <div class="ui centered row field" id="email-server-name-wrapper">
+                <div class="ui three wide column right aligned">
+                    <label>Server Hostname:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="text" name="email-server-name" placeholder="Ex. 192.168.0.0" id="email-server-name">
+                </div>
+            </div>
+            <div class="ui centered row field" id="email-server-ssl-wrapper">
+                <div class="ui three wide column">
+                </div>
+                <div class="ui nine wide column inline field">
+                    <div class="ui checkbox field">
+                        <input type="checkbox" name="email-server-ssl" id="email-server-ssl">
+                        <label>User secure connection (SSL/TSL)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui centered row field" id="email-username-wrapper">
+                <div class="ui three wide column right aligned">
+                    <label>User name:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="text" name="email-username" placeholder="Ex. john@doe.com" id="email-username">
+                </div>
+            </div>
+
+            <div class="ui centered row field" id="email-password-wrapper">
+                <div class="ui three wide column right aligned">
+                    <label>Password:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="password" name="email-password" placeholder="******" id="email-password">
+                </div>
+            </div>
+
+            <div class="ui centered row field" id="email-sender-wrapper">
+                <div class="ui three wide column right aligned">
+                    <label>Sender Address:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="text" name="email-sender" placeholder="Ex. no-reply@doe.com" id="email-sender">
+                </div>
+            </div>
+
+            <div class="ui centered row field" id="email-test-button-wrapper">
+                <button type="button" class="ui teal button massive">Test</button>
+            </div>
+
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <button type="reset" class="ui blue button massive right icon"><i class="icon angle left"></i> Back</button>
+                <button type="submit" class="ui blue button massive right icon">Next <i class="icon angle right"></i></button>
+            </div>
+        </div>
+
+        <!-- PASSWORD TEMPLATE -->
+        <div hidden id="template-password">
+            <div class="ui centered row">
+                <div class="ui message twelve wide column center aligned">
+                    <div class="content">
+                        <div class="header">
+                        Here’s where we set up a password for your Hub.<br />You will need this whenever you use the Hobson web console.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui centered row">
+                <div class="ui twelve wide column">
+                    <h2>Hub Password</h2>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui centered row field">
+                <div class="ui three wide column right aligned">
+                    <label>Password:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="password" name="password-password" id="password-password">
+                    <label for="password-password">8-14 characters with upper and lower case, one number and one special character.</label>
+                </div>
+            </div>
+            <div class="ui centered row field">
+                <div class="ui three wide column right aligned">
+                    <label>Repeat Password:</label>
+                </div>
+                <div class="ui nine wide column">
+                    <input type="password" name="password-confirmation" id="password-confirmation">
+                    <label for="password-confirmation">Confirm the same password again.</label>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <button type="reset" class="ui blue button massive right icon"><i class="icon angle left"></i> Back</button>
+                <button type="submit" class="ui blue button massive right icon">Next <i class="icon angle right"></i></button>
+            </div>
+        </div>
+
+        <!-- COMPLETE TEMPLATE -->
+        <div hidden id="template-complete">
+            <div class="ui centered row">
+                <div class="ui message twelve wide column center aligned">
+                    <div class="content">
+                        <div class="header">
+                        Congratulations! Your new Hobson Hub is now ready to use. Click the next button below to be taken to the Hub management console. Note: You will most likely be prompted for a username and password.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+            <div class="ui centered row field">
+                <div class="ui six wide column center aligned">
+                    <div class="ui positive icon message left aligned">
+                        <i class="warning sign icon"></i>
+                        <div class="header">
+                        Username: admin
+                        </div>
+                        <div class="header">
+                        Password: 
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ui divider"></div>
+            <div class="ui centered row">
+                <button type="submit" class="ui blue button massive right icon">Next <i class="icon angle right"></i></button>
+            </div>
         </div>
 
 
@@ -48,8 +314,10 @@
         <script src="bower_components/jquery/dist/jquery.js"></script>
         <script src="bower_components/lodash/dist/lodash.compat.js"></script>
         <script src="bower_components/backbone/backbone.js"></script>
+        <script src="bower_components/aspect.js/src/aspect.js"></script>
+        <script src="semantic/semantic.min.js"></script>
         <!-- endbuild -->
-
+        
         <!-- build:js({.tmp,app}) scripts/main.js -->
         <script src="scripts/main.js"></script>
         <script src="scripts/templates.js"></script>

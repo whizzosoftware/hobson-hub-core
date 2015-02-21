@@ -1,0 +1,60 @@
+$font-size: 1rem;
+$lines-to-show: 2;
+$header-lines-to-show: 1;
+$line-height: 1.4;
+$plugin-active-bg: #8297bf;
+
+#plugins-container {
+	.ui.item {
+		padding: 0.5rem;
+		border: 1px solid #999;
+		border-radius: 0.5rem;
+		background: white;
+
+		&:hover {
+			cursor: pointer;
+		}
+
+		.image {
+			width: 65px;
+		}
+
+		.description, .header{
+			display: block;
+			display: -webkit-box;
+			height: $font-size*$line-height*$lines-to-show; /* Fallback for non-webkit */
+			margin: 0 auto;
+			font-size: $font-size;
+			line-height: $line-height;
+			-webkit-line-clamp: $lines-to-show;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.header {
+			height: $font-size*$line-height*$header-lines-to-show;
+			text-transform: capitalize;
+		}
+
+		.content {
+			margin-bottom: 0;
+			padding-bottom: 0;
+		}
+
+		box-shadow: 0px 1px 0 transparentize(black, 0.8);
+	}
+
+	.ui.items {
+		margin: 0;
+
+		&.active .item {
+			background: $plugin-active-bg;
+
+			.header, .content p{
+				color: white;
+				text-shadow: 1px 1px darken($plugin-active-bg, 20%);
+			}
+		}
+	}
+}
