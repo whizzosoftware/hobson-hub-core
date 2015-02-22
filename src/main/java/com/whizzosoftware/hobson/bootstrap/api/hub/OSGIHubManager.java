@@ -15,27 +15,25 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
-import com.whizzosoftware.hobson.api.HobsonNotFoundException;
+import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
-import com.whizzosoftware.hobson.api.image.ImageInputStream;
-import com.whizzosoftware.hobson.api.image.ImageMediaTypes;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.FileUtils;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.LoggerFactory;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import java.io.*;
-import java.util.Dictionary;
-import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * An OSGi implementation of HubManager.
@@ -43,10 +41,15 @@ import java.util.Properties;
  * @author Dan Noguerol
  */
 public class OSGIHubManager implements HubManager {
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
+
     public static final String HUB_NAME = "hub.name";
     public static final String ADMIN_PASSWORD = "admin.password";
     public static final String SETUP_COMPLETE = "setup.complete";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
+    public static final String RECIPIENT_ADDRESS = "recipientAddress";
+    public static final String SUBJECT = "subject";
+    public static final String MESSAGE = "message";
 
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
@@ -82,6 +85,11 @@ public class OSGIHubManager implements HubManager {
             String hubPassword = (String)props.get(ADMIN_PASSWORD);
             if (hubPassword != null && !hubPassword.equals(shaOld)) {
                 throw new HobsonRuntimeException("The current hub password is invalid");
+            }
+
+            // verify the password meets complexity requirements
+            if (!change.isValid()) {
+                throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
             }
 
             // set the new password
@@ -163,6 +171,55 @@ public class OSGIHubManager implements HubManager {
     }
 
     @Override
+    public void sendTestEmail(String userId, String hubId, EmailConfiguration config) {
+        sendEmail(config, config.getSenderAddress(), "Hobson Test Message", "This is a test message from Hobson. If you're reading this, your e-mail configuration is working!");
+    }
+
+    @Override
+    public void sendEmail(String userId, String hubId, String recipientAddress, String subject, String body) {
+        sendEmail(getHubEmailConfiguration(userId, hubId), recipientAddress, subject, body);
+    }
+
+    protected void sendEmail(EmailConfiguration config, String recipientAddress, String subject, String body) {
+        String mailHost = config.getMailServer();
+        Boolean mailUseSMTPS = config.isSMTPS();
+        String mailUser = config.getUsername();
+        String mailPassword = config.getPassword();
+
+        if (mailHost == null) {
+            throw new HobsonRuntimeException("No mail host is configured; unable to execute e-mail action");
+        } else if (mailUseSMTPS && mailUser == null) {
+            throw new HobsonRuntimeException("No mail server username is configured for SMTPS; unable to execute e-mail action");
+        } else if (mailUseSMTPS && mailPassword == null) {
+            throw new HobsonRuntimeException("No mail server password is configured for SMTPS; unable to execute e-mail action");
+        }
+
+        // create mail session
+        Properties props = new Properties();
+        props.put("mail.smtp.host", mailHost);
+        Session session = Session.getDefaultInstance(props, null);
+
+        // create the mail message
+        Message msg = createMessage(session, config, recipientAddress, subject, body);
+
+        // send the message
+        String protocol = mailUseSMTPS ? "smtps" : "smtp";
+        int port = mailUseSMTPS ? 465 : 25;
+        try {
+            Transport transport = session.getTransport(protocol);
+            logger.debug("Sending e-mail to {} using {}@{}:{}", msg.getAllRecipients(), mailUser, mailHost, port);
+            transport.connect(mailHost, port, mailUser, mailPassword);
+            msg.saveChanges();
+            transport.sendMessage(msg, msg.getAllRecipients());
+            transport.close();
+            logger.debug("Message sent successfully");
+        } catch (MessagingException e) {
+            logger.error("Error sending e-mail message", e);
+            throw new HobsonRuntimeException("Error sending e-mail message", e);
+        }
+    }
+
+    @Override
     public boolean isSetupWizardComplete(String userId, String hubId) {
         Configuration config = getConfiguration();
         Dictionary props = config.getProperties();
@@ -204,8 +261,18 @@ public class OSGIHubManager implements HubManager {
         try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
             long fileLength = file.length();
 
-            if (fileLength > endIndex) {
+            if (startIndex == -1) {
+                startIndex = fileLength - endIndex - 1;
                 endIndex = fileLength - 1;
+            }
+            if (endIndex == -1) {
+                endIndex = fileLength - 1;
+            }
+            if (startIndex > fileLength - 1) {
+                throw new HobsonRuntimeException("Requested start index is greater than file length");
+            }
+            if (endIndex > fileLength - 1) {
+                throw new HobsonRuntimeException("Requested end index is greater than file length");
             }
 
             // jump to start point in file
@@ -278,5 +345,42 @@ public class OSGIHubManager implements HubManager {
     private void updateConfiguration(Configuration config, Dictionary props) throws IOException {
         config.update(props);
         eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new HubConfigurationUpdateEvent());
+    }
+
+    /**
+     * Convenience method for creating an e-mail message from a set of message properties.
+     *
+     * @param session the mail Session instance to use
+     * @param config the email configuration to use
+     * @param recipientAddress the e-mail address of the recipient
+     * @param subject the e-mail subject line
+     * @param message the e-mail message body
+     *
+     * @return a Message instance
+     *
+     * @since hobson-hub-api 0.1.6
+     */
+    protected Message createMessage(Session session, EmailConfiguration config, String recipientAddress, String subject, String message) {
+        if (config.getSenderAddress() == null) {
+            throw new HobsonInvalidRequestException("No sender address specified; unable to execute e-mail action");
+        } else if (recipientAddress == null) {
+            throw new HobsonInvalidRequestException("No recipient address specified; unable to execute e-mail action");
+        } else if (subject == null) {
+            throw new HobsonInvalidRequestException("No subject specified; unable to execute e-mail action");
+        } else if (message == null) {
+            throw new HobsonInvalidRequestException("No message body specified; unable to execute e-mail action");
+        }
+
+        try {
+            Message msg = new MimeMessage(session);
+            msg.setFrom(new InternetAddress(config.getSenderAddress()));
+            msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recipientAddress));
+            msg.setSubject(subject);
+            msg.setText(message);
+
+            return msg;
+        } catch (MessagingException e) {
+            throw new HobsonInvalidRequestException("Unable to create mail message", e);
+        }
     }
 }
