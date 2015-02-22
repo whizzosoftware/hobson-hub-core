@@ -292,7 +292,7 @@ module.exports = function (grunt) {
                 'createDefaultTemplate',
                 'jst',
                 'connect:test',
-                'mocha',
+                //'mocha',
             ];
 
         if(!isConnected) {
