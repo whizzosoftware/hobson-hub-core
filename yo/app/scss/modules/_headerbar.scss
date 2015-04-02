@@ -1,0 +1,25 @@
+.header-bar {
+	vertical-align: middle;
+	background-color: $color-3;
+	color: $color-dark-text;
+	margin-bottom: 25px;
+	padding: 1em 6em;
+	text-align: center;
+	font-size: 1.1rem;
+}
+
+.footer-bar {
+	vertical-align: middle;
+	background-color: $color-3;
+	color: $color-dark-text;
+	padding: 2em 6em;
+	text-align: center;
+	font-size: 1.1rem;
+}
+
+@media (max-width: 600px) {
+	.header-bar {
+		font-size: .8rem;
+		padding: 1em 4em;
+	}
+}

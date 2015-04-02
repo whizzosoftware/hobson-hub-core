@@ -1,0 +1,51 @@
+<div class="row">
+    <div class="large-12 columns header-bar">
+        <%= strings.StartWelcome %>
+    </div>
+</div>
+<div class="page-container">
+    <div class="row">
+        <div class="large-3 medium-3 small-12 columns">
+            <center>
+                <div class="upload-widget">
+                    <div id="upload-prompt">
+                        <img src="images/camera-upload.png" />
+                        <p><%= strings.UploadPrompt %></p>
+                    </div>
+                </div>
+            </center>
+        </div>
+        <div class="large-9 medium-9 small-12 columns">
+            <div class="row">
+                <div class="large-12 columns">
+                    <label><%= strings.HubNickname %>
+                    <input id="name" class="radius" type="text" value="<%= hub.name %>" />
+                    </label>
+                    <p class="input-help-text"><%= strings.NicknameHelp %></p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="large-12 columns">
+                    <label id="addressLabel"><%= strings.HubAddress %>
+                    <input id="address" class="radius" type="text" value="<%= hub.location ? hub.location.text : '' %>" placeholder="<%= strings.AddressPlaceholder %>" />
+                    </label>
+                    <small id="lookupError" class="error" style="display: none;"><%= strings.AddressLookupFailure %></small>
+                    <p class="input-help-text"><%= strings.AddressHelp %></p>
+                </div>
+            </div>
+            <div id="latlong" class="row" style="display: none;">
+                <div class="large-6 medium-6 columns">
+                    <label>Latitude
+                    <input id="latitude" class="radius" type="text" value="<%= hub.location ? hub.location.latitude : '' %>" placeholder="<%= strings.Latitude %>" />
+                    </label>
+                </div>
+                <div class="large-6 medium-6 columns">
+                    <label>Longitude
+                    <input id="longitude" class="radius" type="text" value="<%= hub.location ? hub.location.longitude : '' %>" placeholder="<%= strings.Longitude %>" />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="footer-container"></div>

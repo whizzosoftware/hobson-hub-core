@@ -13,10 +13,10 @@ public class PluginListBuilderTest {
     @Test
     public void testCreatePluginListWithOneUpdate() throws Exception {
         MockPluginListSource localSource = new MockPluginListSource();
-        localSource.addPluginDescriptor(new PluginDescriptor("id", "name", null, PluginType.PLUGIN, new PluginStatus(PluginStatus.Status.RUNNING), "1.0.0"));
+        localSource.addPluginDescriptor(new PluginDescriptor("id", "name", null, PluginType.PLUGIN, PluginStatus.running(), "1.0.0"));
 
         MockPluginListSource repoSource = new MockPluginListSource();
-        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, new PluginStatus(PluginStatus.Status.NOT_INSTALLED), null);
+        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, PluginStatus.notInstalled(), null);
         pd.setLatestVersionString("1.1.0");
         repoSource.addPluginDescriptor(pd);
 
@@ -40,7 +40,7 @@ public class PluginListBuilderTest {
         MockPluginListSource localSource = new MockPluginListSource();
 
         MockPluginListSource repoSource = new MockPluginListSource();
-        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, new PluginStatus(PluginStatus.Status.NOT_INSTALLED), null);
+        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, PluginStatus.notInstalled(), null);
         pd.setLatestVersionString("1.1.0");
         repoSource.addPluginDescriptor(pd);
 
@@ -62,7 +62,7 @@ public class PluginListBuilderTest {
     @Test
     public void testCreatePluginListWithOnlyLocalPlugins() throws Exception {
         MockPluginListSource localSource = new MockPluginListSource();
-        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, new PluginStatus(PluginStatus.Status.RUNNING), "1.1.0");
+        PluginDescriptor pd = new PluginDescriptor("id", "name", "desc", PluginType.PLUGIN, PluginStatus.running(), "1.1.0");
         localSource.addPluginDescriptor(pd);
 
         PluginListBuilder p = new PluginListBuilder(localSource, new MockPluginListSource());

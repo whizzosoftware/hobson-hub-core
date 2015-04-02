@@ -12,19 +12,15 @@ import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
-import com.whizzosoftware.hobson.api.device.DeviceManager;
-import com.whizzosoftware.hobson.api.device.DevicePublisher;
-import com.whizzosoftware.hobson.api.device.DeviceNotFoundException;
-import com.whizzosoftware.hobson.api.device.HobsonDevice;
+import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
-import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import org.osgi.framework.*;
@@ -40,7 +36,7 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIDeviceManager implements DeviceManager, DevicePublisher, ServiceListener {
+public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final static String DEVICE_PID_SEPARATOR = ".";
@@ -50,6 +46,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     volatile private ConfigurationAdmin configAdmin;
     volatile private VariableManager variableManager;
     volatile private PluginManager pluginManager;
+    volatile private TelemetryManager telemetryManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
     private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
@@ -67,15 +64,10 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     }
 
     @Override
-    public void enableDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, boolean enabled) {
-        setDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "telemetry", enabled, true);
-    }
-
-    @Override
     public Collection<HobsonDevice> getAllDevices(String userId, String hubId) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            List<HobsonDevice> results = new ArrayList<HobsonDevice>();
+            List<HobsonDevice> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(HobsonDevice.class.getName(), null);
             if (references != null) {
                 for (ServiceReference ref : references) {
@@ -184,24 +176,6 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     }
 
     @Override
-    public DevicePublisher getPublisher() {
-        return this;
-    }
-
-    @Override
-    public Map<String, Collection<TemporalValue>> getDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, long endTime, TelemetryInterval interval) {
-        Map<String,Collection<TemporalValue>> results = new HashMap<>();
-        HobsonDevice device = getDevice(userId, hubId, pluginId, deviceId);
-        String[] variables = device.getRuntime().getTelemetryVariableNames();
-        if (variables != null) {
-            for (String varName : variables) {
-                results.put(varName, variableManager.getDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, endTime, interval));
-            }
-        }
-        return results;
-    }
-
-    @Override
     public boolean hasDevice(String userId, String hubId, String pluginId, String deviceId) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
@@ -218,45 +192,12 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     }
 
     @Override
-    public boolean isDeviceTelemetryEnabled(String userId, String hubId, String pluginId, String deviceId) {
-        Boolean b = (Boolean)getDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "telemetry");
-        return (b != null && b);
+    public void publishDevice(String userId, String hubId, HobsonPlugin plugin, HobsonDevice device) {
+        publishDevice(userId, hubId, plugin, device, false);
     }
 
     @Override
-    public void setDeviceConfigurationProperty(String userId, String hubId, String pluginId, String deviceId, String name, Object value, boolean overwrite) {
-        try {
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (pluginId.equals(bundle.getSymbolicName())) {
-                    if (configAdmin != null) {
-                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(pluginId + "." + deviceId, bundle.getLocation());
-                        Dictionary dic = config.getProperties();
-                        if (dic == null) {
-                            dic = new Hashtable();
-                        }
-                        if (dic.get(name) == null || overwrite) {
-                            dic.put(name, value);
-                            config.update(dic);
-                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, new Configuration(dic)));
-                        }
-                        return;
-                    } else {
-                        throw new ConfigurationException("Unable to set device name: ConfigurationAdmin service is not available");
-                    }
-                }
-            }
-        } catch (IOException e) {
-            throw new ConfigurationException("Error obtaining configuration", e);
-        }
-    }
-
-    @Override
-    synchronized public void publishDevice(final HobsonPlugin plugin, final HobsonDevice device) {
-        publishDevice(plugin, device, false);
-    }
-
-    @Override
-    synchronized public void publishDevice(HobsonPlugin plugin, HobsonDevice device, boolean republish) {
+    synchronized public void publishDevice(String userId, String hubId, HobsonPlugin plugin, HobsonDevice device, boolean republish) {
         BundleContext context = BundleUtil.getBundleContext(getClass(), device.getPluginId());
 
         // check that the device ID is legal
@@ -270,7 +211,7 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
             if (republish) {
                 logger.debug("Removing existing device: {}:{}", device.getPluginId(), device.getId());
                 removeDeviceRegistration(device.getPluginId(), device.getId());
-            // if it does and it's not an explicit re-publish, throw an exception
+                // if it does and it's not an explicit re-publish, throw an exception
             } else {
                 throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getPluginId() + "." + device.getId());
             }
@@ -294,42 +235,13 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
     }
 
     @Override
-    synchronized public void unpublishAllDevices(HobsonPlugin plugin) {
-        List<DeviceServiceRegistration> regs = serviceRegistrations.get(plugin.getId());
-        if (regs != null) {
-            try {
-                for (DeviceServiceRegistration reg : regs) {
-                    try {
-                        final HobsonDevice device = reg.getDevice();
-                        reg.unregister();
-                        // execute the device's shutdown method using its plugin event loop
-                        plugin.getRuntime().executeInEventLoop(new Runnable() {
-                            @Override
-                            public void run() {
-                                device.getRuntime().onShutdown();
-                                eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStoppedEvent(device));
-                            }
-                        });
-                    } catch (Exception e) {
-                        logger.error("Error stopping device for " + plugin.getId(), e);
-                    }
-                }
-            } finally {
-                serviceRegistrations.remove(plugin.getId());
-            }
-        }
+    public boolean isDeviceTelemetryEnabled(String userId, String hubId, String pluginId, String deviceId) {
+        Boolean b = (Boolean)getDeviceConfigurationProperty(userId, hubId, pluginId, deviceId, "telemetry");
+        return (b != null && b);
     }
 
     @Override
-    public void writeDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, Map<String, TemporalValue> values) {
-        for (String varName : values.keySet()) {
-            TemporalValue value = values.get(varName);
-            variableManager.writeDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, value.getValue(), value.getTime());
-        }
-    }
-
-    @Override
-    synchronized public void unpublishDevice(HobsonPlugin plugin, String deviceId) {
+    synchronized public void unpublishDevice(String userId, String hubId, HobsonPlugin plugin, String deviceId) {
         List<DeviceServiceRegistration> regs = serviceRegistrations.get(plugin.getId());
         if (regs != null) {
             DeviceServiceRegistration dsr = null;
@@ -357,6 +269,65 @@ public class OSGIDeviceManager implements DeviceManager, DevicePublisher, Servic
                     regs.remove(dsr);
                 }
             }
+        }
+    }
+
+    @Override
+    synchronized public void unpublishAllDevices(String userId, String hubId, HobsonPlugin plugin) {
+        List<DeviceServiceRegistration> regs = serviceRegistrations.get(plugin.getId());
+        if (regs != null) {
+            try {
+                for (DeviceServiceRegistration reg : regs) {
+                    try {
+                        final HobsonDevice device = reg.getDevice();
+                        reg.unregister();
+                        // execute the device's shutdown method using its plugin event loop
+                        plugin.getRuntime().executeInEventLoop(new Runnable() {
+                            @Override
+                            public void run() {
+                                device.getRuntime().onShutdown();
+                                eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceStoppedEvent(device));
+                            }
+                        });
+                    } catch (Exception e) {
+                        logger.error("Error stopping device for " + plugin.getId(), e);
+                    }
+                }
+            } finally {
+                serviceRegistrations.remove(plugin.getId());
+            }
+        }
+    }
+
+    @Override
+    public void setDeviceConfiguration(String userId, String hubId, String pluginId, String deviceId, Configuration config) {
+        // TODO
+    }
+
+    @Override
+    public void setDeviceConfigurationProperty(String userId, String hubId, String pluginId, String deviceId, String name, Object value, boolean overwrite) {
+        try {
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (pluginId.equals(bundle.getSymbolicName())) {
+                    if (configAdmin != null) {
+                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(pluginId + "." + deviceId, bundle.getLocation());
+                        Dictionary dic = config.getProperties();
+                        if (dic == null) {
+                            dic = new Hashtable();
+                        }
+                        if (dic.get(name) == null || overwrite) {
+                            dic.put(name, value);
+                            config.update(dic);
+                            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new DeviceConfigurationUpdateEvent(pluginId, deviceId, new Configuration(dic)));
+                        }
+                        return;
+                    } else {
+                        throw new ConfigurationException("Unable to set device name: ConfigurationAdmin service is not available");
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new ConfigurationException("Error obtaining configuration", e);
         }
     }
 

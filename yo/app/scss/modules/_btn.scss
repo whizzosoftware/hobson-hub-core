@@ -1,0 +1,27 @@
+.button {
+	margin: 0;
+	padding: 1em 3em;
+	background-color: $color-1;
+}
+
+.button:hover {
+	background-color: #10649e;
+}
+
+.button.secondary:hover {
+	background-color: #1790e4;
+	color: #fff;
+}
+
+.button.secondary {
+	background-color: $color-2;
+	color: #fff;
+}
+
+.ladda-button {
+	background-color: $color-1;
+}
+
+.ladda-button:hover {
+	background-color: #10649e;
+}

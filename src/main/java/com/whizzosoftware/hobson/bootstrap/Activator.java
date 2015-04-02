@@ -17,6 +17,7 @@ import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
@@ -28,13 +29,13 @@ import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
+import com.whizzosoftware.hobson.bootstrap.api.telemetry.OSGITelemetryManager;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.discovery.Advertiser;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
-import com.whizzosoftware.hobson.bootstrap.rest.HobsonVerifier;
 import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
-import com.whizzosoftware.hobson.rest.v1.ApiV1Application;
+import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -49,7 +50,6 @@ import org.osgi.util.tracker.ServiceTracker;
 import org.restlet.Application;
 import org.restlet.Component;
 import org.restlet.Server;
-import org.restlet.data.ChallengeScheme;
 import org.restlet.data.Parameter;
 import org.restlet.data.Protocol;
 import org.restlet.engine.Engine;
@@ -57,7 +57,6 @@ import org.restlet.ext.guice.SelfInjectingServerResourceModule;
 import org.restlet.ext.jetty.HttpServerHelper;
 import org.restlet.ext.jetty.HttpsServerHelper;
 import org.restlet.ext.slf4j.Slf4jLoggerFacade;
-import org.restlet.security.ChallengeAuthenticator;
 import org.restlet.util.Series;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,7 +134,7 @@ public class Activator extends DependencyActivatorBase {
                     registerRestletApplication(new RootApplication(), "");
 
                     // register the REST API application
-                    registerRestletApplication(new ApiV1Application(new HobsonVerifier(hubManager)), ApiV1Application.PATH);
+                    registerRestletApplication(new ApiV1Application(), ApiV1Application.PATH);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");
@@ -158,7 +157,7 @@ public class Activator extends DependencyActivatorBase {
                     } else {
                         consoleURI = "http://localhost:8182";
                     }
-                    if (hubManager.isSetupWizardComplete(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)) {
+                    if (hubManager.getHub(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB).isSetupComplete()) {
                         consoleURI += "/console/index.html";
                     } else {
                         consoleURI += "/setup/index.html";
@@ -326,6 +325,14 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(TaskManager.class.getName(), null);
         c.setImplementation(OSGITaskManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        manager.add(c);
+        registeredComponents.add(c);
+
+        // register telemetry manager
+        c = manager.createComponent();
+        c.setInterface(TelemetryManager.class.getName(), null);
+        c.setImplementation(OSGITelemetryManager.class);
+        c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

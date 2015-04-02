@@ -8,7 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.hub;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.hub.EmailConfiguration;
+import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,7 +17,7 @@ import javax.mail.Message;
 public class OSGIHubManagerTest {
     @Test
     public void testCreateMessage() throws Exception {
-        EmailConfiguration config = new EmailConfiguration("localhost", false, null, null, "foo@bar.com");
+        EmailConfiguration config = new EmailConfiguration.Builder().server("localhost").secure(false).senderAddress("foo@bar.com").build();
         OSGIHubManager a = new OSGIHubManager();
 
         try {

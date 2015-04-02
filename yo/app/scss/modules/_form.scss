@@ -1,0 +1,48 @@
+.help-text {
+	color: $color-light-text;
+	font-size: 0.85em;
+	line-height: 1em;
+	margin-top: 5px;
+}
+
+.input-help-text {
+	@extend .help-text;
+	margin-top: -8px;
+}
+
+.login-summary {
+	text-align: center;
+	color: $color-1;
+	margin: 50px 0;
+	i {
+		font-size: 7em;
+		color: green;
+	}
+	p {
+		text-align: left;
+		font-size: 3em;
+		margin: 0;
+		padding: 0;
+	}
+	ul {
+		margin: 0;
+		padding: 0;
+	}
+	li {
+		display: inline-block;
+		margin: 10px;
+	}
+}
+
+.paired-checkbox {
+	margin-top: -50px;
+	padding-top: -50px;
+}
+
+#plugins-list {
+	overflow-y: scroll;
+	height: 400px;
+	margin-bottom: 25px;
+	padding: 15px;
+	border: 3px solid $color-3;
+}

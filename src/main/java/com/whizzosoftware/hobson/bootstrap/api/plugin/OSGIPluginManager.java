@@ -56,14 +56,20 @@ public class OSGIPluginManager implements PluginManager {
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
     @Override
-    public PluginList getPlugins(String userId, String hubId, boolean includeRemoteInfo) {
-        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource remoteSource = null;
-        if (includeRemoteInfo) {
-            remoteSource = new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource(context);
+    public Collection<HobsonPlugin> getAllPlugins(String userId, String hubId) {
+        try {
+            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + "))");
+            List<HobsonPlugin> plugins = new ArrayList<>();
+            if (references != null) {
+                for (ServiceReference ref : references) {
+                    plugins.add((HobsonPlugin)context.getService(ref));
+                }
+            }
+            return plugins;
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving plugin", e);
         }
-        PluginListBuilder builder = new PluginListBuilder(new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource(context), remoteSource);
-        return builder.createPluginList();
     }
 
     @Override
@@ -81,6 +87,17 @@ public class OSGIPluginManager implements PluginManager {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error retrieving plugin", e);
         }
+    }
+
+    @Override
+    public PluginList getPluginDescriptors(String userId, String hubId, boolean includeRemoteInfo) {
+        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource remoteSource = null;
+        if (includeRemoteInfo) {
+            remoteSource = new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource(context);
+        }
+        PluginListBuilder builder = new PluginListBuilder(new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource(context), remoteSource);
+        return builder.createPluginList();
     }
 
     @Override
@@ -140,7 +157,7 @@ public class OSGIPluginManager implements PluginManager {
             if (url != null) {
                 is = url.openStream();
             } else {
-                url = FrameworkUtil.getBundle(getClass()).getResource("default-plugin-icon.jpg");
+                url = FrameworkUtil.getBundle(getClass()).getResource("default-plugin-icon.png");
                 if (url != null) {
                     is = url.openStream();
                 }
@@ -205,6 +222,11 @@ public class OSGIPluginManager implements PluginManager {
         } catch (BundleException e) {
             throw new HobsonRuntimeException("Error reloading plugin: " + pluginId, e);
         }
+    }
+
+    @Override
+    public void publishPlugin(String userId, String hubId, HobsonPlugin plugin) {
+        // TODO
     }
 
     @Override

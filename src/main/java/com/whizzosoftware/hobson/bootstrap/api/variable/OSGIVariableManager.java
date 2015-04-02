@@ -7,27 +7,21 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.variable;
 
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateRequestEvent;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
-import com.whizzosoftware.hobson.api.variable.telemetry.TelemetryInterval;
-import com.whizzosoftware.hobson.api.variable.telemetry.TemporalValue;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
-import org.rrd4j.ConsolFun;
-import org.rrd4j.DsType;
-import org.rrd4j.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
 import java.util.*;
-
-import static org.rrd4j.ConsolFun.AVERAGE;
 
 /**
  * A VariableManager implementation that publishes variables as OSGi services and uses OSGi events to
@@ -35,21 +29,36 @@ import static org.rrd4j.ConsolFun.AVERAGE;
  *
  * @author Dan Noguerol
  */
-public class OSGIVariableManager implements VariableManager, VariablePublisher {
+public class OSGIVariableManager implements VariableManager {
     private static final Logger logger = LoggerFactory.getLogger(OSGIVariableManager.class);
 
     private volatile EventManager eventManager;
     private volatile ConfigurationAdmin configAdmin;
 
     private static final String GLOBAL_NAME = "$GLOBAL$";
-    private static final String TELEMETRY_DELIMITER = ":";
 
     private final Map<String,List<VariableRegistration>> variableRegistrations = new HashMap<>();
-    private final Map<String,Object> telemetryMutexes = new HashMap<>();
 
     @Override
-    public void publishGlobalVariable(String userId, String hubId, String pluginId, String name, Object value, HobsonVariable.Mask mask) {
-        publishDeviceVariable(userId, hubId, pluginId, GLOBAL_NAME, name, value, mask);
+    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask) {
+        publishDeviceVariable(DeviceContext.createLocal(ctx.getPluginId(), GLOBAL_NAME), name, value, mask);
+    }
+
+    @Override
+    public Collection<HobsonVariable> getAllVariables(String userId, String hubId) {
+        List<HobsonVariable> results = new ArrayList<>();
+        BundleContext bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        try {
+            ServiceReference[] references = bundleContext.getServiceReferences(HobsonVariable.class.getName(), "(&(objectClass=" + HobsonVariable.class.getName() + "))");
+            if (references != null && references.length > 0) {
+                for (ServiceReference ref : references) {
+                    results.add((HobsonVariable)bundleContext.getService(ref));
+                }
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving variables", e);
+        }
+        return results;
     }
 
     @Override
@@ -89,37 +98,37 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
     }
 
     @Override
-    public void publishDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name, Object value, HobsonVariable.Mask mask) {
+    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask) {
         // make sure the variable name is legal
         if (name == null || name.contains(",") || name.contains(":")) {
             throw new HobsonRuntimeException("Unable to publish variable \"" + name + "\": name is either null or contains an invalid character");
         }
 
         // make sure variable doesn't already exist
-        if (hasDeviceVariable(userId, hubId, pluginId, deviceId, name)) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + pluginId + "," + deviceId + "," + name);
+        if (hasDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name)) {
+            throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + ctx.getPluginId() + "," + ctx.getDeviceId() + "," + name);
         }
 
         // publish the variable
         Dictionary<String,String> props = new Hashtable<>();
-        props.put("pluginId", pluginId);
-        props.put("deviceId", deviceId);
+        props.put("pluginId", ctx.getPluginId());
+        props.put("deviceId", ctx.getDeviceId());
         props.put("name", name);
-        addVariableRegistration(pluginId, deviceId, name, getBundleContext().registerService(
+        addVariableRegistration(ctx.getPluginId(), ctx.getDeviceId(), name, getBundleContext().registerService(
             HobsonVariable.class.getName(),
-            new HobsonVariableImpl(name, value, mask),
+            new HobsonVariableImpl(ctx.getPluginId(), ctx.getDeviceId(), name, value, mask),
             props
         ));
     }
 
     @Override
-    public void unpublishGlobalVariable(String userId, String hubId, String pluginId, String name) {
+    public void unpublishGlobalVariable(PluginContext ctx, String name) {
         synchronized (variableRegistrations) {
-            List<VariableRegistration> regs = variableRegistrations.get(pluginId);
+            List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 VariableRegistration vr = null;
                 for (VariableRegistration reg : regs) {
-                    if (reg.getPluginId().equals(pluginId) && reg.getName().equals(name)) {
+                    if (reg.getPluginId().equals(ctx.getPluginId()) && reg.getName().equals(name)) {
                         vr = reg;
                         break;
                     }
@@ -133,26 +142,38 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
     }
 
     @Override
-    public void unpublishAllPluginVariables(String userId, String hubId, String pluginId) {
+    public void unpublishAllPluginVariables(PluginContext ctx) {
         synchronized (variableRegistrations) {
-            List<VariableRegistration> regs = variableRegistrations.get(pluginId);
+            List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 for (VariableRegistration vr : regs) {
                     vr.unregister();
                 }
-                variableRegistrations.remove(pluginId);
+                variableRegistrations.remove(ctx.getPluginId());
             }
         }
     }
 
     @Override
-    public void unpublishDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name) {
+    public Long setGlobalVariable(PluginContext ctx, String name, Object value) {
+        // TODO
+        return null;
+    }
+
+    @Override
+    public Map<String, Long> setGlobalVariables(PluginContext ctx, Map<String, Object> values) {
+        // TODO
+        return null;
+    }
+
+    @Override
+    public void unpublishDeviceVariable(DeviceContext ctx, String name) {
         synchronized (variableRegistrations) {
-            List<VariableRegistration> regs = variableRegistrations.get(pluginId);
+            List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 VariableRegistration vr = null;
                 for (VariableRegistration reg : regs) {
-                    if (reg.getPluginId().equals(pluginId) && reg.getDeviceId().equals(deviceId) && reg.getName().equals(name)) {
+                    if (reg.getPluginId().equals(ctx.getPluginId()) && reg.getDeviceId().equals(ctx.getDeviceId()) && reg.getName().equals(name)) {
                         vr = reg;
                         break;
                     }
@@ -166,13 +187,13 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
     }
 
     @Override
-    public void unpublishAllDeviceVariables(String userId, String hubId, String pluginId, String deviceId) {
+    public void unpublishAllDeviceVariables(DeviceContext ctx) {
         synchronized (variableRegistrations) {
-            List<VariableRegistration> regs = variableRegistrations.get(pluginId);
+            List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 VariableRegistration vr = null;
                 for (VariableRegistration reg : regs) {
-                    if (reg.getPluginId().equals(pluginId) && reg.getDeviceId().equals(deviceId)) {
+                    if (reg.getPluginId().equals(ctx.getPluginId()) && reg.getDeviceId().equals(ctx.getDeviceId())) {
                         vr = reg;
                         break;
                     }
@@ -274,122 +295,48 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
     }
 
     @Override
-    public Long setDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name, Object value) {
-        HobsonVariable variable = getDeviceVariable(userId, hubId, pluginId, deviceId, name);
+    public Long setDeviceVariable(DeviceContext ctx, String name, Object value) {
+        HobsonVariable variable = getDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name);
+        if (variable == null) {
+            throw new HobsonNotFoundException("Attempt to set unknown variable: " + ctx.getPluginId() + "." + ctx.getDeviceId() + "." + name);
+        }
         Long lastUpdate = variable.getLastUpdate();
-        logger.debug("Attempting to set variable {}.{}.{} to value {}", pluginId, deviceId, name, value);
-        eventManager.postEvent(userId, hubId, new VariableUpdateRequestEvent(pluginId, deviceId, name, value));
+        logger.debug("Attempting to set variable {}.{}.{} to value {}", ctx.getPluginId(), ctx.getDeviceId(), name, value);
+        eventManager.postEvent(ctx.getUserId(), ctx.getHubId(), new VariableUpdateRequestEvent(new VariableUpdate(ctx.getPluginId(), ctx.getDeviceId(), name, value)));
         return lastUpdate;
     }
 
     @Override
-    public Map<String, Long> setDeviceVariables(String userId, String hubId, String pluginId, String deviceId, Map<String, Object> values) {
-        // TODO
-        return null;
-    }
-
-    @Override
-    public void writeDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, Object value, long time) {
-        try {
-            Object mutex = getTelemetryMutex(pluginId, deviceId, name);
-            synchronized (mutex) {
-                File file = getTelemetryFile(pluginId, deviceId, name);
-                RrdDb db = new RrdDb(file.getAbsolutePath(), false);
-                Sample sample = db.createSample();
-                sample.setAndUpdate(Long.toString(time) + ":" + value);
-                db.close();
+    public Map<String, Long> setDeviceVariables(DeviceContext ctx, Map<String, Object> values) {
+        Map<String,Long> results = new HashMap<>();
+        List<VariableUpdate> updates = new ArrayList<>();
+        for (String name : values.keySet()) {
+            HobsonVariable variable = getDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name);
+            if (variable != null) {
+                results.put(name, variable.getLastUpdate());
             }
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error writing to telemetry file", e);
         }
+        eventManager.postEvent(ctx.getUserId(), ctx.getHubId(), new VariableUpdateRequestEvent(updates));
+        return results;
     }
 
     @Override
-    public Collection<TemporalValue> getDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, long endTime, TelemetryInterval interval) {
-        try {
-            List<TemporalValue> results = new ArrayList<>();
-            File file = getTelemetryFile(pluginId, deviceId, name);
-            if (file.exists()) {
-                Object mutex = getTelemetryMutex(pluginId, deviceId, name);
-                synchronized (mutex) {
-                    RrdDb db = new RrdDb(file.getAbsolutePath(), true);
-                    try {
-                        FetchRequest fetch = db.createFetchRequest(ConsolFun.AVERAGE, calculateStartTime(endTime, interval), endTime);
-                        FetchData data = fetch.fetchData();
-
-                        long[] timestamps = data.getTimestamps();
-                        double[] values = data.getValues(0);
-
-                        if (timestamps.length == values.length) {
-                            for (int i = 0; i < timestamps.length; i++) {
-                                results.add(new TemporalValue(timestamps[i], values[i]));
-                            }
-                        } else {
-                            throw new HobsonRuntimeException("Timestamp and value count is different; telemetry file may be corrupted?");
-                        }
-                    } finally {
-                        db.close();
-                    }
-                }
-            }
-            return results;
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error retrieving device telemetry", e);
-        }
-    }
-
-    @Override
-    public VariablePublisher getPublisher() {
-        return this;
-    }
-
-    @Override
-    public void fireVariableUpdateNotification(final String userId, final String hubId, HobsonPlugin plugin, final VariableUpdate update) {
-        plugin.getRuntime().executeInEventLoop(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    setVariable(userId, hubId, update, true);
-                } catch (DeviceVariableNotFoundException e) {
-                    logger.error("Attempt to update a variable that has not been published: {}", update);
-                }
-            }
-        });
-    }
-
-    @Override
-    public void fireVariableUpdateNotifications(final String userId, final String hubId, HobsonPlugin plugin, final List<VariableUpdate> updates) {
-        plugin.getRuntime().executeInEventLoop(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (VariableUpdate update : updates) {
-                        setVariable(userId, hubId, update, false);
-                    }
-                    eventManager.postEvent(userId, hubId, new VariableUpdateNotificationEvent(updates));
-                } catch (DeviceVariableNotFoundException e) {
-                    logger.error("Attempt to update a variable that has not been published: {}", updates);
-                }
-            }
-        });
-    }
-
-    protected void setVariable(String userId, String hubId, VariableUpdate update, boolean generateEvent) {
+    public void confirmVariableUpdates(String userId, String hubId, List<VariableUpdate> updates) {
         HobsonVariable var;
 
-        // if the device ID is null, it's a global variable
-        if (update.getDeviceId() == null) {
-            var = getDeviceVariable(userId, hubId, update.getPluginId(), GLOBAL_NAME, update.getName());
-        } else {
-            var = getDeviceVariable(userId, hubId, update.getPluginId(), update.getDeviceId(), update.getName());
+        for (VariableUpdate update : updates) {
+            if (update.isGlobal()) {
+                var = getDeviceVariable(userId, hubId, update.getPluginId(), GLOBAL_NAME, update.getName());
+            } else {
+                var = getDeviceVariable(userId, hubId, update.getPluginId(), update.getDeviceId(), update.getName());
+            }
+
+            if (var != null) {
+                ((HobsonVariableImpl)var).setValue(update.getValue());
+            }
         }
 
-        if (var != null) {
-            ((HobsonVariableImpl)var).setValue(update.getValue());
-        }
-        if (generateEvent) {
-            eventManager.postEvent(userId, hubId, new VariableUpdateNotificationEvent(update));
-        }
+        eventManager.postEvent(userId, hubId, new VariableUpdateNotificationEvent(updates));
     }
 
     protected BundleContext getBundleContext() {
@@ -409,46 +356,6 @@ public class OSGIVariableManager implements VariableManager, VariablePublisher {
                 variableRegistrations.put(pluginId, regs);
             }
             regs.add(new VariableRegistration(pluginId, deviceId, name, reg));
-        }
-    }
-
-    private String createDeviceVariableString(String pluginId, String deviceId, String name) {
-        return pluginId + TELEMETRY_DELIMITER + deviceId + TELEMETRY_DELIMITER + name;
-    }
-
-    private Object getTelemetryMutex(String pluginId, String deviceId, String name) {
-        synchronized (telemetryMutexes) {
-            String key = createDeviceVariableString(pluginId, deviceId, name);
-            Object mutex = telemetryMutexes.get(key);
-            if (mutex == null) {
-                mutex = new Object();
-                telemetryMutexes.put(key, mutex);
-            }
-            return mutex;
-        }
-    }
-
-    private File getTelemetryFile(String pluginId, String deviceId, String name) throws IOException {
-        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        File file = context.getDataFile(createDeviceVariableString(pluginId, deviceId, name) + ".rrd");
-        if (!file.exists()) {
-            RrdDef rrdDef = new RrdDef(file.getAbsolutePath(), 300);
-            rrdDef.addDatasource(name, DsType.GAUGE, 300, Double.NaN, Double.NaN);
-            rrdDef.addArchive(AVERAGE, 0.5, 1, 2016);
-            RrdDb db = new RrdDb(rrdDef);
-            db.close();
-        }
-        return file;
-    }
-
-    private long calculateStartTime(long endTime, TelemetryInterval interval) {
-        switch (interval) {
-            case DAYS_7:
-                return endTime - (7 * 24 * 60 * 60L);
-            case DAYS_30:
-                return endTime - (30 * 24 * 60 * 60L);
-            default:
-                return endTime - (24 * 60 * 60L);
         }
     }
 

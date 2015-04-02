@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutorService;
  *
  * @author Dan Noguerol
  */
-public class OSGITaskManager implements TaskManager, TaskPublisher {
+public class OSGITaskManager implements TaskManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
@@ -137,11 +137,6 @@ public class OSGITaskManager implements TaskManager, TaskPublisher {
 
             }
         });
-    }
-
-    @Override
-    public TaskPublisher getPublisher() {
-        return this;
     }
 
     @Override

@@ -16,8 +16,10 @@ import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import io.netty.util.concurrent.Future;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.InvalidSyntaxException;
@@ -49,6 +51,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private volatile HubManager hubManager;
     private volatile PluginManager pluginManager;
     private volatile TaskManager taskManager;
+    private volatile TelemetryManager telemetryManager;
     private volatile VariableManager variableManager;
 
     private HobsonPlugin plugin;
@@ -79,6 +82,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         getRuntime().setHubManager(hubManager);
         getRuntime().setPluginManager(pluginManager);
         getRuntime().setTaskManager(taskManager);
+        getRuntime().setTelemetryManager(telemetryManager);
         getRuntime().setVariableManager(variableManager);
 
         // wait for service to become registered before performing final initialization
@@ -105,10 +109,10 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             eventManager.removeListenerFromAllTopics(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, HobsonPluginEventLoopWrapper.this);
 
             // unpublish all variables published by this plugin's devices
-            variableManager.getPublisher().unpublishAllPluginVariables(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, getId());
+            variableManager.unpublishAllPluginVariables(PluginContext.createLocal(getId()));
 
             // stop all devices
-            deviceManager.getPublisher().unpublishAllDevices(plugin);
+            deviceManager.unpublishAllDevices(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin);
 
             // shut down the plugin
             getRuntime().onShutdown();
@@ -141,11 +145,22 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 try {
                     if (event instanceof PluginConfigurationUpdateEvent && plugin.getId().equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
                         PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
+                        logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
                         plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
                     } else if (event instanceof DeviceConfigurationUpdateEvent && plugin.getId().equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
                         DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
+                        logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
                         plugin.getRuntime().onDeviceConfigurationUpdate(dcue.getDeviceId(), dcue.getConfiguration());
+                    } else if (event instanceof VariableUpdateRequestEvent) {
+                        VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
+                        for (VariableUpdate update : dcue.getUpdates()) {
+                            if (plugin.getId().equals(update.getPluginId())) {
+                                logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
+                                plugin.getRuntime().onSetDeviceVariable(update.getDeviceId(), update.getName(), update.getValue());
+                            }
+                        }
                     } else {
+                        logger.trace("Dispatching event to plugin {}: {}", plugin.getId(), event);
                         plugin.getRuntime().onHobsonEvent(event);
                     }
                 } catch (Throwable e) {

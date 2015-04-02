@@ -30,10 +30,10 @@ public class PluginListTest {
     @Test
     public void testUpdates() {
         List<PluginDescriptor> plugins = new ArrayList<PluginDescriptor>();
-        PluginDescriptor pd = new PluginDescriptor("id1", "name1", "desc1", PluginType.CORE, new PluginStatus(PluginStatus.Status.RUNNING), "1.0.0");
+        PluginDescriptor pd = new PluginDescriptor("id1", "name1", "desc1", PluginType.CORE, PluginStatus.running(), "1.0.0");
         pd.setLatestVersionString("1.1.0");
         plugins.add(pd);
-        plugins.add(new PluginDescriptor("id2", "name2", "desc2", PluginType.CORE, new PluginStatus(PluginStatus.Status.RUNNING), "1.0.0"));
+        plugins.add(new PluginDescriptor("id2", "name2", "desc2", PluginType.CORE, PluginStatus.running(), "1.0.0"));
 
         PluginList list = new PluginList(plugins);
         assertEquals(2, list.size());

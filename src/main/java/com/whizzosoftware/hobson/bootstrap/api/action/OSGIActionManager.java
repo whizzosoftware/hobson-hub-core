@@ -9,7 +9,6 @@ package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
-import com.whizzosoftware.hobson.api.action.ActionPublisher;
 import com.whizzosoftware.hobson.api.action.HobsonAction;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
@@ -27,7 +26,7 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIActionManager implements ActionManager, ActionPublisher {
+public class OSGIActionManager implements ActionManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
@@ -145,10 +144,5 @@ public class OSGIActionManager implements ActionManager, ActionPublisher {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error retrieving action", e);
         }
-    }
-
-    @Override
-    public ActionPublisher getPublisher() {
-        return this;
     }
 }

@@ -16,12 +16,16 @@ import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.input.ReversedLinesFileReader;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.LoggerFactory;
@@ -40,38 +44,105 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIHubManager implements HubManager {
+public class OSGIHubManager implements HubManager, LocalHubManager {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
 
     public static final String HUB_NAME = "hub.name";
     public static final String ADMIN_PASSWORD = "admin.password";
     public static final String SETUP_COMPLETE = "setup.complete";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
-    public static final String RECIPIENT_ADDRESS = "recipientAddress";
-    public static final String SUBJECT = "subject";
-    public static final String MESSAGE = "message";
 
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
 
-    @Override
-    public String getHubName(String userId, String hubId) {
-        Configuration config = getConfiguration();
-        Dictionary props = getConfigurationProperties(config);
-        return (String)props.get(HUB_NAME);
+    public Collection<HobsonHub> getHubs(String userId) {
+        return Arrays.asList(createLocalHubDetails(userId));
     }
 
     @Override
-    public void setHubName(String userId, String hubId, String name) {
-        try {
-            Configuration config = getConfiguration();
-            Dictionary props = getConfigurationProperties(config);
-            props.put(HUB_NAME, name);
-
-            updateConfiguration(config, props);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting hub name", e);
+    public HobsonHub getHub(String userId, String hubId) {
+        if (UserUtil.DEFAULT_HUB.equals(hubId)) {
+            return createLocalHubDetails(userId);
+        } else {
+            throw new HobsonNotFoundException("Unable to find hub with specified ID");
         }
+    }
+
+    @Override
+    public void setHubDetails(String userId, String hubId, HobsonHub hub) {
+        boolean needsUpdate = false;
+        Configuration config = getConfiguration();
+        Dictionary props = getConfigurationProperties(config);
+
+        if (hub.hasName()) {
+            props.put(HUB_NAME, hub.getName());
+            needsUpdate = true;
+        }
+
+        if (hub.hasLocation()) {
+            HubLocation location = hub.getLocation();
+            if (location.getText() != null) {
+                props.put(HubLocation.PROP_LOCATION_STRING, location.getText());
+                needsUpdate = true;
+            }
+            if (location.hasLatitude()) {
+                props.put(HubLocation.PROP_LATITUDE, location.getLatitude());
+                needsUpdate = true;
+            }
+            if (location.hasLongitude()) {
+                props.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
+                needsUpdate = true;
+            }
+        }
+
+        if (hub.hasEmail()) {
+            EmailConfiguration email = hub.getEmail();
+            props.put(EmailConfiguration.PROP_MAIL_SERVER, email.getServer());
+            props.put(EmailConfiguration.PROP_MAIL_SECURE, email.isSecure());
+            props.put(EmailConfiguration.PROP_MAIL_USERNAME, email.getUsername());
+            if (email.hasPassword()) {
+                props.put(EmailConfiguration.PROP_MAIL_PASSWORD, email.getPassword());
+            }
+            props.put(EmailConfiguration.PROP_MAIL_SENDER, email.getSenderAddress());
+            needsUpdate = true;
+        }
+
+        if (hub.hasLogLevel()) {
+            Logger root = (Logger)LoggerFactory.getLogger(HOBSON_LOGGER);
+            root.setLevel(Level.toLevel(hub.getLogLevel()));
+        }
+
+        if (hub.hasSetupComplete()) {
+            props.put(SETUP_COMPLETE, hub.isSetupComplete());
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            try {
+                updateConfiguration(config, props);
+            } catch (IOException e) {
+                throw new HobsonRuntimeException("Error setting hub details", e);
+            }
+        }
+    }
+
+    @Override
+    public void clearHubDetails(String userId, String hubId) {
+        Configuration config = getConfiguration();
+        Dictionary props = new Hashtable();
+        try {
+            updateConfiguration(config, props);
+            ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.INFO);
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error clearing hub details", e);
+        }
+    }
+
+    protected String getHubName(String userId, String hubId) {
+        Configuration config = getConfiguration();
+        Dictionary props = getConfigurationProperties(config);
+        String name = (String)props.get(HUB_NAME);
+        return (name == null) ? "Unnamed" : name;
     }
 
     @Override
@@ -116,58 +187,18 @@ public class OSGIHubManager implements HubManager {
 
         // if it hasn't been set, default to the "admin" password
         if (adminPassword == null) {
-            adminPassword = DigestUtils.sha256Hex("admin");
+            adminPassword = DigestUtils.sha256Hex("local");
         }
 
         return (adminPassword.equals(password));
     }
 
-    @Override
-    public HubLocation getHubLocation(String userId, String hubId) {
-        return new HubLocation(getConfigurationProperties(getConfiguration()));
+    protected HubLocation getHubLocation(String userId, String hubId) {
+        return new HubLocation.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
     }
 
-    @Override
-    public void setHubLocation(String userId, String hubId, HubLocation location) {
-        try {
-            Configuration config = getConfiguration();
-            Dictionary d = getConfigurationProperties(config);
-            if (location.getText() != null) {
-                d.put(HubLocation.PROP_LOCATION_STRING, location.getText());
-            }
-            if (location.hasLatitude()) {
-                d.put(HubLocation.PROP_LATITUDE, location.getLatitude());
-            }
-            if (location.hasLongitude()) {
-                d.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
-            }
-
-            updateConfiguration(config, d);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting hub location", e);
-        }
-    }
-
-    @Override
-    public EmailConfiguration getHubEmailConfiguration(String userId, String hubId) {
-        return new EmailConfiguration(getConfigurationProperties(getConfiguration()));
-    }
-
-    @Override
-    public void setHubEmailConfiguration(String userId, String hubId, EmailConfiguration ec) {
-        try {
-            Configuration config = getConfiguration();
-            Dictionary d = getConfigurationProperties(config);
-            d.put(EmailConfiguration.PROP_MAIL_SERVER, ec.getMailServer());
-            d.put(EmailConfiguration.PROP_MAIL_SMTPS, ec.isSMTPS());
-            d.put(EmailConfiguration.PROP_MAIL_USERNAME, ec.getUsername());
-            d.put(EmailConfiguration.PROP_MAIL_PASSWORD, ec.getPassword());
-            d.put(EmailConfiguration.PROP_MAIL_SENDER, ec.getSenderAddress());
-
-            updateConfiguration(config, d);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting hub location", e);
-        }
+    protected EmailConfiguration getHubEmailConfiguration(String userId, String hubId) {
+        return new EmailConfiguration.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
     }
 
     @Override
@@ -181,16 +212,16 @@ public class OSGIHubManager implements HubManager {
     }
 
     protected void sendEmail(EmailConfiguration config, String recipientAddress, String subject, String body) {
-        String mailHost = config.getMailServer();
-        Boolean mailUseSMTPS = config.isSMTPS();
+        String mailHost = config.getServer();
+        Boolean mailSecure = config.isSecure();
         String mailUser = config.getUsername();
         String mailPassword = config.getPassword();
 
         if (mailHost == null) {
             throw new HobsonRuntimeException("No mail host is configured; unable to execute e-mail action");
-        } else if (mailUseSMTPS && mailUser == null) {
+        } else if (mailSecure && mailUser == null) {
             throw new HobsonRuntimeException("No mail server username is configured for SMTPS; unable to execute e-mail action");
-        } else if (mailUseSMTPS && mailPassword == null) {
+        } else if (mailSecure && mailPassword == null) {
             throw new HobsonRuntimeException("No mail server password is configured for SMTPS; unable to execute e-mail action");
         }
 
@@ -203,8 +234,8 @@ public class OSGIHubManager implements HubManager {
         Message msg = createMessage(session, config, recipientAddress, subject, body);
 
         // send the message
-        String protocol = mailUseSMTPS ? "smtps" : "smtp";
-        int port = mailUseSMTPS ? 465 : 25;
+        String protocol = mailSecure ? "smtps" : "smtp";
+        int port = mailSecure ? 465 : 25;
         try {
             Transport transport = session.getTransport(protocol);
             logger.debug("Sending e-mail to {} using {}@{}:{}", msg.getAllRecipients(), mailUser, mailHost, port);
@@ -219,73 +250,67 @@ public class OSGIHubManager implements HubManager {
         }
     }
 
-    @Override
-    public boolean isSetupWizardComplete(String userId, String hubId) {
+    protected HobsonHub createLocalHubDetails(String userId) {
+        String version = FrameworkUtil.getBundle(getClass()).getVersion().toString();
+        return new HobsonHub.Builder(UserUtil.DEFAULT_HUB).
+            name(getHubName(userId, UserUtil.DEFAULT_HUB)).
+            version(version).
+            email(getHubEmailConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)).
+            location(getHubLocation(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB)).
+            logLevel(((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString()).
+            setupComplete(isSetupComplete()).
+            build();
+    }
+
+    protected boolean isSetupComplete() {
         Configuration config = getConfiguration();
         Dictionary props = config.getProperties();
         return (props != null && props.get(SETUP_COMPLETE) != null && (Boolean)props.get(SETUP_COMPLETE));
     }
 
     @Override
-    public void setSetupWizardComplete(String userId, String hubId, boolean complete) {
-        try {
-            Configuration config = getConfiguration();
-            Dictionary props = config.getProperties();
-            if (props == null) {
-                props = new Hashtable();
-            }
-            props.put(SETUP_COMPLETE, complete);
-
-            updateConfiguration(config, props);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting setup wizard completion status", e);
-        }
-    }
-
-    @Override
-    public String getLogLevel(String userId, String hubId) {
-        Logger root = (Logger) LoggerFactory.getLogger(HOBSON_LOGGER);
-        return root.getLevel().toString();
-    }
-
-    @Override
-    public void setLogLevel(String userId, String hubId, String level) {
-        Logger root = (Logger) LoggerFactory.getLogger(HOBSON_LOGGER);
-        root.setLevel(Level.toLevel(level));
-    }
-
-    @Override
-    public LogContent getLog(String userId, String hubId, long startIndex, long endIndex) {
+    public LineRange getLog(String userId, String hubId, long startLine, long endLine, Appendable appendable) {
         String path = getLogFilePath();
 
-        try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
-            long fileLength = file.length();
+        try {
+            ReversedLinesFileReader reader = new ReversedLinesFileReader(new File(path));
 
-            if (startIndex == -1) {
-                startIndex = fileLength - endIndex - 1;
-                endIndex = fileLength - 1;
-            }
-            if (endIndex == -1) {
-                endIndex = fileLength - 1;
-            }
-            if (startIndex > fileLength - 1) {
-                throw new HobsonRuntimeException("Requested start index is greater than file length");
-            }
-            if (endIndex > fileLength - 1) {
-                throw new HobsonRuntimeException("Requested end index is greater than file length");
+            long lineCount = endLine - startLine + 1;
+
+            // read to the start line
+            for (int i=0; i < startLine; i++) {
+                reader.readLine();
             }
 
-            // jump to start point in file
-            file.seek(startIndex);
+            // append the requested number of lines (aborting if start of file is hit)
+            appendable.append("[\n");
+            long count = 0;
+            for (; count < lineCount; count++) {
+                String s = reader.readLine();
+                if (s == null) {
+                    break;
+                }
+                appendable.append(s);
+                if (count < lineCount - 1) {
+                    appendable.append(",");
+                }
+            }
+            appendable.append("\n]");
 
-            // read in appropriate number of bytes
-            byte buffer[] = new byte[(int)(endIndex - startIndex)];
-            file.read(buffer);
-
-            return new LogContent(startIndex, endIndex, buffer);
+            return new LineRange(startLine, count - 1);
         } catch (IOException e) {
             throw new HobsonRuntimeException("Unable to read log file", e);
         }
+    }
+
+    @Override
+    public HubRegistrar getRegistrar() {
+        return null;
+    }
+
+    @Override
+    public LocalHubManager getLocalManager() {
+        return this;
     }
 
     @Override

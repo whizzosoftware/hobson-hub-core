@@ -19,6 +19,9 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.rest.v1.LocalAuthorizer;
+import com.whizzosoftware.hobson.rest.v1.Authorizer;
+import com.whizzosoftware.hobson.rest.v1.util.HATEOASLinkHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -29,8 +32,21 @@ import org.osgi.framework.ServiceReference;
  * @author Dan Noguerol
  */
 public class HobsonManagerModule extends AbstractModule {
+    private HATEOASLinkHelper linkHelper = new HATEOASLinkHelper();
+    private Authorizer authorizer = new LocalAuthorizer();
+
     @Override
     protected void configure() {
+    }
+
+    @Provides
+    public Authorizer providerAuthorizer() {
+        return authorizer;
+    }
+
+    @Provides
+    public HATEOASLinkHelper provideLinkHelper() {
+        return linkHelper;
     }
 
     @Provides

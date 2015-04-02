@@ -1,0 +1,53 @@
+<div class="row">
+    <div class="large-12 columns header-bar">
+        <%= strings.EmailWelcome %>
+    </div>
+</div>
+<div class="page-container">
+	<div class="row">
+		<div class="large-12 columns">
+			<label><%= strings.ServerType %></label>
+			<input id="serverNone" type="radio" name="serverType" value="none"><label for="serverNone"><%= strings.None %></label>
+			<input id="serverGmail" type="radio" name="serverType" value="gmail"><label for="serverGmail"><%= strings.Gmail %></label>
+			<input id="serverOther" type="radio" name="serverType" value="other"><label for="serverOther"><%= strings.Other %></label>
+		</div>
+	</div>
+	<div class="row">
+		<div class="large-9 medium-9 columns">
+			<label><%= strings.ServerHostname %>
+				<input id="serverHost" class="radius" type="text" value="<%= hub.email ? hub.email.server : '' %>" placeholder="Ex: 192.121.8.342" disabled />
+			</label>
+            <p class="input-help-text" style="margin-bottom: .5em;"><%= strings.MailServerHelp %></p>
+			<input id="serverSecure" type="checkbox" <%= hub.email ? (hub.email.secure ? 'checked' : '') : '' %> disabled><label for="serverSecure"><%= strings.MailServerSecure %></label></input>
+		</div>
+	</div>
+	<div class="row">
+		<div class="large-9 medium-9 columns">
+			<label><%= strings.UserName %>
+				<input id="serverUsername" class="radius" type="text" value="<%= hub.email ? hub.email.username : '' %>" placeholder="Ex: joe@foo.com" disabled />
+			</label>
+            <p class="input-help-text"><%= strings.MailUserHelp %></p>
+		</div>
+	</div>	
+	<div class="row">
+		<div class="large-9 medium-9 columns">
+			<label><%= strings.Password %>
+				<input id="serverPassword" class="radius" type="password" placeholder="<%= strings.PasswordHelp %>" disabled />
+			</label>
+            <p class="input-help-text"><%= strings.MailPasswordHelp %></p>
+		</div>
+	</div>	
+	<div class="row">
+		<div class="large-9 medium-9 columns">
+			<label><%= strings.SenderAddress %>
+				<input id="serverSender" class="radius" type="text" value="<%= hub.email ? hub.email.senderAddress : '' %>" placeholder="Ex: joe@foo.com" disabled />
+			</label>
+            <p class="input-help-text"><%= strings.MailSenderHelp %></p>
+		</div>
+	</div>	
+	<div class="row">
+		<div class="large-9 medium-9 columns end">
+	       	<a id="testSendButton" class="secondary small radius button" href="#"><%= strings.SendTestMessage %></a>
+		</div>
+	</div>
+ </div>

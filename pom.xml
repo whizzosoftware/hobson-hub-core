@@ -147,6 +147,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.restlet.osgi</groupId>
+            <artifactId>org.restlet.ext.fileupload</artifactId>
+            <version>2.2.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>3.0</version>
@@ -155,6 +161,11 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api</artifactId>
+            <version>0.5.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.whizzosoftware.hobson.hub</groupId>
+            <artifactId>hobson-hub-dto</artifactId>
             <version>0.5.0-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -181,6 +192,16 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback.contrib</groupId>
+            <artifactId>logback-json-core</artifactId>
+            <version>0.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback.contrib</groupId>
+            <artifactId>logback-json-classic</artifactId>
+            <version>0.1.2</version>
         </dependency>
         <dependency>
             <groupId>javax.jmdns</groupId>
@@ -215,6 +236,9 @@
                     <exclude>**/version.properties</exclude>
                 </excludes>
             </resource>
+            <resource>
+                <directory>yo/dist</directory>
+            </resource>
         </resources>
         <plugins>
             <plugin>
@@ -225,6 +249,28 @@
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>2.7</version>
+                <executions>
+                    <execution>
+                        <id>copy-resources</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${basedir}/target/classes/setup</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>yo/app</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -260,12 +306,24 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Import-Package>org.osgi.framework,org.osgi.framework.wiring,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,com.ning.http.client.*,javax.inject.*,javax.mail.*,org.restlet.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
+                        <Import-Package>org.osgi.framework,org.osgi.framework.wiring,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,com.ning.http.client.*,javax.inject.*,javax.mail.*,org.restlet.*,org.apache.commons.fileupload.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
                         <Bundle-Activator>com.whizzosoftware.hobson.bootstrap.Activator</Bundle-Activator>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*</Export-Package>
+                        <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*,com.whizzosoftware.hobson.json.*,com.whizzosoftware.hobson.dto.*</Export-Package>
                     </instructions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.trecloux</groupId>
+                <artifactId>yeoman-maven-plugin</artifactId>
+                <version>0.2</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

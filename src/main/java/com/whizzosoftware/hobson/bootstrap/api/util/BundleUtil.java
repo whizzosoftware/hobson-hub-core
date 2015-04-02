@@ -59,12 +59,12 @@ public class BundleUtil {
     static public PluginStatus createPluginStatusFromBundleState(int state) {
         switch (state) {
             case Bundle.ACTIVE:
-                return new PluginStatus(PluginStatus.Status.RUNNING);
+                return PluginStatus.running();
             case Bundle.INSTALLED:
             case Bundle.RESOLVED:
-                return new PluginStatus(PluginStatus.Status.STOPPED);
+                return PluginStatus.stopped();
             default:
-                return new PluginStatus(PluginStatus.Status.NOT_INSTALLED);
+                return PluginStatus.notInstalled();
         }
     }
 }
