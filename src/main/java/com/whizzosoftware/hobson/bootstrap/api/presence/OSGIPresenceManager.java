@@ -9,7 +9,9 @@ package com.whizzosoftware.hobson.bootstrap.api.presence;
 
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PresenceUpdateEvent;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.presence.PresenceEntity;
+import com.whizzosoftware.hobson.api.presence.PresenceEntityContext;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 
 import java.util.*;
@@ -27,26 +29,26 @@ public class OSGIPresenceManager implements PresenceManager {
     private volatile EventManager eventManager;
 
     @Override
-    public Collection<PresenceEntity> getAllEntities(String userId, String hubId) {
+    public Collection<PresenceEntity> getAllEntities(HubContext ctx) {
         List<PresenceEntity> results = new ArrayList<>();
         results.addAll(entities.values());
         return results;
     }
 
     @Override
-    public PresenceEntity getEntity(String userId, String hubId, String entityId) {
-        return entities.get(entityId);
+    public PresenceEntity getEntity(PresenceEntityContext ctx) {
+        return entities.get(ctx.getEntityId());
     }
 
     @Override
-    public String addEntity(String userId, String hubId, PresenceEntity entity) {
-        entities.put(entity.getId(), new MutablePresenceEntity(entity));
-        return entity.getId();
+    public String addEntity(PresenceEntity entity) {
+        entities.put(entity.getContext().getEntityId(), new MutablePresenceEntity(entity));
+        return entity.getContext().getEntityId();
     }
 
     @Override
-    public void updateEntity(String userId, String hubId, String entityId, String name, String location) {
-        MutablePresenceEntity entity = entities.get(entityId);
+    public void updateEntity(PresenceEntityContext ctx, String name, String location) {
+        MutablePresenceEntity entity = entities.get(ctx.getEntityId());
         if (entity != null) {
             if (name != null) {
                 entity.setName(name);
@@ -55,6 +57,6 @@ public class OSGIPresenceManager implements PresenceManager {
                 entity.setLocation(location);
             }
         }
-        eventManager.postEvent(userId, hubId, new PresenceUpdateEvent(entityId, location));
+        eventManager.postEvent(ctx.getHubContext(), new PresenceUpdateEvent(ctx.getEntityId(), location));
     }
 }

@@ -8,8 +8,10 @@
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
+import com.whizzosoftware.hobson.api.action.ActionContext;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,8 +25,8 @@ import java.util.Map;
 public class LogAction extends AbstractHobsonAction {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    public LogAction(String pluginId) {
-        super(pluginId, "log", "Log Message");
+    public LogAction(PluginContext ctx) {
+        super(ActionContext.create(ctx, "log"), "Log Message");
 
         addMetaData(new ActionMetaData("message", "Message", "The message added to the log file", ActionMetaData.Type.STRING));
     }

@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.image;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageGroup;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.image.ImageManager;
@@ -56,7 +57,7 @@ public class OSGIImageManager implements ImageManager {
     }
 
     @Override
-    public ImageInputStream getHubImage() {
+    public ImageInputStream getHubImage(HubContext ctx) {
         BundleContext bc = FrameworkUtil.getBundle(getClass()).getBundleContext();
 
         // look for a hub image
@@ -78,7 +79,7 @@ public class OSGIImageManager implements ImageManager {
     }
 
     @Override
-    public void setHubImage(ImageInputStream iis) {
+    public void setHubImage(HubContext ctx, ImageInputStream iis) {
         String filename = null;
 
         if (iis.getMediaType().equalsIgnoreCase(ImageMediaTypes.JPEG)) {
@@ -103,12 +104,12 @@ public class OSGIImageManager implements ImageManager {
 
 
     @Override
-    public List<ImageGroup> getImageLibraryGroups(String userId, String hubId) {
+    public List<ImageGroup> getImageLibraryGroups(HubContext ctx) {
         return imageGroups;
     }
 
     @Override
-    public List<String> getImageLibraryImageIds(String userId, String hubId, String groupId) {
+    public List<String> getImageLibraryImageIds(HubContext ctx, String groupId) {
         ImageGroup ig = imageGroupMap.get(groupId);
         if (ig != null) {
             return ig.getImageIds();
@@ -118,7 +119,7 @@ public class OSGIImageManager implements ImageManager {
     }
 
     @Override
-    public ImageInputStream getImageLibraryImage(String userId, String hubId, String imageId) {
+    public ImageInputStream getImageLibraryImage(HubContext ctx, String imageId) {
         return new ImageInputStream("image/png", getClass().getClassLoader().getResourceAsStream("imagelib/" + imageId));
     }
 }

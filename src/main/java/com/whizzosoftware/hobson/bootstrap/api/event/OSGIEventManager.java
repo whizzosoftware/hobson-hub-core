@@ -8,9 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
-import com.whizzosoftware.hobson.api.variable.DeviceVariableNotFoundException;
-import com.whizzosoftware.hobson.api.variable.VariableUpdate;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.bootstrap.api.util.EventUtil;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
@@ -23,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -55,7 +52,7 @@ public class OSGIEventManager implements EventManager {
     }
 
     @Override
-    public void addListener(String userId, String hubId, EventListener listener, String[] topics) {
+    public void addListener(HubContext ctx, EventListener listener, String[] topics) {
         Hashtable ht = new Hashtable();
         ht.put(EventConstants.EVENT_TOPIC, topics);
         synchronized (serviceRegMap) {
@@ -70,12 +67,12 @@ public class OSGIEventManager implements EventManager {
     }
 
     @Override
-    public void removeListener(String userId, String hubId, EventListener listener, String[] topics) {
+    public void removeListener(HubContext ctx, EventListener listener, String[] topics) {
         // TODO
     }
 
     @Override
-    public void removeListenerFromAllTopics(String userId, String hubId, EventListener listener) {
+    public void removeListenerFromAllTopics(HubContext ctx, EventListener listener) {
         synchronized (serviceRegMap) {
             ServiceRegistration reg = serviceRegMap.get(listener);
             if (reg != null) {
@@ -86,8 +83,8 @@ public class OSGIEventManager implements EventManager {
     }
 
     @Override
-    public void postEvent(String userId, String hubId, HobsonEvent event) {
-        logger.trace("Posting event for {}:{}: {}", userId, hubId, event);
+    public void postEvent(HubContext ctx, HobsonEvent event) {
+        logger.trace("Posting event for {}: {}", ctx, event);
         eventAdmin.postEvent(EventUtil.createEventFromHobsonEvent(event));
     }
 

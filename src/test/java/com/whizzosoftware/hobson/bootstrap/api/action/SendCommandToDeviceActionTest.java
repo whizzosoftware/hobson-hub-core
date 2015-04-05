@@ -1,5 +1,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
+import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.junit.Assert;
 import org.junit.Test;
@@ -10,7 +12,7 @@ import java.util.Map;
 public class SendCommandToDeviceActionTest {
     @Test
     public void testCreateVariableUpdateForSetLevel() {
-        SendCommandToDeviceAction a = new SendCommandToDeviceAction("pid");
+        SendCommandToDeviceAction a = new SendCommandToDeviceAction(PluginContext.create(HubContext.createLocal(), "pid"));
         Map<String,Object> p = new HashMap<String,Object>();
         p.put("pluginId", "com.whizzosoftware.hobson.hub.hobson-hub-zwave");
         p.put("deviceId", "zwave-40:1");
@@ -25,7 +27,7 @@ public class SendCommandToDeviceActionTest {
 
     @Test
     public void testCreateVariableUpdateForTurnOff() {
-        SendCommandToDeviceAction a = new SendCommandToDeviceAction("pid");
+        SendCommandToDeviceAction a = new SendCommandToDeviceAction(PluginContext.create(HubContext.createLocal(), "pid"));
         Map<String,Object> p = new HashMap<String,Object>();
         p.put("pluginId", "com.whizzosoftware.hobson.hub.hobson-hub-zwave");
         p.put("deviceId", "zwave-40:1");
@@ -39,7 +41,7 @@ public class SendCommandToDeviceActionTest {
 
     @Test
     public void testCreateVariableUpdateForTurnOn() {
-        SendCommandToDeviceAction a = new SendCommandToDeviceAction("pid");
+        SendCommandToDeviceAction a = new SendCommandToDeviceAction(PluginContext.create(HubContext.createLocal(), "pid"));
         Map<String,Object> p = new HashMap<String,Object>();
         p.put("pluginId", "com.whizzosoftware.hobson.hub.hobson-hub-zwave");
         p.put("deviceId", "zwave-40:1");
@@ -53,7 +55,7 @@ public class SendCommandToDeviceActionTest {
 
     @Test
     public void testCreateVariableUpdateForInvalidCommandId() {
-        SendCommandToDeviceAction a = new SendCommandToDeviceAction("pid");
+        SendCommandToDeviceAction a = new SendCommandToDeviceAction(PluginContext.create(HubContext.createLocal(), "pid"));
         Map<String,Object> p = new HashMap<String,Object>();
         p.put("pluginId", "com.whizzosoftware.hobson.hub.hobson-hub-zwave");
         p.put("deviceId", "zwave-40:1");

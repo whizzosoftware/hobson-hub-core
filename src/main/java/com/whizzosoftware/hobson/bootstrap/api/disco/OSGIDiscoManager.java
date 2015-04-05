@@ -11,7 +11,9 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.disco.*;
 import com.whizzosoftware.hobson.api.event.DeviceAdvertisementEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
@@ -52,10 +54,10 @@ public class OSGIDiscoManager implements DiscoManager {
     }
 
     @Override
-    synchronized public void requestDeviceAdvertisementSnapshot(String userId, String hubId, String pluginId, String protocolId) {
+    synchronized public void requestDeviceAdvertisementSnapshot(PluginContext ctx, String protocolId) {
         try {
             BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-            HobsonPlugin plugin = pluginManager.getPlugin(userId, hubId, pluginId);
+            HobsonPlugin plugin = pluginManager.getPlugin(ctx);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
             if (references != null && references.length > 0) {
                 for (ServiceReference ref : references) {
@@ -72,7 +74,7 @@ public class OSGIDiscoManager implements DiscoManager {
     }
 
     @Override
-    synchronized public void fireDeviceAdvertisement(String userId, String hubId, final DeviceAdvertisement advertisement) {
+    synchronized public void fireDeviceAdvertisement(HubContext ctx, final DeviceAdvertisement advertisement) {
         String fqId = advertisement.getProtocolId() + ":" + advertisement.getId();
         if (!localDiscoveryList.containsKey(fqId)) {
             try {
@@ -90,7 +92,7 @@ public class OSGIDiscoManager implements DiscoManager {
                     localDiscoveryList.put(fqId, sr);
 
                     // send the advertisement to interested listeners
-                    eventManager.postEvent(userId, hubId, new DeviceAdvertisementEvent(advertisement));
+                    eventManager.postEvent(ctx, new DeviceAdvertisementEvent(advertisement));
                 } else {
                     logger.trace("Ignoring previously registered service: {}", fqId);
                 }

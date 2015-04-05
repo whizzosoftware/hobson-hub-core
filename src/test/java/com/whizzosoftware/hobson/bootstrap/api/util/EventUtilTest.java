@@ -1,12 +1,10 @@
 package com.whizzosoftware.hobson.bootstrap.api.util;
 
-import com.whizzosoftware.hobson.api.config.Configuration;
-import com.whizzosoftware.hobson.api.device.AbstractHobsonDevice;
-import com.whizzosoftware.hobson.api.device.DeviceType;
+import com.whizzosoftware.hobson.api.device.MockHobsonDevice;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
 import com.whizzosoftware.hobson.api.event.EventTopics;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.MockHobsonPlugin;
 import org.junit.Test;
 import org.osgi.service.event.Event;
 
@@ -18,7 +16,8 @@ import static org.junit.Assert.*;
 public class EventUtilTest {
     @Test
     public void testDeviceStartedToEventMapping() {
-        MockHobsonDevice device = new MockHobsonDevice(null);
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
         DeviceStartedEvent dse = new DeviceStartedEvent(device);
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
@@ -29,7 +28,8 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStartedMapping() {
-        MockHobsonDevice device = new MockHobsonDevice(null);
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
         Map props = new HashMap();
         props.put(DeviceStartedEvent.PROP_EVENT_ID, DeviceStartedEvent.ID);
@@ -38,7 +38,7 @@ public class EventUtilTest {
 
         DeviceStartedEvent dse = new DeviceStartedEvent(EventUtil.createMapFromEvent(e));
 
-        assertNull(dse.getPluginId());
+        assertEquals("pid", dse.getDevice().getContext().getPluginId());
         assertEquals(DeviceStartedEvent.ID, dse.getEventId());
         assertEquals(EventTopics.DEVICES_TOPIC, dse.getTopic());
         assertEquals(device, dse.getDevice());
@@ -46,7 +46,9 @@ public class EventUtilTest {
 
     @Test
     public void testDeviceStoppedEventMapping() {
-        MockHobsonDevice device = new MockHobsonDevice(null);
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
+
         DeviceStoppedEvent dse = new DeviceStoppedEvent(device);
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
@@ -57,7 +59,8 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStoppedMapping() {
-        MockHobsonDevice device = new MockHobsonDevice(null);
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
         Map props = new HashMap();
         props.put(DeviceStoppedEvent.PROP_EVENT_ID, DeviceStoppedEvent.ID);
@@ -66,41 +69,9 @@ public class EventUtilTest {
 
         DeviceStoppedEvent dse = new DeviceStoppedEvent(EventUtil.createMapFromEvent(e));
 
-        assertNull(dse.getPluginId());
+        assertEquals("pid", dse.getDevice().getContext().getPluginId());
         assertEquals(DeviceStoppedEvent.ID, dse.getEventId());
         assertEquals(EventTopics.DEVICES_TOPIC, dse.getTopic());
         assertEquals(device, dse.getDevice());
-    }
-
-    private class MockHobsonDevice extends AbstractHobsonDevice {
-
-        /**
-         * Constructor.
-         *
-         * @param plugin the HobsonPlugin that created this device
-         */
-        public MockHobsonDevice(HobsonPlugin plugin) {
-            super(plugin, "bulb");
-        }
-
-        @Override
-        public DeviceType getType() {
-            return DeviceType.LIGHTBULB;
-        }
-
-        @Override
-        public void onStartup(Configuration config) {
-
-        }
-
-        @Override
-        public void onShutdown() {
-
-        }
-
-        @Override
-        public void onSetVariable(String variableName, Object value) {
-
-        }
     }
 }

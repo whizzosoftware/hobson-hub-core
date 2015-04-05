@@ -10,14 +10,15 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.*;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import io.netty.util.concurrent.Future;
@@ -87,10 +88,10 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
 
         // wait for service to become registered before performing final initialization
         try {
-            String filter = "(&(objectclass=" + HobsonPlugin.class.getName() + ")(pluginId=" + getId() + "))";
+            String filter = "(&(objectclass=" + HobsonPlugin.class.getName() + ")(pluginId=" + getContext().getPluginId() + "))";
             FrameworkUtil.getBundle(getClass()).getBundleContext().addServiceListener(this, filter);
         } catch (InvalidSyntaxException e) {
-            logger.error("Error registering service listener for plugin " + getId(), e);
+            logger.error("Error registering service listener for plugin " + getContext(), e);
         }
     }
 
@@ -102,26 +103,28 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
 
         // shutdown the plugin
+        final HubContext ctx = HubContext.createLocal();
+        final PluginContext pctx = plugin.getContext();
         Future f = plugin.getRuntime().submitInEventLoop(new Runnable() {
             @Override
             public void run() {
-            // stop listening for all events
-            eventManager.removeListenerFromAllTopics(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, HobsonPluginEventLoopWrapper.this);
+                // stop listening for all events
+                eventManager.removeListenerFromAllTopics(ctx, HobsonPluginEventLoopWrapper.this);
 
-            // unpublish all variables published by this plugin's devices
-            variableManager.unpublishAllPluginVariables(PluginContext.createLocal(getId()));
+                // unpublish all variables published by this plugin's devices
+                variableManager.unpublishAllPluginVariables(plugin.getContext());
 
-            // stop all devices
-            deviceManager.unpublishAllDevices(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin);
+                // stop all devices
+                deviceManager.unpublishAllDevices(pctx, plugin.getRuntime().getEventLoopExecutor());
 
-            // shut down the plugin
-            getRuntime().onShutdown();
+                // shut down the plugin
+                getRuntime().onShutdown();
 
-            // post plugin stopped event
-            eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginStoppedEvent(getId()));
+                // post plugin stopped event
+                eventManager.postEvent(ctx, new PluginStoppedEvent(getContext()));
 
-            // drop reference
-            plugin = null;
+                // drop reference
+                plugin = null;
             }
         });
 
@@ -139,28 +142,29 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
 
     @Override
     public void onHobsonEvent(final HobsonEvent event) {
-        plugin.getRuntime().executeInEventLoop(new Runnable() {
+        plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (event instanceof PluginConfigurationUpdateEvent && plugin.getId().equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
+                    String pluginId = plugin.getContext().getPluginId();
+                    if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent) event).getPluginId())) {
                         PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
                         logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
                         plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
-                    } else if (event instanceof DeviceConfigurationUpdateEvent && plugin.getId().equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
+                    } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent) event).getPluginId())) {
                         DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
                         logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
-                        plugin.getRuntime().onDeviceConfigurationUpdate(dcue.getDeviceId(), dcue.getConfiguration());
+                        plugin.getRuntime().onDeviceConfigurationUpdate(DeviceContext.create(plugin.getContext(), dcue.getDeviceId()), dcue.getConfiguration());
                     } else if (event instanceof VariableUpdateRequestEvent) {
                         VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
                         for (VariableUpdate update : dcue.getUpdates()) {
-                            if (plugin.getId().equals(update.getPluginId())) {
+                            if (pluginId.equals(update.getPluginId())) {
                                 logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
-                                plugin.getRuntime().onSetDeviceVariable(update.getDeviceId(), update.getName(), update.getValue());
+                                plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
                             }
                         }
                     } else {
-                        logger.trace("Dispatching event to plugin {}: {}", plugin.getId(), event);
+                        logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
                         plugin.getRuntime().onHobsonEvent(event);
                     }
                 } catch (Throwable e) {
@@ -175,8 +179,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      */
 
     @Override
-    public String getId() {
-        return plugin.getId();
+    public PluginContext getContext() {
+        return plugin.getContext();
     }
 
     @Override
@@ -239,17 +243,17 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             if (otherTopicsCount > 0) {
                 System.arraycopy(otherTopics, 0, topics, 2, otherTopicsCount);
             }
-            eventManager.addListener(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, this, topics);
+            eventManager.addListener(plugin.getContext().getHubContext(), this, topics);
 
             // start the event loop
             Future f = getRuntime().submitInEventLoop(new Runnable() {
                 @Override
                 public void run() {
                     // start the plugin
-                    getRuntime().onStartup(pluginManager.getPluginConfiguration(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, plugin));
+                    getRuntime().onStartup(pluginManager.getPluginConfiguration(plugin.getContext()));
 
                     // post plugin started event
-                    eventManager.postEvent(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new PluginStartedEvent(getId()));
+                    eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStartedEvent(getContext()));
 
                     // schedule the refresh callback if the plugin's refresh interval > 0
                     if (plugin.getRefreshInterval() > 0) {
@@ -259,7 +263,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                                 try {
                                     getRuntime().onRefresh();
                                 } catch (Exception e) {
-                                    logger.error("Error refreshing plugin " + plugin.getId(), e);
+                                    logger.error("Error refreshing plugin: " + plugin.getContext(), e);
                                 }
                             }
                         }, 0, plugin.getRefreshInterval(), TimeUnit.SECONDS);

@@ -8,11 +8,13 @@
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.action.ActionContext;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.action.HobsonAction;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import org.osgi.framework.*;
@@ -40,31 +42,34 @@ public class OSGIActionManager implements ActionManager {
         String pluginId = FrameworkUtil.getBundle(getClass()).getSymbolicName();
 
         // publish default actions
-        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new EmailAction(pluginId));
-        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new LogAction(pluginId));
-        publishAction(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, new SendCommandToDeviceAction(pluginId));
+        PluginContext ctx = PluginContext.createLocal(pluginId);
+        publishAction(new EmailAction(ctx));
+        publishAction(new LogAction(ctx));
+        publishAction(new SendCommandToDeviceAction(ctx));
     }
 
     @Override
-    public void publishAction(String userId, String hubId, HobsonAction action) {
-        BundleContext context = BundleUtil.getBundleContext(getClass(), action.getPluginId());
+    public void publishAction(HobsonAction action) {
+        String pluginId = action.getContext().getPluginId();
+        String actionId = action.getContext().getActionId();
+        BundleContext context = BundleUtil.getBundleContext(getClass(), pluginId);
 
         if (context != null) {
             // register device as a service
             Dictionary<String,String> props = new Hashtable<>();
-            if (action.getPluginId() == null) {
+            if (pluginId == null) {
                 logger.error("Unable to publish action with null plugin ID");
-            } else if (action.getId() == null) {
+            } else if (actionId == null) {
                 logger.error("Unable to publish action with null ID");
             } else {
-                props.put("pluginId", action.getPluginId());
-                props.put("actionId", action.getId());
+                props.put("pluginId", pluginId);
+                props.put("actionId", actionId);
 
                 synchronized (serviceRegistrationMap) {
-                    List<ServiceRegistration> srl = serviceRegistrationMap.get(action.getPluginId());
+                    List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
                     if (srl == null) {
                         srl = new ArrayList<>();
-                        serviceRegistrationMap.put(action.getPluginId(), srl);
+                        serviceRegistrationMap.put(pluginId, srl);
                     }
                     srl.add(
                             context.registerService(
@@ -78,7 +83,7 @@ public class OSGIActionManager implements ActionManager {
                 // set the action's managers
                 action.setVariableManager(variableManager);
 
-                logger.debug("Action {} published", action.getId());
+                logger.debug("Action {} published", action.getContext());
             }
         } else {
             throw new HobsonRuntimeException("Unable to obtain context to publish action");
@@ -86,36 +91,36 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
-    public void unpublishAllActions(String userId, String hubId, String pluginId) {
+    public void unpublishAllActions(PluginContext ctx) {
         synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
             if (srl != null) {
                 for (ServiceRegistration sr : srl) {
                     sr.unregister();
                 }
-                serviceRegistrationMap.remove(pluginId);
+                serviceRegistrationMap.remove(ctx.getPluginId());
             }
         }
     }
 
     @Override
-    public void executeAction(String userId, String hubId, String pluginId, String actionId, Map<String, Object> properties) {
+    public void executeAction(ActionContext ctx, Map<String, Object> properties) {
         try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + pluginId + ")(actionId=" + actionId + "))");
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(actionId=" + ctx.getActionId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(HobsonAction.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
                 HobsonAction action = (HobsonAction)bundleContext.getService(refs[0]);
                 action.execute(hubManager, properties);
             } else {
-                throw new HobsonRuntimeException("Unable to find action with ID: " + actionId);
+                throw new HobsonRuntimeException("Unable to find action: " + ctx);
             }
         } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error executing action with ID: " + actionId, e);
+            throw new HobsonRuntimeException("Error executing action: " + ctx, e);
         }
     }
 
     @Override
-    public Collection<HobsonAction> getAllActions(String userId, String hubId) {
+    public Collection<HobsonAction> getAllActions(HubContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             List<HobsonAction> results = new ArrayList<HobsonAction>();
@@ -132,10 +137,10 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
-    public HobsonAction getAction(String userId, String hubId, String pluginId, String actionId) {
+    public HobsonAction getAction(ActionContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            Filter filter = context.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + pluginId + ")(actionId=" + actionId + "))");
+            Filter filter = context.createFilter("(&(objectClass=" + HobsonAction.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(actionId=" + ctx.getActionId() + "))");
             ServiceReference[] references = context.getServiceReferences((String)null, filter.toString());
             if (references != null && references.length > 0) {
                 return (HobsonAction)context.getService(references[0]);

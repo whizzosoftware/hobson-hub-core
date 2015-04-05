@@ -4,6 +4,11 @@
 	background-color: $color-1;
 }
 
+button:focus {
+	outline: 0;
+	background: $color-1;
+}
+
 .button:hover {
 	background-color: #10649e;
 }

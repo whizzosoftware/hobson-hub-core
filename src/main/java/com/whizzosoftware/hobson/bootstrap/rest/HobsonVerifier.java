@@ -8,8 +8,8 @@
 package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -26,6 +26,7 @@ import org.restlet.security.Verifier;
  */
 public class HobsonVerifier implements Verifier {
     private HubManager hubManager;
+    private HubContext localHubContext = HubContext.createLocal();
 
     @Override
     public int verify(Request request, Response response) {
@@ -35,7 +36,7 @@ public class HobsonVerifier implements Verifier {
         } else {
             String identifier = request.getChallengeResponse().getIdentifier();
             char[] secret = request.getChallengeResponse().getSecret();
-            if (identifier.equals("local") && getHubManager().getLocalManager().authenticateAdmin(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB, DigestUtils.sha256Hex(new String(secret)))) {
+            if (identifier.equals(localHubContext.getUserId()) && getHubManager().getLocalManager().authenticateAdmin(localHubContext, DigestUtils.sha256Hex(new String(secret)))) {
                 result = RESULT_VALID;
                 request.getClientInfo().setUser(new User("local", secret, "Local", "User", null));
             }

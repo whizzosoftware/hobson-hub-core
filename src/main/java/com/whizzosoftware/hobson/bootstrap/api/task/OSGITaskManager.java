@@ -8,6 +8,10 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
+import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.task.*;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
@@ -27,82 +31,82 @@ public class OSGITaskManager implements TaskManager {
 
     private volatile BundleContext bundleContext;
     private volatile ExecutorService executorService;
+    private volatile PluginManager pluginManager;
 
     private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
 
     @Override
-    public void publishTaskProvider(String userId, String hubId, TaskProvider provider) {
-        BundleContext context = BundleUtil.getBundleContext(getClass(), provider.getPluginId());
+    public void publishTask(HobsonTask task) {
+        String pluginId = task.getContext().getPluginId();
+        BundleContext context = BundleUtil.getBundleContext(getClass(), pluginId);
 
-        // check that the device doesn't already exist
-        if (hasTaskProvider(userId, hubId, provider.getPluginId(), provider.getId())) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate task provider: " + provider.getId());
+        // check that the task doesn't already exist
+        if (getTask(task.getContext()) != null) {
+            throw new HobsonRuntimeException("Attempt to publish a duplicate task: " + task.getContext());
         }
 
         if (context != null) {
-            // register provider as a service
+            // register task as a service
             Dictionary<String,String> props = new Hashtable<>();
-            props.put("pluginId", provider.getPluginId());
-            props.put("providerId", provider.getId());
+            props.put("pluginId", pluginId);
+            props.put("id", task.getContext().getTaskId());
 
             synchronized (serviceRegistrationMap) {
-                List<ServiceRegistration> regList = serviceRegistrationMap.get(provider.getPluginId());
+                List<ServiceRegistration> regList = serviceRegistrationMap.get(pluginId);
                 if (regList == null) {
                     regList = new ArrayList<>();
-                    serviceRegistrationMap.put(provider.getPluginId(), regList);
+                    serviceRegistrationMap.put(pluginId, regList);
                 }
                 regList.add(
                     context.registerService(
-                            TaskProvider.class.getName(),
-                            provider,
+                            HobsonTask.class.getName(),
+                            task,
                             props
                     )
                 );
             }
 
-
-            logger.debug("Task provider {} registered", provider.getId());
+            logger.debug("Task {} registered", task.getContext());
         }
     }
 
     @Override
-    public void unpublishAllTaskProviders(String userId, String hubId, String pluginId) {
+    public void unpublishAllTasks(PluginContext ctx) {
         synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
             if (srl != null) {
                 for (ServiceRegistration sr : srl) {
                     sr.unregister();
                 }
-                serviceRegistrationMap.remove(pluginId);
+                serviceRegistrationMap.remove(ctx.getPluginId());
             }
         }
     }
 
     @Override
-    public boolean hasTaskProvider(String userId, String hubId, String pluginId, String providerId) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + TaskProvider.class.getName() + ")(pluginId=" + pluginId + ")(providerId=" + providerId + "))");
-            if (references != null && references.length == 1) {
-                return true;
-            } else if (references != null && references.length > 1) {
-                throw new HobsonRuntimeException("Duplicate task providers detected");
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving task provider", e);
+    public void addTask(PluginContext ctx, final Object config) {
+        final HobsonPlugin plugin = pluginManager.getPlugin(ctx);
+        if (plugin != null) {
+            final TaskProvider provider = getTaskProvider(plugin);
+            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    provider.onAddTask(config);
+                }
+            });
+        } else {
+            throw new TaskException("No plugin found: " + ctx);
         }
-        return false;
     }
 
     @Override
-    public Collection<HobsonTask> getAllTasks(String userId, String hubId) {
+    public Collection<HobsonTask> getAllTasks(HubContext ctx) {
         List<HobsonTask> tasks = new ArrayList<HobsonTask>();
         try {
-            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), null);
+            ServiceReference[] refs = bundleContext.getServiceReferences(HobsonTask.class.getName(), null);
             if (refs != null) {
                 for (ServiceReference ref : refs) {
-                    TaskProvider provider = (TaskProvider)bundleContext.getService(ref);
-                    tasks.addAll(provider.getTasks());
+                    tasks.add((HobsonTask) bundleContext.getService(ref));
                 }
             }
         } catch (InvalidSyntaxException e) {
@@ -112,24 +116,23 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public HobsonTask getTask(String userId, String hubId, String providerId, String taskId) {
+    public HobsonTask getTask(TaskContext ctx) {
         try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonTask.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(id=" + ctx.getTaskId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
-                TaskProvider provider = (TaskProvider)bundleContext.getService(refs[0]);
-                return provider.getTask(taskId);
+                return (HobsonTask)bundleContext.getService(refs[0]);
             } else {
-                throw new TaskException("Unable to find unique task provider for id: " + providerId);
+                throw new TaskException("Unable to find unique task for id: " + ctx);
             }
         } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task providers", e);
+            throw new TaskException("Error obtaining task", e);
         }
     }
 
     @Override
-    public void executeTask(String userId, String hubId, String providerId, String taskId) {
-        final HobsonTask task = getTask(userId, hubId, providerId, taskId);
+    public void executeTask(TaskContext ctx) {
+        final HobsonTask task = getTask(ctx);
         executorService.submit(new Runnable() {
             @Override
             public void run() {
@@ -140,50 +143,66 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void addTask(String userId, String hubId, String providerId, Object task) {
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                TaskProvider provider = (TaskProvider)bundleContext.getService(refs[0]);
-                provider.addTask(task);
-            } else {
-                throw new TaskException("Unable to find unique task provider for id: " + providerId);
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task providers", e);
+    public void updateTask(TaskContext ctx, final Object config) {
+        final HobsonPlugin plugin = pluginManager.getPlugin(ctx.getPluginContext());
+        if (plugin != null) {
+            final TaskProvider provider = getTaskProvider(plugin);
+            final HobsonTask task = getTask(ctx);
+            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    provider.onUpdateTask(task, config);
+                }
+            });
+        } else {
+            throw new TaskException("No plugin found: " + ctx);
         }
     }
 
     @Override
-    public void updateTask(String userId, String hubId, String providerId, String taskId, Object task) {
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                TaskProvider provider = (TaskProvider)bundleContext.getService(refs[0]);
-                provider.updateTask(taskId, task);
-            } else {
-                throw new TaskException("Unable to find unique task provider for id: " + providerId);
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task providers", e);
+    public void deleteTask(final TaskContext ctx) {
+        final HobsonPlugin plugin = pluginManager.getPlugin(ctx.getPluginContext());
+        if (plugin != null) {
+            final TaskProvider provider = getTaskProvider(plugin);
+            final HobsonTask task = getTask(ctx);
+            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    // delete the task from the provider
+                    provider.onDeleteTask(task);
+
+                    // unpublish the task service
+                    List<ServiceRegistration> regs = serviceRegistrationMap.get(ctx.getPluginId());
+                    if (regs != null) {
+                        for (ServiceRegistration sr : regs) {
+                            // TODO
+                        }
+                    }
+                }
+            });
+        } else {
+            throw new TaskException("No plugin found: " + ctx);
         }
     }
 
-    @Override
-    public void deleteTask(String userId, String hubId, String providerId, String taskId) {
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + TaskProvider.class.getName() + ")(providerId=" + providerId + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                TaskProvider provider = (TaskProvider)bundleContext.getService(refs[0]);
-                provider.deleteTask(taskId);
+    private TaskProvider getTaskProvider(PluginContext ctx) {
+        HobsonPlugin plugin = pluginManager.getPlugin(ctx);
+        if (plugin != null) {
+            return getTaskProvider(plugin);
+        } else {
+            throw new TaskException("No plugin found for task " + ctx);
+        }
+    }
+
+    private TaskProvider getTaskProvider(HobsonPlugin plugin) {
+        if (plugin.getRuntime() != null) {
+            if (plugin.getRuntime().getTaskProvider() != null) {
+                return plugin.getRuntime().getTaskProvider();
             } else {
-                throw new TaskException("Unable to find unique task provider for id: " + providerId);
+                throw new TaskException("No task provider available for task " + plugin.getContext());
             }
-        } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task providers", e);
+        } else {
+            throw new TaskException("No plugin runtime available for task " + plugin.getContext());
         }
     }
 }

@@ -12,13 +12,13 @@ import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
@@ -157,7 +157,7 @@ public class Activator extends DependencyActivatorBase {
                     } else {
                         consoleURI = "http://localhost:8182";
                     }
-                    if (hubManager.getHub(UserUtil.DEFAULT_USER, UserUtil.DEFAULT_HUB).isSetupComplete()) {
+                    if (hubManager.getHub(HubContext.createLocal()).isSetupComplete()) {
                         consoleURI += "/console/index.html";
                     } else {
                         consoleURI += "/setup/index.html";

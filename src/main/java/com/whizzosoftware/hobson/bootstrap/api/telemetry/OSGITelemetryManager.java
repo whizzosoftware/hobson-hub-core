@@ -39,35 +39,35 @@ public class OSGITelemetryManager implements TelemetryManager {
     private final Map<String,Object> telemetryMutexes = new HashMap<>();
 
     @Override
-    public void enableDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, boolean enabled) {
+    public void enableDeviceTelemetry(DeviceContext ctx, boolean enabled) {
 
     }
 
     @Override
-    public Map<String, Collection<TemporalValue>> getDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, long endTime, TelemetryInterval interval) {
+    public Map<String, Collection<TemporalValue>> getDeviceTelemetry(DeviceContext ctx, long endTime, TelemetryInterval interval) {
         Map<String,Collection<TemporalValue>> results = new HashMap<>();
-        HobsonDevice device = deviceManager.getDevice(userId, hubId, pluginId, deviceId);
+        HobsonDevice device = deviceManager.getDevice(ctx);
         String[] variables = device.getRuntime().getTelemetryVariableNames();
         if (variables != null) {
             for (String varName : variables) {
-                results.put(varName, getDeviceVariableTelemetry(userId, hubId, pluginId, deviceId, varName, endTime, interval));
+                results.put(varName, getDeviceVariableTelemetry(ctx, varName, endTime, interval));
             }
         }
         return results;
     }
 
     @Override
-    public void writeDeviceTelemetry(String userId, String hubId, String pluginId, String deviceId, Map<String, TemporalValue> values) {
+    public void writeDeviceTelemetry(DeviceContext ctx, Map<String, TemporalValue> values) {
 
     }
 
     @Override
-    public Collection<TemporalValue> getDeviceVariableTelemetry(String userId, String hubId, String pluginId, String deviceId, String name, long endTime, TelemetryInterval interval) {
+    public Collection<TemporalValue> getDeviceVariableTelemetry(DeviceContext ctx, String name, long endTime, TelemetryInterval interval) {
         try {
             List<TemporalValue> results = new ArrayList<>();
-            File file = getTelemetryFile(pluginId, deviceId, name);
+            File file = getTelemetryFile(ctx, name);
             if (file.exists()) {
-                Object mutex = getTelemetryMutex(pluginId, deviceId, name);
+                Object mutex = getTelemetryMutex(ctx, name);
                 synchronized (mutex) {
                     RrdDb db = new RrdDb(file.getAbsolutePath(), true);
                     try {
@@ -98,9 +98,9 @@ public class OSGITelemetryManager implements TelemetryManager {
     @Override
     public void writeDeviceVariableTelemetry(DeviceContext ctx, String name, Object value, long time) {
         try {
-            Object mutex = getTelemetryMutex(ctx.getPluginId(), ctx.getDeviceId(), name);
+            Object mutex = getTelemetryMutex(ctx, name);
             synchronized (mutex) {
-                File file = getTelemetryFile(ctx.getPluginId(), ctx.getDeviceId(), name);
+                File file = getTelemetryFile(ctx, name);
                 RrdDb db = new RrdDb(file.getAbsolutePath(), false);
                 Sample sample = db.createSample();
                 sample.setAndUpdate(Long.toString(time) + ":" + value);
@@ -111,9 +111,9 @@ public class OSGITelemetryManager implements TelemetryManager {
         }
     }
 
-    private Object getTelemetryMutex(String pluginId, String deviceId, String name) {
+    private Object getTelemetryMutex(DeviceContext ctx, String name) {
         synchronized (telemetryMutexes) {
-            String key = createDeviceVariableString(pluginId, deviceId, name);
+            String key = createDeviceVariableString(ctx.getPluginId(), ctx.getDeviceId(), name);
             Object mutex = telemetryMutexes.get(key);
             if (mutex == null) {
                 mutex = new Object();
@@ -123,9 +123,9 @@ public class OSGITelemetryManager implements TelemetryManager {
         }
     }
 
-    private File getTelemetryFile(String pluginId, String deviceId, String name) throws IOException {
+    private File getTelemetryFile(DeviceContext ctx, String name) throws IOException {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        File file = context.getDataFile(createDeviceVariableString(pluginId, deviceId, name) + ".rrd");
+        File file = context.getDataFile(createDeviceVariableString(ctx.getPluginId(), ctx.getDeviceId(), name) + ".rrd");
         if (!file.exists()) {
             RrdDef rrdDef = new RrdDef(file.getAbsolutePath(), 300);
             rrdDef.addDatasource(name, DsType.GAUGE, 300, Double.NaN, Double.NaN);

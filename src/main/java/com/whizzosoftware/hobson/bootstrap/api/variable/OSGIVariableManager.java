@@ -13,6 +13,7 @@ import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateRequestEvent;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
@@ -41,11 +42,11 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask) {
-        publishDeviceVariable(DeviceContext.createLocal(ctx.getPluginId(), GLOBAL_NAME), name, value, mask);
+        publishDeviceVariable(DeviceContext.create(ctx, GLOBAL_NAME), name, value, mask);
     }
 
     @Override
-    public Collection<HobsonVariable> getAllVariables(String userId, String hubId) {
+    public Collection<HobsonVariable> getAllVariables(HubContext ctx) {
         List<HobsonVariable> results = new ArrayList<>();
         BundleContext bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
         try {
@@ -62,7 +63,7 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public Collection<HobsonVariable> getGlobalVariables(String userId, String hubId) {
+    public Collection<HobsonVariable> getGlobalVariables(HubContext ctx) {
         List<HobsonVariable> results = new ArrayList<>();
         BundleContext bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
         try {
@@ -79,7 +80,7 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public HobsonVariable getGlobalVariable(String userId, String hubId, String name) {
+    public HobsonVariable getGlobalVariable(HubContext ctx, String name) {
         BundleContext bundleContext = FrameworkUtil.getBundle(getClass()).getBundleContext();
         try {
             ServiceReference[] references = bundleContext.getServiceReferences(HobsonVariable.class.getName(), "(&(objectClass=" + HobsonVariable.class.getName() + ")(deviceId=" + GLOBAL_NAME + ")(name=" + name + "))");
@@ -105,7 +106,7 @@ public class OSGIVariableManager implements VariableManager {
         }
 
         // make sure variable doesn't already exist
-        if (hasDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name)) {
+        if (hasDeviceVariable(ctx, name)) {
             throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + ctx.getPluginId() + "," + ctx.getDeviceId() + "," + name);
         }
 
@@ -207,31 +208,31 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public Collection<HobsonVariable> getDeviceVariables(String userId, String hubId, String pluginId, String deviceId) {
+    public HobsonVariableCollection getDeviceVariables(DeviceContext ctx) {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
-                ServiceReference[] refs = bundleContext.getServiceReferences(HobsonVariable.class.getName(), "(&(objectClass=" + HobsonVariable.class.getName() + ")(pluginId=" + pluginId + ")(deviceId=" + deviceId + "))");
+                ServiceReference[] refs = bundleContext.getServiceReferences(HobsonVariable.class.getName(), "(&(objectClass=" + HobsonVariable.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(deviceId=" + ctx.getDeviceId() + "))");
                 if (refs != null) {
-                    List<HobsonVariable> results = new ArrayList<>();
+                    HobsonVariableCollection results = new HobsonVariableCollection();
                     for (ServiceReference ref : refs) {
                         results.add((HobsonVariable)bundleContext.getService(ref));
                     }
                     return results;
                 }
             } catch (InvalidSyntaxException e) {
-                throw new HobsonRuntimeException("Error looking up variables for device ID \"" + deviceId + "\"", e);
+                throw new HobsonRuntimeException("Error looking up variables for device ID \"" + ctx.getDeviceId() + "\"", e);
             }
         }
         return null;
     }
 
     @Override
-    public Collection<String> getDeviceVariableChangeIds(String userId, String hubId, String pluginId, String deviceId) {
+    public Collection<String> getDeviceVariableChangeIds(DeviceContext ctx) {
         List<String> eventIds = new ArrayList<>();
 
-        Collection<HobsonVariable> deviceVars = getDeviceVariables(userId, hubId, pluginId, deviceId);
-        for (HobsonVariable v : deviceVars) {
+        HobsonVariableCollection deviceVars = getDeviceVariables(ctx);
+        for (HobsonVariable v : deviceVars.getCollection()) {
             VariableChangeIdHelper.populateChangeIdsForVariableName(v.getName(), eventIds);
         }
 
@@ -239,16 +240,16 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public HobsonVariable getDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name) {
+    public HobsonVariable getDeviceVariable(DeviceContext ctx, String name) {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
                 ServiceReference[] refs = bundleContext.getServiceReferences((String)null, "(&(objectClass=" +
                     HobsonVariable.class.getName() +
                     ")(pluginId=" +
-                    pluginId +
+                    ctx.getPluginId() +
                     ")(deviceId=" +
-                    deviceId +
+                    ctx.getDeviceId() +
                     ")(name=" +
                     name +
                     "))"
@@ -256,28 +257,28 @@ public class OSGIVariableManager implements VariableManager {
                 if (refs != null && refs.length == 1) {
                     return (HobsonVariable) bundleContext.getService(refs[0]);
                 } else if (refs != null && refs.length > 1) {
-                    throw new HobsonRuntimeException("Found multiple variables for " + pluginId + "." + deviceId + "[" + name + "]");
+                    throw new HobsonRuntimeException("Found multiple variables for " + ctx.getPluginId() + "." + ctx.getDeviceId() + "[" + name + "]");
                 } else {
-                    throw new DeviceVariableNotFoundException(pluginId, deviceId, name);
+                    throw new DeviceVariableNotFoundException(ctx, name);
                 }
             } catch (InvalidSyntaxException e) {
-                throw new HobsonRuntimeException("Error looking up variable " + pluginId + "." + deviceId + "[" + name + "]", e);
+                throw new HobsonRuntimeException("Error looking up variable " + ctx + "[" + name + "]", e);
             }
         }
         return null;
     }
 
     @Override
-    public boolean hasDeviceVariable(String userId, String hubId, String pluginId, String deviceId, String name) {
+    public boolean hasDeviceVariable(DeviceContext ctx, String name) {
         BundleContext bundleContext = getBundleContext();
         if (bundleContext != null) {
             try {
                 ServiceReference[] refs = bundleContext.getServiceReferences((String)null, "(&(objectClass=" +
                     HobsonVariable.class.getName() +
                     ")(pluginId=" +
-                    pluginId +
+                    ctx.getPluginId() +
                     ")(deviceId=" +
-                    deviceId +
+                    ctx.getDeviceId() +
                     ")(name=" +
                     name +
                     "))"
@@ -285,10 +286,10 @@ public class OSGIVariableManager implements VariableManager {
                 if (refs != null && refs.length == 1) {
                     return true;
                 } else if (refs != null && refs.length > 1) {
-                    throw new HobsonRuntimeException("Found multiple variables for " + pluginId + "." + deviceId + "[" + name + "]");
+                    throw new HobsonRuntimeException("Found multiple variables for " + ctx.getPluginId() + "." + ctx.getDeviceId() + "[" + name + "]");
                 }
             } catch (InvalidSyntaxException e) {
-                throw new HobsonRuntimeException("Error looking up variable " + pluginId + "." + deviceId + "[" + name + "]", e);
+                throw new HobsonRuntimeException("Error looking up variable " + ctx.getPluginId() + "." + ctx.getDeviceId() + "[" + name + "]", e);
             }
         }
         return false;
@@ -296,13 +297,13 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public Long setDeviceVariable(DeviceContext ctx, String name, Object value) {
-        HobsonVariable variable = getDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name);
+        HobsonVariable variable = getDeviceVariable(ctx, name);
         if (variable == null) {
             throw new HobsonNotFoundException("Attempt to set unknown variable: " + ctx.getPluginId() + "." + ctx.getDeviceId() + "." + name);
         }
         Long lastUpdate = variable.getLastUpdate();
         logger.debug("Attempting to set variable {}.{}.{} to value {}", ctx.getPluginId(), ctx.getDeviceId(), name, value);
-        eventManager.postEvent(ctx.getUserId(), ctx.getHubId(), new VariableUpdateRequestEvent(new VariableUpdate(ctx.getPluginId(), ctx.getDeviceId(), name, value)));
+        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(new VariableUpdate(ctx.getPluginId(), ctx.getDeviceId(), name, value)));
         return lastUpdate;
     }
 
@@ -311,24 +312,24 @@ public class OSGIVariableManager implements VariableManager {
         Map<String,Long> results = new HashMap<>();
         List<VariableUpdate> updates = new ArrayList<>();
         for (String name : values.keySet()) {
-            HobsonVariable variable = getDeviceVariable(ctx.getUserId(), ctx.getHubId(), ctx.getPluginId(), ctx.getDeviceId(), name);
+            HobsonVariable variable = getDeviceVariable(ctx, name);
             if (variable != null) {
                 results.put(name, variable.getLastUpdate());
             }
         }
-        eventManager.postEvent(ctx.getUserId(), ctx.getHubId(), new VariableUpdateRequestEvent(updates));
+        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(updates));
         return results;
     }
 
     @Override
-    public void confirmVariableUpdates(String userId, String hubId, List<VariableUpdate> updates) {
+    public void applyVariableUpdates(HubContext ctx, List<VariableUpdate> updates) {
         HobsonVariable var;
 
         for (VariableUpdate update : updates) {
             if (update.isGlobal()) {
-                var = getDeviceVariable(userId, hubId, update.getPluginId(), GLOBAL_NAME, update.getName());
+                var = getDeviceVariable(DeviceContext.create(ctx, update.getPluginId(), GLOBAL_NAME), update.getName());
             } else {
-                var = getDeviceVariable(userId, hubId, update.getPluginId(), update.getDeviceId(), update.getName());
+                var = getDeviceVariable(DeviceContext.create(ctx, update.getPluginId(), update.getDeviceId()), update.getName());
             }
 
             if (var != null) {
@@ -336,7 +337,7 @@ public class OSGIVariableManager implements VariableManager {
             }
         }
 
-        eventManager.postEvent(userId, hubId, new VariableUpdateNotificationEvent(updates));
+        eventManager.postEvent(ctx, new VariableUpdateNotificationEvent(updates));
     }
 
     protected BundleContext getBundleContext() {

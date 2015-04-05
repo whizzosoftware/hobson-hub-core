@@ -8,9 +8,10 @@
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
+import com.whizzosoftware.hobson.api.action.ActionContext;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.hub.HubManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 
 import java.util.Map;
 
@@ -28,12 +29,12 @@ public class EmailAction extends AbstractHobsonAction {
     /**
      * Constructor.
      *
-     * @param pluginId the plugin ID creating this action
+     * @param ctx the context of the plugin creating this action
      *
      * @since hobson-hub-api 0.1.6
      */
-    public EmailAction(String pluginId) {
-        super(pluginId, "sendEmail", "Send E-mail");
+    public EmailAction(PluginContext ctx) {
+        super(ActionContext.create(ctx, "sendEmail"), "Send E-mail");
 
         addMetaData(new ActionMetaData(RECIPIENT_ADDRESS, "Recipient Address", "The address the e-mail will be sent to", ActionMetaData.Type.STRING));
         addMetaData(new ActionMetaData(SUBJECT, "Subject", "The e-mail subject text", ActionMetaData.Type.STRING));
@@ -52,8 +53,7 @@ public class EmailAction extends AbstractHobsonAction {
     public void execute(HubManager hubManager, Map<String, Object> properties) {
         // send the e-mail
         hubManager.sendEmail(
-            UserUtil.DEFAULT_USER,
-            UserUtil.DEFAULT_HUB,
+            getContext().getHubContext(),
             (String) properties.get(RECIPIENT_ADDRESS),
             (String) properties.get(SUBJECT),
             (String) properties.get(MESSAGE)

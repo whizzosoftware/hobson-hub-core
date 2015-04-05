@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.rest.v1;
 
 import com.whizzosoftware.hobson.api.HobsonAuthException;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.rest.v1.Authorizer;
 
 /**
@@ -18,8 +19,8 @@ import com.whizzosoftware.hobson.rest.v1.Authorizer;
  */
 public class LocalAuthorizer implements Authorizer {
     @Override
-    public void authorizeHub(String userId, String hubId) {
-        if (!"local".equals(userId) || !"local".equals(hubId)) {
+    public void authorizeHub(HubContext ctx) {
+        if (!"local".equals(ctx.getHubId()) || !"local".equals(ctx.getUserId())) {
             throw new HobsonAuthException("User ID and hub ID should be local/local");
         }
     }

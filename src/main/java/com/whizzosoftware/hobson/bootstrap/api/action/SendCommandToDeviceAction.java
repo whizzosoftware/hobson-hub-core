@@ -8,12 +8,13 @@
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.action.AbstractHobsonAction;
+import com.whizzosoftware.hobson.api.action.ActionContext;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaData;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValue;
 import com.whizzosoftware.hobson.api.action.meta.ActionMetaDataEnumValueParam;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
-import com.whizzosoftware.hobson.api.util.UserUtil;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.VariableConstants;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.slf4j.Logger;
@@ -38,8 +39,8 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
 
     private final Map<String,ActionMetaDataEnumValue> metaEnumValues = new HashMap<>();
 
-    public SendCommandToDeviceAction(String pluginId) {
-        super(pluginId, "sendDeviceCommand", "Send Command to Device");
+    public SendCommandToDeviceAction(PluginContext ctx) {
+        super(ActionContext.create(ctx, "sendDeviceCommand"), "Send Command to Device");
 
         buildMetaEnums();
 
@@ -57,7 +58,7 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     public void execute(HubManager hubManager, Map<String, Object> properties) {
         try {
             VariableUpdate vup = createVariableUpdate(properties);
-            getVariableManager().setDeviceVariable(DeviceContext.createLocal(vup.getPluginId(), vup.getDeviceId()), vup.getName(), vup.getValue());
+            getVariableManager().setDeviceVariable(DeviceContext.create(getContext().getPluginContext(), vup.getDeviceId()), vup.getName(), vup.getValue());
         } catch (Exception e) {
             logger.error("Error sending command to device", e);
         }

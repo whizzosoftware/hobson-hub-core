@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.presence;
 
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.presence.PresenceEntity;
 
 /**
@@ -15,12 +16,12 @@ import com.whizzosoftware.hobson.api.presence.PresenceEntity;
  * @author Dan Noguerol
  */
 public class MutablePresenceEntity extends PresenceEntity {
-    public MutablePresenceEntity(String name, String location) {
-        super(name, location);
+    public MutablePresenceEntity(HubContext ctx, String name, String location) {
+        super(ctx, name, location);
     }
 
     public MutablePresenceEntity(PresenceEntity entity) {
-        super(entity.getName(), entity.getLocation());
+        super(entity.getContext().getHubContext(), entity.getName(), entity.getLocation());
     }
 
     public void setName(String name) {
