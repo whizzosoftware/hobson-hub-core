@@ -311,6 +311,11 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public void setDeviceConfigurationProperty(DeviceContext ctx, String name, Object value, boolean overwrite) {
+        setDeviceConfigurationProperties(ctx, Collections.singletonMap(name, value), overwrite);
+    }
+
+    @Override
+    public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite) {
         try {
             for (Bundle bundle : bundleContext.getBundles()) {
                 if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
@@ -320,11 +325,13 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                         if (dic == null) {
                             dic = new Hashtable();
                         }
-                        if (dic.get(name) == null || overwrite) {
-                            dic.put(name, value);
-                            config.update(dic);
-                            eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceConfigurationUpdateEvent(ctx.getPluginId(), ctx.getDeviceId(), new Configuration(dic)));
+                        for (String name : values.keySet()) {
+                            if (dic.get(name) == null || overwrite) {
+                                dic.put(name, values.get(name));
+                            }
                         }
+                        config.update(dic);
+                        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceConfigurationUpdateEvent(ctx.getPluginId(), ctx.getDeviceId(), new Configuration(dic)));
                         return;
                     } else {
                         throw new ConfigurationException("Unable to set device name: ConfigurationAdmin service is not available");

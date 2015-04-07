@@ -366,13 +366,6 @@
             <name>Public online Restlet repository</name>
             <url>http://maven.restlet.com</url>
         </repository>
-        <repository>
-            <id>ops4j.snapshots</id>
-            <url>http://repository.ops4j.org/mvn-snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
     </repositories>
     <scm>
         <connection>scm:git:ssh://git@github.com/whizzosoftware/hobson-hub-core.git</connection>

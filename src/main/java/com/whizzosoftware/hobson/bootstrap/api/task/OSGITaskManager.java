@@ -84,14 +84,14 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void addTask(PluginContext ctx, final Object config) {
+    public void createTask(PluginContext ctx, final Object config) {
         final HobsonPlugin plugin = pluginManager.getPlugin(ctx);
         if (plugin != null) {
             final TaskProvider provider = getTaskProvider(plugin);
             plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                    provider.onAddTask(config);
+                    provider.onCreateTask(config);
                 }
             });
         } else {

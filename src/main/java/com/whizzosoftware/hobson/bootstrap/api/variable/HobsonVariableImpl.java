@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.variable;
 
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.variable.HobsonVariable;
 
 /**
@@ -15,29 +16,39 @@ import com.whizzosoftware.hobson.api.variable.HobsonVariable;
  * @author Dan Noguerol
  */
 public class HobsonVariableImpl implements HobsonVariable {
-    private String pluginId;
-    private String deviceId;
+    private DeviceContext ctx;
     private String name;
     private Object value;
+    private String proxyType;
     private Mask mask;
     private Long lastUpdate;
 
-    public HobsonVariableImpl(String pluginId, String deviceId, String name, Object value, Mask mask) {
-        this.pluginId = pluginId;
-        this.deviceId = deviceId;
+    public HobsonVariableImpl(DeviceContext ctx, String name, Object value, Mask mask, String proxyType) {
+        this.ctx = ctx;
         this.name = name;
         setValue(value);
         this.mask = mask;
+        this.proxyType = proxyType;
     }
 
     @Override
     public String getPluginId() {
-        return pluginId;
+        return ctx.getPluginId();
+    }
+
+    @Override
+    public boolean hasProxyType() {
+        return (proxyType != null);
+    }
+
+    @Override
+    public String getProxyType() {
+        return proxyType;
     }
 
     @Override
     public String getDeviceId() {
-        return deviceId;
+        return ctx.getDeviceId();
     }
 
     @Override
@@ -67,6 +78,10 @@ public class HobsonVariableImpl implements HobsonVariable {
 
     @Override
     public boolean isGlobal() {
-        return (deviceId == null);
+        return (ctx.getDeviceId() == null);
+    }
+
+    public String toString() {
+        return ctx.toString() + "." + name;
     }
 }
