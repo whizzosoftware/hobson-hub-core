@@ -201,16 +201,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     }
 
     @Override
-    public long getRefreshInterval() {
-        return plugin.getRefreshInterval();
-    }
-
-    @Override
-    public String[] getEventTopics() {
-        return plugin.getEventTopics();
-    }
-
-    @Override
     public Collection<ConfigurationPropertyMetaData> getConfigurationPropertyMetaData() {
         return plugin.getConfigurationPropertyMetaData();
     }
@@ -235,7 +225,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
             // register plugin for necessary event topics
             int otherTopicsCount = 0;
-            String[] otherTopics = plugin.getEventTopics();
+            String[] otherTopics = plugin.getRuntime().getEventTopics();
             if (otherTopics != null) {
                 otherTopicsCount = otherTopics.length;
             }
@@ -258,7 +248,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                     eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStartedEvent(System.currentTimeMillis(), getContext()));
 
                     // schedule the refresh callback if the plugin's refresh interval > 0
-                    if (plugin.getRefreshInterval() > 0) {
+                    if (plugin.getRuntime().getRefreshInterval() > 0) {
                         getRuntime().scheduleAtFixedRateInEventLoop(new Runnable() {
                             @Override
                             public void run() {
@@ -268,7 +258,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                                     logger.error("Error refreshing plugin: " + plugin.getContext(), e);
                                 }
                             }
-                        }, 0, plugin.getRefreshInterval(), TimeUnit.SECONDS);
+                        }, 0, plugin.getRuntime().getRefreshInterval(), TimeUnit.SECONDS);
                     }
                 }
             });
