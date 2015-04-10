@@ -60,10 +60,11 @@ public class OSGIDiscoManager implements DiscoManager {
             HobsonPlugin plugin = pluginManager.getPlugin(ctx);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
             if (references != null && references.length > 0) {
+                long now = System.currentTimeMillis();
                 for (ServiceReference ref : references) {
                     DeviceAdvertisement adv = (DeviceAdvertisement) context.getService(ref);
                     logger.debug("Resending device advertisement {} to plugin {}", adv.getId(), plugin);
-                    plugin.getRuntime().onHobsonEvent(new DeviceAdvertisementEvent(adv));
+                    plugin.getRuntime().onHobsonEvent(new DeviceAdvertisementEvent(now, adv));
                 }
             } else {
                 logger.debug("No device advertisements found to re-send");
@@ -92,7 +93,7 @@ public class OSGIDiscoManager implements DiscoManager {
                     localDiscoveryList.put(fqId, sr);
 
                     // send the advertisement to interested listeners
-                    eventManager.postEvent(ctx, new DeviceAdvertisementEvent(advertisement));
+                    eventManager.postEvent(ctx, new DeviceAdvertisementEvent(System.currentTimeMillis(), advertisement));
                 } else {
                     logger.trace("Ignoring previously registered service: {}", fqId);
                 }

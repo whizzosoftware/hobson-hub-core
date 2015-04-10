@@ -99,6 +99,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      * Called when the OSGi service is stopped. This will stop the plugin event loop.
      */
     public void stop() {
+        final long now = System.currentTimeMillis();
+
         // remove the service listener
         FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
 
@@ -121,7 +123,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 getRuntime().onShutdown();
 
                 // post plugin stopped event
-                eventManager.postEvent(ctx, new PluginStoppedEvent(getContext()));
+                eventManager.postEvent(ctx, new PluginStoppedEvent(now, getContext()));
 
                 // drop reference
                 plugin = null;
@@ -253,7 +255,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                     getRuntime().onStartup(pluginManager.getPluginConfiguration(plugin.getContext()));
 
                     // post plugin started event
-                    eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStartedEvent(getContext()));
+                    eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStartedEvent(System.currentTimeMillis(), getContext()));
 
                     // schedule the refresh callback if the plugin's refresh interval > 0
                     if (plugin.getRefreshInterval() > 0) {

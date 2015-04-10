@@ -361,7 +361,7 @@ public class OSGIVariableManager implements VariableManager {
         }
         Long lastUpdate = variable.getLastUpdate();
         logger.debug("Attempting to set variable {}.{}.{} to value {}", ctx.getPluginId(), ctx.getDeviceId(), name, value);
-        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(new VariableUpdate(ctx.getPluginId(), ctx.getDeviceId(), name, value)));
+        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), new VariableUpdate(ctx, name, value)));
         return lastUpdate;
     }
 
@@ -375,7 +375,7 @@ public class OSGIVariableManager implements VariableManager {
                 results.put(name, variable.getLastUpdate());
             }
         }
-        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(updates));
+        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), updates));
         return results;
     }
 
@@ -396,7 +396,7 @@ public class OSGIVariableManager implements VariableManager {
             }
         }
 
-        eventManager.postEvent(ctx, new VariableUpdateNotificationEvent(updates));
+        eventManager.postEvent(ctx, new VariableUpdateNotificationEvent(System.currentTimeMillis(), updates));
     }
 
     protected BundleContext getBundleContext() {

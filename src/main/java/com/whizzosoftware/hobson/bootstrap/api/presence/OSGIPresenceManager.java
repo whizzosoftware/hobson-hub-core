@@ -57,6 +57,6 @@ public class OSGIPresenceManager implements PresenceManager {
                 entity.setLocation(location);
             }
         }
-        eventManager.postEvent(ctx.getHubContext(), new PresenceUpdateEvent(ctx.getEntityId(), location));
+        eventManager.postEvent(ctx.getHubContext(), new PresenceUpdateEvent(System.currentTimeMillis(), ctx.getEntityId(), location));
     }
 }

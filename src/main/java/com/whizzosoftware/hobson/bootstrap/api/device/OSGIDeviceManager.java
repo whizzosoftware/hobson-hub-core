@@ -251,6 +251,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         if (regs != null) {
             DeviceServiceRegistration dsr = null;
             try {
+                final long now = System.currentTimeMillis();
                 for (final DeviceServiceRegistration reg : regs) {
                     final HobsonDevice device = reg.getDevice();
                     if (device != null && device.getContext().getDeviceId().equals(ctx.getDeviceId())) {
@@ -260,7 +261,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                             @Override
                             public void run() {
                                 device.getRuntime().onShutdown();
-                                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceStoppedEvent(reg.getDevice()));
+                                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceStoppedEvent(now, reg.getDevice()));
                             }
                         });
                         break;
@@ -282,6 +283,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         List<DeviceServiceRegistration> regs = serviceRegistrations.get(ctx.getPluginId());
         if (regs != null) {
             try {
+                final long now = System.currentTimeMillis();
                 for (DeviceServiceRegistration reg : regs) {
                     try {
                         final HobsonDevice device = reg.getDevice();
@@ -291,7 +293,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                             @Override
                             public void run() {
                                 device.getRuntime().onShutdown();
-                                eventManager.postEvent(ctx.getHubContext(), new DeviceStoppedEvent(device));
+                                eventManager.postEvent(ctx.getHubContext(), new DeviceStoppedEvent(now, device));
                             }
                         });
                     } catch (Exception e) {
@@ -331,7 +333,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                             }
                         }
                         config.update(dic);
-                        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceConfigurationUpdateEvent(ctx.getPluginId(), ctx.getDeviceId(), new Configuration(dic)));
+                        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceConfigurationUpdateEvent(System.currentTimeMillis(), ctx.getPluginId(), ctx.getDeviceId(), new Configuration(dic)));
                         return;
                     } else {
                         throw new ConfigurationException("Unable to set device name: ConfigurationAdmin service is not available");
@@ -412,7 +414,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                     device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
 
                     // post a device started event
-                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(device));
+                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device));
                 }
             });
         }

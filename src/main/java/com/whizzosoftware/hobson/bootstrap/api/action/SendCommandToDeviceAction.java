@@ -75,10 +75,12 @@ public class SendCommandToDeviceAction extends AbstractHobsonAction {
     protected VariableUpdate createVariableUpdate(Map<String, Object> properties) {
         String commandId = (String)properties.get("commandId");
         return new VariableUpdate(
+            DeviceContext.createLocal(
                 (String)properties.get("pluginId"),
-                (String)properties.get("deviceId"),
-                getVariableNameForCommandId(commandId),
-                getVariableValueForCommandId(commandId, properties.get("param"))
+                (String)properties.get("deviceId")
+            ),
+            getVariableNameForCommandId(commandId),
+            getVariableValueForCommandId(commandId, properties.get("param"))
         );
     }
 

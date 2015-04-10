@@ -18,7 +18,7 @@ public class EventUtilTest {
     public void testDeviceStartedToEventMapping() {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
-        DeviceStartedEvent dse = new DeviceStartedEvent(device);
+        DeviceStartedEvent dse = new DeviceStartedEvent(System.currentTimeMillis(), device);
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
         assertEquals(dse.getTopic(), e.getTopic());
@@ -49,7 +49,7 @@ public class EventUtilTest {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
-        DeviceStoppedEvent dse = new DeviceStoppedEvent(device);
+        DeviceStoppedEvent dse = new DeviceStoppedEvent(System.currentTimeMillis(), device);
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
         assertEquals(dse.getTopic(), e.getTopic());

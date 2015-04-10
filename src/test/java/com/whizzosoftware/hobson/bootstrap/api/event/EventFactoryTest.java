@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 
@@ -40,7 +41,7 @@ public class EventFactoryTest {
 
         Map<String,Object> props = new HashMap<>();
         List<VariableUpdate> updates = new ArrayList<>();
-        updates.add(new VariableUpdate("plugin", "name", "value"));
+        updates.add(new VariableUpdate(DeviceContext.createLocalGlobal("plugin"), "name", "value"));
         props.put(HobsonEvent.PROP_EVENT_ID, VariableUpdateNotificationEvent.ID);
         props.put(VariableUpdateNotificationEvent.PROP_UPDATES, updates);
 

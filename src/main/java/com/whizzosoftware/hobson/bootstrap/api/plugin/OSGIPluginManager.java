@@ -314,7 +314,7 @@ public class OSGIPluginManager implements PluginManager {
     private void updateOSGIConfiguration(PluginContext ctx, org.osgi.service.cm.Configuration config, Dictionary d) {
         try {
             config.update(d);
-            eventManager.postEvent(ctx.getHubContext(), new PluginConfigurationUpdateEvent(ctx, new Configuration(d)));
+            eventManager.postEvent(ctx.getHubContext(), new PluginConfigurationUpdateEvent(System.currentTimeMillis(), ctx, new Configuration(d)));
         } catch (IOException e) {
             throw new ConfigurationException("Error updating plugin configuration", e);
         }

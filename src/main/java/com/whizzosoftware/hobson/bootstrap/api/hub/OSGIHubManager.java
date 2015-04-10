@@ -369,7 +369,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     private void updateConfiguration(HubContext ctx, Configuration config, Dictionary props) throws IOException {
         config.update(props);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent());
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
     }
 
     /**

@@ -8,6 +8,8 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.event.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
@@ -32,6 +34,7 @@ public class OSGITaskManager implements TaskManager {
     private volatile BundleContext bundleContext;
     private volatile ExecutorService executorService;
     private volatile PluginManager pluginManager;
+    private volatile EventManager eventManager;
 
     private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
 
@@ -131,13 +134,13 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void executeTask(TaskContext ctx) {
+    public void executeTask(final TaskContext ctx) {
         final HobsonTask task = getTask(ctx);
         executorService.submit(new Runnable() {
             @Override
             public void run() {
                 task.execute();
-
+                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), task.getName()));
             }
         });
     }
