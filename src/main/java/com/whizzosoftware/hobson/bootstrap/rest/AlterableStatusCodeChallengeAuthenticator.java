@@ -54,7 +54,7 @@ public class AlterableStatusCodeChallengeAuthenticator extends ChallengeAuthenti
         Integer statusCode = null;
         Series headerMap = (Series)response.getRequest().getAttributes().get("org.restlet.http.headers");
         if (headerMap != null) {
-            String sStatusCode = headerMap.getFirstValue("X-StatusOnLoginFail");
+            String sStatusCode = headerMap.getFirstValue("X-StatusOnLoginFail", true);
             if (sStatusCode != null) {
                 try {
                     statusCode = Integer.parseInt(sStatusCode);

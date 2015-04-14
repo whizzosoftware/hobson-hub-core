@@ -3,10 +3,11 @@ define([
     'jquery',
     'underscore',
     'backbone',
+    'services/hub',
     'views/footer',
     'i18n!nls/strings',
     'text!templates/plugin.html'
-], function($, _, Backbone, FooterView, strings, pluginTemplate) {
+], function($, _, Backbone, HubService, FooterView, strings, pluginTemplate) {
 
     var PluginView = Backbone.View.extend({
         template: _.template(pluginTemplate),
@@ -24,7 +25,14 @@ define([
         },
 
         render: function() {
-            this.$el.append(this.template({ plugin: this.plugin, strings: strings }));
+            this.$el.append(this.template({ 
+                plugin: this.plugin, 
+                strings: strings 
+            }));
+            HubService.getPluginImage(this, this.plugin.links.icon).success(function(response, b, c) {
+                console.debug();
+                this.$el.find('.plugin-image').html($('<img src="data:' + c.getResponseHeader('content-type') + ';base64,' + response + '" />'));
+            });
             return this;
         },
 

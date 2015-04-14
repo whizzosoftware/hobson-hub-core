@@ -30,7 +30,7 @@ define({
 	"PasswordWelcome": "Here's where we set up a password for your new Hub. You will need this whenever you use the Hobson web console.",
 	"Plugins": "Plugins",
 	"PluginSelectionPrompt": "Select one or more plugins you want to start with by clicking on them.",
-	"PluginsWelcome": "Here's where you'll choose your plugins. Plugins teach Hobson how to talk with different types of smart devices. Don't worry if you don't install them all now &mdash; you can always add more later.",
+	"PluginsWelcome": "Here's where you'll choose your plugins. Plugins teach Hobson how to talk with different smart devices. Don't worry if you don't install them all now &mdash; you can add more later.",
 	"RepeatPassword": "Repeat password",
 	"RepeatPasswordHelp": "Enter the same password again.",
 	"Send": "Send",
@@ -45,5 +45,7 @@ define({
 	"TestMessageFailure": "An error occurred sending the test message.",
 	"TestMessagePasswordMissing": "You must enter a password to send a test message.",
 	"UploadPrompt": "Upload an image of your home to use on the dashboard (optional).",
-	"UserName": "User name"
+	"UserName": "User name",
+	"WizardGenericError": "An error has occurred running the configuration wizard. Check the log file for details.",
+	"WizardPasswordError": "The configuration wizard cannot be run once the default password has been changed. <a href=\"/console\">Click here</a> to go to the web console."
 });

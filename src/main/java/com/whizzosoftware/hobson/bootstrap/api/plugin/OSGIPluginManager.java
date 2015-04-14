@@ -152,7 +152,10 @@ public class OSGIPluginManager implements PluginManager {
     public ImageInputStream getPluginIcon(PluginContext ctx) {
         try {
             Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-            URL url = bundle.getResource("icon.png");
+            URL url = null;
+            if (bundle != null) {
+                url = bundle.getResource("icon.png");
+            }
             InputStream is = null;
             if (url != null) {
                 is = url.openStream();

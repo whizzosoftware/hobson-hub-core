@@ -29,6 +29,14 @@ define([
 			});
 		},
 
+		getPluginImage: function(ctx, url) {
+			return $.ajax({
+				context: ctx,
+				url: url + '?base64=true',
+				type: 'GET'
+			});
+		},
+
 		installPlugin: function(ctx, url) {
 			return $.ajax(url, {
 				type: 'POST'

@@ -7,9 +7,10 @@ define([
     'dropzone',
     'models/hub',
     'views/footer',
+    'views/error',
     'i18n!nls/strings',
     'text!templates/start.html'
-], function($, Backbone, toastr, Ladda, Dropzone, HubModel, FooterView, strings, startTemplate) {
+], function($, Backbone, toastr, Ladda, Dropzone, HubModel, FooterView, ErrorView, strings, startTemplate) {
 
     var StartView = Backbone.View.extend({
         template: _.template(startTemplate),
@@ -57,9 +58,13 @@ define([
                         toastr.error(error.errors[0].message);
                     });
                 },
-                error: function(model, xhr, options) {
-                    console.debug('Nope!');
-                    options.context.$el.append('<p>A problem occurred</p>');
+                error: function(model, response, options) {
+                    console.debug('nope: ', response);
+                    if (response.status === 418) {
+                        options.context.$el.append(new ErrorView({message: strings.WizardPasswordError}).render().el);
+                    } else {
+                        options.context.$el.append(new ErrorView({message: strings.WizardGenericError}).render().el);
+                    }
                 }
             });
 
