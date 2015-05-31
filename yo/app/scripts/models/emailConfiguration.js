@@ -1,4 +1,4 @@
-// Filename: models/hub.js
+// Filename: models/emailConfiguration.js
 define([
 	'backbone'
 ], function(Backbone) {

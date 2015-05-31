@@ -11,6 +11,7 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryInterval;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.telemetry.TemporalValue;
@@ -40,7 +41,18 @@ public class OSGITelemetryManager implements TelemetryManager {
 
     @Override
     public void enableDeviceTelemetry(DeviceContext ctx, boolean enabled) {
+        deviceManager.setDeviceConfigurationProperty(ctx, "telemetry", enabled, true);
+    }
 
+    @Override
+    public Collection<HobsonDevice> getAllTelemetryEnabledDevices(HubContext ctx) {
+        List<HobsonDevice> results = new ArrayList<HobsonDevice>();
+        for (HobsonDevice device : deviceManager.getAllDevices(ctx)) {
+            if (isDeviceTelemetryEnabled(device.getContext())) {
+                results.add(device);
+            }
+        }
+        return results;
     }
 
     @Override
@@ -58,7 +70,10 @@ public class OSGITelemetryManager implements TelemetryManager {
 
     @Override
     public void writeDeviceTelemetry(DeviceContext ctx, Map<String, TemporalValue> values) {
-
+        for (String name : values.keySet()) {
+            TemporalValue val = values.get(name);
+            writeDeviceVariableTelemetry(ctx, name, val.getValue(), val.getTime());
+        }
     }
 
     @Override
@@ -79,7 +94,9 @@ public class OSGITelemetryManager implements TelemetryManager {
 
                         if (timestamps.length == values.length) {
                             for (int i = 0; i < timestamps.length; i++) {
-                                results.add(new TemporalValue(timestamps[i], values[i]));
+                                if (!Double.isNaN(values[i])) {
+                                    results.add(new TemporalValue(timestamps[i], values[i]));
+                                }
                             }
                         } else {
                             throw new HobsonRuntimeException("Timestamp and value count is different; telemetry file may be corrupted?");
@@ -96,9 +113,15 @@ public class OSGITelemetryManager implements TelemetryManager {
     }
 
     @Override
+    public boolean isDeviceTelemetryEnabled(DeviceContext ctx) {
+        Boolean b = (Boolean)deviceManager.getDeviceConfigurationProperty(ctx, "telemetry");
+        return (b != null && b);
+    }
+
+    @Override
     public void writeDeviceVariableTelemetry(DeviceContext ctx, String name, Object value, long time) {
         try {
-            Object mutex = getTelemetryMutex(ctx, name);
+            final Object mutex = getTelemetryMutex(ctx, name);
             synchronized (mutex) {
                 File file = getTelemetryFile(ctx, name);
                 RrdDb db = new RrdDb(file.getAbsolutePath(), false);

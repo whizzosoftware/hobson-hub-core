@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
@@ -44,7 +43,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     // these will be dependency injected by the OSGi runtime
-    private volatile ActionManager actionManager;
     private volatile DeviceManager deviceManager;
     private volatile DiscoManager discoManager;
     private volatile EventManager eventManager;
@@ -76,7 +74,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      */
     public void start() {
         // inject manager dependencies
-        getRuntime().setActionManager(actionManager);
         getRuntime().setDeviceManager(deviceManager);
         getRuntime().setDiscoManager(discoManager);
         getRuntime().setEventManager(eventManager);

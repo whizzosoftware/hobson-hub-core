@@ -24,10 +24,6 @@ public class SetupApplication extends Application {
         Router router = new Router();
         router.attach("/", new ClassLoaderOverrideDirectory(getContext(), "clap://class/www/", getClass().getClassLoader()));
 
-        ChallengeAuthenticator auth = new AlterableStatusCodeChallengeAuthenticator(getContext(), ChallengeScheme.HTTP_BASIC, "Hobson (default is local/local)");
-        auth.setVerifier(new HobsonVerifier());
-        auth.setNext(router);
-
-        return auth;
+        return router;
     }
 }

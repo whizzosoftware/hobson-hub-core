@@ -55,16 +55,31 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private EventManager eventManager;
 
     public Collection<HobsonHub> getHubs(String userId) {
-        return Arrays.asList(createLocalHubDetails(userId));
+        return Arrays.asList(createLocalHubDetails());
     }
 
     @Override
     public HobsonHub getHub(HubContext ctx) {
         if (HubContext.DEFAULT_HUB.equals(ctx.getHubId())) {
-            return createLocalHubDetails(ctx.getUserId());
+            return createLocalHubDetails();
         } else {
             throw new HobsonNotFoundException("Unable to find hub with specified ID");
         }
+    }
+
+    @Override
+    public HobsonHub addHub(String userId, String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void removeHub(HubContext ctx) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean authenticateHub(HubContext ctx, HubCredentials credentials) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -78,43 +93,43 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             needsUpdate = true;
         }
 
-        if (hub.hasLocation()) {
-            HubLocation location = hub.getLocation();
-            if (location.getText() != null) {
-                props.put(HubLocation.PROP_LOCATION_STRING, location.getText());
-                needsUpdate = true;
-            }
-            if (location.hasLatitude()) {
-                props.put(HubLocation.PROP_LATITUDE, location.getLatitude());
-                needsUpdate = true;
-            }
-            if (location.hasLongitude()) {
-                props.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
-                needsUpdate = true;
-            }
-        }
-
-        if (hub.hasEmail()) {
-            EmailConfiguration email = hub.getEmail();
-            props.put(EmailConfiguration.PROP_MAIL_SERVER, email.getServer());
-            props.put(EmailConfiguration.PROP_MAIL_SECURE, email.isSecure());
-            props.put(EmailConfiguration.PROP_MAIL_USERNAME, email.getUsername());
-            if (email.hasPassword()) {
-                props.put(EmailConfiguration.PROP_MAIL_PASSWORD, email.getPassword());
-            }
-            props.put(EmailConfiguration.PROP_MAIL_SENDER, email.getSenderAddress());
-            needsUpdate = true;
-        }
-
-        if (hub.hasLogLevel()) {
-            Logger root = (Logger)LoggerFactory.getLogger(HOBSON_LOGGER);
-            root.setLevel(Level.toLevel(hub.getLogLevel()));
-        }
-
-        if (hub.hasSetupComplete()) {
-            props.put(SETUP_COMPLETE, hub.isSetupComplete());
-            needsUpdate = true;
-        }
+//        if (hub.hasLocation()) {
+//            HubLocation location = hub.getLocation();
+//            if (location.getText() != null) {
+//                props.put(HubLocation.PROP_LOCATION_STRING, location.getText());
+//                needsUpdate = true;
+//            }
+//            if (location.hasLatitude()) {
+//                props.put(HubLocation.PROP_LATITUDE, location.getLatitude());
+//                needsUpdate = true;
+//            }
+//            if (location.hasLongitude()) {
+//                props.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
+//                needsUpdate = true;
+//            }
+//        }
+//
+//        if (hub.hasEmail()) {
+//            EmailConfiguration email = hub.getEmail();
+//            props.put(EmailConfiguration.PROP_MAIL_SERVER, email.getServer());
+//            props.put(EmailConfiguration.PROP_MAIL_SECURE, email.isSecure());
+//            props.put(EmailConfiguration.PROP_MAIL_USERNAME, email.getUsername());
+//            if (email.hasPassword()) {
+//                props.put(EmailConfiguration.PROP_MAIL_PASSWORD, email.getPassword());
+//            }
+//            props.put(EmailConfiguration.PROP_MAIL_SENDER, email.getSenderAddress());
+//            needsUpdate = true;
+//        }
+//
+//        if (hub.hasLogLevel()) {
+//            Logger root = (Logger)LoggerFactory.getLogger(HOBSON_LOGGER);
+//            root.setLevel(Level.toLevel(hub.getLogLevel()));
+//        }
+//
+//        if (hub.hasSetupComplete()) {
+//            props.put(SETUP_COMPLETE, hub.isSetupComplete());
+//            needsUpdate = true;
+//        }
 
         if (needsUpdate) {
             try {
@@ -145,7 +160,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void setHubPassword(HubContext ctx, PasswordChange change) {
+    public void setLocalPassword(HubContext ctx, PasswordChange change) {
         try {
             Configuration config = getConfiguration();
             Dictionary props = getConfigurationProperties(config);
@@ -172,7 +187,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public boolean authenticateAdmin(HubContext ctx, String password) {
+    public boolean authenticateLocal(HubContext ctx, String password) {
         String adminPassword = null;
         Configuration config = getConfiguration();
 
@@ -192,9 +207,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return (adminPassword.equals(password));
     }
 
-    protected HubLocation getHubLocation(HubContext ctx) {
-        return new HubLocation.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
-    }
+//    protected HubLocation getHubLocation(HubContext ctx) {
+//        return new HubLocation.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
+//    }
 
     protected EmailConfiguration getHubEmailConfiguration(HubContext ctx) {
         return new EmailConfiguration.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
@@ -249,16 +264,17 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
-    protected HobsonHub createLocalHubDetails(String userId) {
+    protected HobsonHub createLocalHubDetails() {
         String version = FrameworkUtil.getBundle(getClass()).getVersion().toString();
         HubContext ctx = HubContext.createLocal();
         return new HobsonHub.Builder(ctx).
             name(getHubName(ctx)).
             version(version).
-            email(getHubEmailConfiguration(ctx)).
-            location(getHubLocation(ctx)).
-            logLevel(((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString()).
-            setupComplete(isSetupComplete()).
+            configuration(getConfigurationPropertyMap(getConfiguration())).
+//            email(getHubEmailConfiguration(ctx)).
+//            location(getHubLocation(ctx)).
+//            logLevel(((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString()).
+//            setupComplete(isSetupComplete()).
             build();
     }
 
@@ -301,11 +317,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         } catch (IOException e) {
             throw new HobsonRuntimeException("Unable to read log file", e);
         }
-    }
-
-    @Override
-    public HubRegistrar getRegistrar() {
-        return null;
     }
 
     @Override
@@ -365,6 +376,19 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             p = new Properties();
         }
         return p;
+    }
+
+    private Map<String,Object> getConfigurationPropertyMap(Configuration config) {
+        Dictionary p = config.getProperties();
+        Map<String,Object> pm = new HashMap<>();
+        if (p != null) {
+            Enumeration e = p.keys();
+            while (e.hasMoreElements()) {
+                Object k = e.nextElement();
+                pm.put(k.toString(), p.get(k));
+            }
+        }
+        return pm;
     }
 
     private void updateConfiguration(HubContext ctx, Configuration config, Dictionary props) throws IOException {

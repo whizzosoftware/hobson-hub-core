@@ -15,7 +15,6 @@ import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateRequestEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.util.VariableChangeIdHelper;
 import com.whizzosoftware.hobson.api.variable.*;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -112,18 +111,6 @@ public class OSGIVariableManager implements VariableManager {
             }
         }
         return v;
-    }
-
-    @Override
-    public Collection<String> getDeviceVariableChangeIds(DeviceContext ctx) {
-        List<String> eventIds = new ArrayList<>();
-
-        HobsonVariableCollection deviceVars = getDeviceVariables(ctx);
-        for (HobsonVariable v : deviceVars.getCollection()) {
-            VariableChangeIdHelper.populateChangeIdsForVariableName(v.getName(), eventIds);
-        }
-
-        return eventIds;
     }
 
     @Override

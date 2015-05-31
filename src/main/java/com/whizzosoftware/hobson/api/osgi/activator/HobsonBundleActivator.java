@@ -7,7 +7,6 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.api.osgi.activator;
 
-import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -15,6 +14,7 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import org.apache.felix.dm.Component;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
-import java.util.concurrent.ExecutorService;
 
 /**
  * An OSGi bundle activator that instantiates a plugin class (defined by the Provide-Capability OSGi manifest header)
@@ -51,13 +50,13 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             props.setProperty("pluginId", pluginId);
             c.setInterface(HobsonPlugin.class.getName(), props);
             c.setFactory(new HobsonPluginFactory(context, pluginClass, pluginId), "create");
-            c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
             c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
             c.add(createServiceDependency().setService(DiscoManager.class).setRequired(true));
             c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
             c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
             c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
+            c.add(createServiceDependency().setService(TelemetryManager.class).setRequired(true));
             c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
             manager.add(c);
         } else {

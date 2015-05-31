@@ -7,9 +7,9 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.rest.v1;
 
-import com.whizzosoftware.hobson.api.HobsonAuthException;
+import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.rest.v1.Authorizer;
+import com.whizzosoftware.hobson.rest.Authorizer;
 
 /**
  * An Authorizer implementation that only allows access to user "local" and hub "local". This is only useful when
@@ -21,7 +21,7 @@ public class LocalAuthorizer implements Authorizer {
     @Override
     public void authorizeHub(HubContext ctx) {
         if (!"local".equals(ctx.getHubId()) || !"local".equals(ctx.getUserId())) {
-            throw new HobsonAuthException("User ID and hub ID should be local/local");
+            throw new HobsonAuthorizationException("User ID and hub ID should be local/local");
         }
     }
 }

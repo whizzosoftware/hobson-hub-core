@@ -9,7 +9,6 @@ package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
@@ -19,10 +18,12 @@ import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.LocalAuthorizer;
-import com.whizzosoftware.hobson.rest.v1.Authorizer;
-import com.whizzosoftware.hobson.rest.v1.util.HATEOASLinkHelper;
+import com.whizzosoftware.hobson.rest.Authorizer;
+import com.whizzosoftware.hobson.rest.v1.util.HATEOASLinkProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -33,8 +34,13 @@ import org.osgi.framework.ServiceReference;
  * @author Dan Noguerol
  */
 public class HobsonManagerModule extends AbstractModule {
-    private HATEOASLinkHelper linkHelper = new HATEOASLinkHelper();
+    private UserStore userStore;
+    private HATEOASLinkProvider linkProvider = new HATEOASLinkProvider();
     private Authorizer authorizer = new LocalAuthorizer();
+
+    public HobsonManagerModule(UserStore userStore) {
+        this.userStore = userStore;
+    }
 
     @Override
     protected void configure() {
@@ -46,13 +52,8 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
-    public HATEOASLinkHelper provideLinkHelper() {
-        return linkHelper;
-    }
-
-    @Provides
-    public ActionManager provideActionManager() {
-        return (ActionManager)getManager(ActionManager.class);
+    public HATEOASLinkProvider provideLinkProvider() {
+        return linkProvider;
     }
 
     @Provides
@@ -98,6 +99,16 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public TaskManager provideTaskManager() {
         return (TaskManager)getManager(TaskManager.class);
+    }
+
+    @Provides
+    public TelemetryManager provideTelemetryManager() {
+        return (TelemetryManager)getManager(TelemetryManager.class);
+    }
+
+    @Provides
+    public UserStore provideUserStore() {
+        return userStore;
     }
 
     @Provides

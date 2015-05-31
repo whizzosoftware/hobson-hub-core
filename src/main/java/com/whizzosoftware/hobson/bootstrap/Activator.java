@@ -8,11 +8,11 @@
 package com.whizzosoftware.hobson.bootstrap;
 
 import com.google.inject.Guice;
-import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.image.ImageManager;
@@ -20,8 +20,8 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
 import com.whizzosoftware.hobson.bootstrap.api.disco.OSGIDiscoManager;
@@ -32,6 +32,7 @@ import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
 import com.whizzosoftware.hobson.bootstrap.api.telemetry.OSGITelemetryManager;
+import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.discovery.Advertiser;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
@@ -90,6 +91,8 @@ public class Activator extends DependencyActivatorBase {
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         logger.info("Hobson core is starting");
 
+        final UserStore userStore = new LocalUserStore();
+
         // set the Netty log factory
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
 
@@ -97,7 +100,7 @@ public class Activator extends DependencyActivatorBase {
         createManagers(manager);
 
         // create the dependency injector for all REST resources
-        Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule());
+        Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(userStore));
 
         // Create the Restlet server
         Engine engine = Engine.getInstance();
@@ -136,7 +139,8 @@ public class Activator extends DependencyActivatorBase {
                     registerRestletApplication(new RootApplication(), "");
 
                     // register the REST API application
-                    registerRestletApplication(new ApiV1Application(), ApiV1Application.PATH);
+                    ApiV1Application app = new ApiV1Application();
+                    registerRestletApplication(app, ApiV1Application.PATH);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");
@@ -159,7 +163,7 @@ public class Activator extends DependencyActivatorBase {
                     } else {
                         consoleURI = "http://localhost:8182";
                     }
-                    if (hubManager.getHub(HubContext.createLocal()).isSetupComplete()) {
+                    if (hubManager.getHub(HubContext.createLocal()).getConfiguration().getBooleanPropertyValue(HubConfigurationClass.SETUP_COMPLETE)) {
                         consoleURI += "/console/index.html";
                     } else {
                         consoleURI += "/setup/index.html";
@@ -251,18 +255,8 @@ public class Activator extends DependencyActivatorBase {
     }
 
     private void createManagers(DependencyManager manager) {
-        // register action manager
-        org.apache.felix.dm.Component c = manager.createComponent();
-        c.setInterface(ActionManager.class.getName(), null);
-        c.setImplementation(OSGIActionManager.class);
-        c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
-        c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
-        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
-        manager.add(c);
-        registeredComponents.add(c);
-
         // register activity log manager
-        c = manager.createComponent();
+        org.apache.felix.dm.Component c = manager.createComponent();
         c.setInterface(ActivityLogManager.class.getName(), null);
         c.setImplementation(OSGIActivityLogManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));

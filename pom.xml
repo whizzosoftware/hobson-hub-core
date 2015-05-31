@@ -119,43 +119,49 @@
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet.ext.json</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet.ext.guice</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet.ext.slf4j</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet.ext.jetty</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.restlet.osgi</groupId>
             <artifactId>org.restlet.ext.fileupload</artifactId>
-            <version>2.2.2</version>
+            <version>2.3.2</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>3.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mapdb</groupId>
+            <artifactId>mapdb</artifactId>
+            <version>1.0.7</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -212,6 +218,11 @@
             <groupId>org.rrd4j</groupId>
             <artifactId>rrd4j</artifactId>
             <version>2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.4.1</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -312,7 +323,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Import-Package>org.osgi.framework,org.osgi.framework.wiring,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,com.ning.http.client.*,javax.inject.*,javax.mail.*,org.restlet.*,org.apache.commons.fileupload.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*</Import-Package>
+                        <Import-Package>org.osgi.framework,org.osgi.framework.wiring,org.osgi.service.cm,org.osgi.service.event,org.osgi.util.tracker,org.apache.felix.bundlerepository,org.apache.felix.dm,org.apache.http.*,com.ning.http.client.*,javax.inject.*,javax.mail.*,org.restlet.*,org.apache.commons.fileupload.*,com.google.inject.*,org.json.*,org.apache.commons.io.*,gnu.io,io.netty.*,org.apache.commons.codec.*,org.apache.commons.lang3.*,org.mapdb.*</Import-Package>
                         <Bundle-Activator>com.whizzosoftware.hobson.bootstrap.Activator</Bundle-Activator>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*,com.whizzosoftware.hobson.json.*,com.whizzosoftware.hobson.dto.*</Export-Package>

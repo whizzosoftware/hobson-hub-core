@@ -21,7 +21,6 @@ import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.EventLoopExecutor;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
@@ -48,7 +47,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     volatile private ConfigurationAdmin configAdmin;
     volatile private VariableManager variableManager;
     volatile private PluginManager pluginManager;
-    volatile private TelemetryManager telemetryManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
     private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
@@ -97,17 +95,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error retrieving device", e);
         }
-    }
-
-    @Override
-    public Collection<HobsonDevice> getAllTelemetryEnabledDevices(HubContext ctx) {
-        List<HobsonDevice> results = new ArrayList<HobsonDevice>();
-        for (HobsonDevice device : getAllDevices(ctx)) {
-            if (isDeviceTelemetryEnabled(device.getContext())) {
-                results.add(device);
-            }
-        }
-        return results;
     }
 
     @Override
@@ -237,12 +224,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             );
             addDeviceRegistration(pluginId, deviceReg);
         }
-    }
-
-    @Override
-    public boolean isDeviceTelemetryEnabled(DeviceContext ctx) {
-        Boolean b = (Boolean)getDeviceConfigurationProperty(ctx, "telemetry");
-        return (b != null && b);
     }
 
     @Override
