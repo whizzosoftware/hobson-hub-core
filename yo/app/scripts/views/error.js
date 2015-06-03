@@ -7,7 +7,7 @@ define([
     'text!templates/error.html'
 ], function($, _, Backbone, strings, errorTemplate) {
 
-    var ErrorView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(errorTemplate),
 
         className: 'error-message',
@@ -24,5 +24,4 @@ define([
         }
     });
 
-    return ErrorView;
 });

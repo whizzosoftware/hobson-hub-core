@@ -1,4 +1,4 @@
-// Filename: views/start.js
+// Filename: views/email.js
 define([
     'jquery',
     'underscore',
@@ -9,18 +9,20 @@ define([
     'models/hubConfiguration',
     'services/hub',
     'views/footer',
+    'views/error',
     'i18n!nls/strings',
     'text!templates/email.html'
-], function($, _, Backbone, toastr, Foundation, EmailConfiguration, HubConfiguration, HubService, FooterView, strings, emailTemplate) {
+], function($, _, Backbone, toastr, Foundation, EmailConfiguration, HubConfiguration, HubService, FooterView, ErrorView, strings, emailTemplate) {
 
-    var StartView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(emailTemplate),
 
         events: {
             'change input[type=radio]': 'onServerTypeChange',
             'click #testOpenButton': 'onTestOpen',
             'click #testSendButton': 'onTestSend',
-            'next': 'onNext' // this event is fired by the footer view
+            'next': 'onNext',
+            'back': 'onBack'
         },
 
         serverType: 'none',
@@ -56,8 +58,11 @@ define([
                     ctx.setServerType(model.get('values').emailServer);
                 },
                 error: function(model, response, options) {
-                    console.debug('Nope!');
-                    options.context.$el.append('<p>A problem occurred</p>');
+                    if (response.status === 401) {
+                        options.context.$el.append(new ErrorView({message: strings.WizardTimeoutError}).render().el);
+                    } else {
+                        options.context.$el.append(new ErrorView({message: strings.WizardGenericError}).render().el);
+                    }
                 }
             });
 
@@ -143,6 +148,11 @@ define([
             }
         },
 
+        onBack: function(event) {
+            console.debug('onBack');
+            Backbone.history.navigate('#plugins', {trigger: true});
+        },
+
         setServerType: function(type) {
             type = type ? ((type === 'smtp.gmail.com') ? 'gmail' : type) : 'none';
 
@@ -166,15 +176,17 @@ define([
         },
 
         createEmailConfiguration: function() {
-            return new EmailConfiguration({
+            var ec = new EmailConfiguration({
                 emailServer: this.serverHost.val(),
                 emailSecure: this.serverSecure.prop('checked'),
                 emailUsername: this.serverUsername.val(),
-                emailPassword: this.serverPassword.val(),
                 emailSender: this.serverSender.val()
             });
+            if (this.serverPassword.val() !== '') {
+                ec.set('emailPassword', this.serverPassword.val());
+            }
+            return ec;
         }
     });
 
-    return StartView;
 });

@@ -7,7 +7,7 @@ define([
     'text!templates/nav.html'
 ], function($, _, Backbone, strings, navTemplate) {
 
-    var NavView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(navTemplate),
 
         render: function() {
@@ -17,5 +17,4 @@ define([
 
     });
 
-    return NavView;
 });

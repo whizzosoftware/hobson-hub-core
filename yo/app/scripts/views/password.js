@@ -1,20 +1,22 @@
-// Filename: views/start.js
+// Filename: views/password.js
 define([
     'jquery',
     'underscore',
     'backbone',
     'toastr',
     'services/hub',
+    'views/base',
     'views/footer',
     'i18n!nls/strings',
     'text!templates/password.html'
-], function($, _, Backbone, toastr, HubService, FooterView, strings, passwordTemplate) {
+], function($, _, Backbone, toastr, HubService, BaseView, FooterView, strings, passwordTemplate) {
 
-    var PasswordView = Backbone.View.extend({
+    return BaseView.extend({
         template: _.template(passwordTemplate),
 
         events: {
-            'next': 'onNext' // this event is fired by the footer view
+            'next': 'onNext', // this event is fired by the footer view
+            'back': 'onBack'
         },
 
         initialize: function() {
@@ -36,8 +38,8 @@ define([
             var password = this.$el.find('#password1').val();
             var password2 = this.$el.find('#password2').val();
 
-            this.showPasswordFieldError(false);
-            this.showRepeatFieldError(false);
+            this.clearFormError('password');
+            this.clearFormError('repeat');
 
             if (password) {
                 if (password === password2) {
@@ -55,37 +57,19 @@ define([
                         }
                     });
                 } else {
-                    this.showRepeatFieldError(true, strings.PasswordMatchError);
+                    this.showFormError('repeat', strings.PasswordMatchError);
                     this.footerView.showLoading(false);
                 }
             } else {
-                this.showPasswordFieldError(true, strings.PasswordMissingError);
+                this.showFormError('password', strings.PasswordMissingError);
                 this.footerView.showLoading(false);
             }
         },
 
-        showPasswordFieldError: function(visible, msg) {
-            var error = this.$el.find('#passwordError');
-            error.text(msg);
-            error.css('display', visible ? 'block' : 'none');
-            if (visible) {
-                this.$el.find('#passwordLabel').addClass('error');
-            } else {
-                this.$el.find('#passwordLabel').removeClass('error');
-            }
-        },
-
-        showRepeatFieldError: function(visible, msg) {
-            var error = this.$el.find('#repeatError');
-            error.text(msg);
-            error.css('display', visible ? 'block' : 'none');
-            if (visible) {
-                this.$el.find('#repeatLabel').addClass('error');
-            } else {
-                this.$el.find('#repeatLabel').removeClass('error');
-            }
+        onBack: function(event) {
+            Backbone.history.navigate('#email', {trigger: true});
         }
+
     });
 
-    return PasswordView;
 });

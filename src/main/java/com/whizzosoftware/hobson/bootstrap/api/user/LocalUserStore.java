@@ -2,10 +2,19 @@ package com.whizzosoftware.hobson.bootstrap.api.user;
 
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
+import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.hub.HubCredentials;
+import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.user.UserStore;
 
 public class LocalUserStore implements UserStore {
+    private HubManager hubManager;
+
+    public LocalUserStore(HubManager hubManager) {
+        this.hubManager = hubManager;
+    }
+
     @Override
     public boolean hasDefaultUser() {
         return true;
@@ -18,7 +27,7 @@ public class LocalUserStore implements UserStore {
 
     @Override
     public HobsonUser authenticate(String username, String password) {
-        if (username.equals("local") && password.equals("local")) {
+        if (hubManager.getLocalManager() != null && hubManager.getLocalManager().authenticateLocal(HubContext.createLocal(), password)) {
             return createLocalUser();
         } else {
             throw new HobsonAuthenticationException("The authentication credentials are invalid");

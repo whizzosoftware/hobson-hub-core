@@ -1,4 +1,4 @@
-// Filename: views/nav.js
+// Filename: views/footer.js
 define([
     'jquery',
     'underscore',
@@ -8,11 +8,12 @@ define([
     'text!templates/footer.html'
 ], function($, _, Backbone, Ladda, strings, footerTemplate) {
 
-    var FooterView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(footerTemplate),
 
         events: {
-            'click #next': 'onNext'
+            'click #next': 'onNext',
+            'click #back': 'onBack'
         },
 
         className: 'row',
@@ -21,10 +22,11 @@ define([
             this.previousTab = options.previousTab;
             this.activeTab = options.activeTab;
             this.nextTab = options.nextTab;
+            this.showBack = (typeof options.showBack !== 'undefined') ? options.showBack : true;
         },
 
         render: function() {
-            this.$el.append(this.template({ previousTab: this.previousTab, activeTab: this.activeTab, nextTab: this.nextTab, strings: strings }));
+            this.$el.append(this.template({ previousTab: this.previousTab, activeTab: this.activeTab, nextTab: this.nextTab, showBack: this.showBack, strings: strings }));
             this.laddaButton = Ladda.create(this.el.querySelector('#next'));
             return this;
         },
@@ -32,6 +34,10 @@ define([
         onNext: function(event) {
             this.laddaButton.start();
             this.$el.trigger('next');
+        },
+
+        onBack: function(event) {
+            this.$el.trigger('back');
         },
 
         showLoading: function(visible) {
@@ -43,5 +49,4 @@ define([
         }
     });
 
-    return FooterView;
 });

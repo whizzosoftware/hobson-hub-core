@@ -9,7 +9,7 @@ define([
     'text!templates/plugin.html'
 ], function($, _, Backbone, HubService, FooterView, strings, pluginTemplate) {
 
-    var PluginView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(pluginTemplate),
 
         events: {
@@ -49,5 +49,4 @@ define([
         }
     });
 
-    return PluginView;
 });

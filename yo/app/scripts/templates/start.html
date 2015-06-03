@@ -18,9 +18,10 @@
         <div class="large-9 medium-9 small-12 columns">
             <div class="row">
                 <div class="large-12 columns">
-                    <label><%= strings.HubNickname %>
+                    <label id="nameLabel"><%= strings.HubNickname %>
                     <input id="name" class="radius" type="text" value="<%= config.values ? config.values.name : '' %>" />
                     </label>
+                    <small id="nameError" class="error" style="display: none"></small>
                     <p class="input-help-text"><%= strings.NicknameHelp %></p>
                 </div>
             </div>
@@ -29,11 +30,11 @@
                     <label id="addressLabel"><%= strings.HubAddress %>
                     <input id="address" class="radius" type="text" value="<%= config.values ? config.values.address : '' %>" placeholder="<%= strings.AddressPlaceholder %>" />
                     </label>
-                    <small id="lookupError" class="error" style="display: none;"><%= strings.AddressLookupFailure %></small>
+                    <small id="addressError" class="error" style="display: none;"></small>
                     <p class="input-help-text"><%= strings.AddressHelp %></p>
                 </div>
             </div>
-            <div id="latlong" class="row" >
+            <div id="latlong" class="row" style="display: none;">
                 <div class="large-6 medium-6 columns">
                     <label>Latitude
                     <input id="latitude" class="radius" type="text" value="<%= config.values ? config.values.latitude : '' %>" placeholder="<%= strings.Latitude %>" />

@@ -91,28 +91,26 @@ public class Activator extends DependencyActivatorBase {
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         logger.info("Hobson core is starting");
 
-        final UserStore userStore = new LocalUserStore();
-
         // set the Netty log factory
         InternalLoggerFactory.setDefaultFactory(new Slf4JLoggerFactory());
 
         // create all OSGi managers
         createManagers(manager);
 
-        // create the dependency injector for all REST resources
-        Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(userStore));
-
-        // Create the Restlet server
-        Engine engine = Engine.getInstance();
-        engine.setLoggerFacade(new Slf4jLoggerFacade());
-        component.getClients().add(Protocol.CLAP);
-        component.getLogService().setEnabled(false);
-
         // listen for the HubManager to be published
         hubManagerTracker = new ServiceTracker(context, HubManager.class.getName(), null) {
             @Override
             public Object addingService(ServiceReference ref) {
                 HubManager hubManager = (HubManager)context.getService(ref);
+
+                // create the dependency injector for all REST resources
+                Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(new LocalUserStore(hubManager)));
+
+                // Create the Restlet server
+                Engine engine = Engine.getInstance();
+                engine.setLoggerFacade(new Slf4jLoggerFacade());
+                component.getClients().add(Protocol.CLAP);
+                component.getLogService().setEnabled(false);
 
                 // start up the HTTP/HTTPS server
                 List<Protocol> protocols = new ArrayList<>();

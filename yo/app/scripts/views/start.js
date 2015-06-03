@@ -7,13 +7,14 @@ define([
     'dropzone',
     'models/hub',
     'models/hubConfiguration',
+    'views/base',
     'views/footer',
     'views/error',
     'i18n!nls/strings',
     'text!templates/start.html'
-], function($, Backbone, toastr, Ladda, Dropzone, Hub, HubConfiguration, FooterView, ErrorView, strings, startTemplate) {
+], function($, Backbone, toastr, Ladda, Dropzone, Hub, HubConfiguration, BaseView, FooterView, ErrorView, strings, startTemplate) {
 
-    var StartView = Backbone.View.extend({
+    return BaseView.extend({
         template: _.template(startTemplate),
 
         events: {
@@ -22,7 +23,7 @@ define([
         },
 
         initialize: function() {
-            this.footerView = new FooterView({previousTab: null, activeTab: 'start', nextTab: 'plugins'}); 
+            this.footerView = new FooterView({previousTab: null, activeTab: 'start', nextTab: 'plugins', showBack: false}); 
         },
 
         remove: function() {
@@ -76,8 +77,7 @@ define([
                             });
                         },
                         error: function(model, response, options) {
-                            console.debug('nope: ', response);
-                            if (response.status === 418) {
+                            if (response.status === 401) {
                                 options.context.$el.append(new ErrorView({message: strings.WizardPasswordError}).render().el);
                             } else {
                                 options.context.$el.append(new ErrorView({message: strings.WizardGenericError}).render().el);
@@ -101,40 +101,49 @@ define([
             var newName = this.$el.find('#name').val();
             var newAddress = this.$el.find('#address').val();
 
-            this.showAddressLookupFailure(false);
-
-            if (this.addressChanged && newAddress) {
-                // flag the address as unchaged
-                this.addressChanged = false;
-
-                // make call to Nominatim
-                $.ajax('https://nominatim.openstreetmap.org/search?format=json&q=' + newAddress, {context: this}).
-                    done(function(data, status, jqxhr) {
-                        if (data.length == 1 && data[0].lat && data[0].lon) {
-
-                            // set the address data in the hub model
-                            var addrData = data[0];
-
-                            this.$el.find('#latitude').val(addrData.lat);
-                            this.$el.find('#longitude').val(addrData.lon);
-
-                            // update hub information
-                            this.updateHub();
-                        } else {
-                            // stop the loading indicator
-                            this.footerView.showLoading(false);
-
-                            // show the lat/long fields
-                            this.showAddressLookupFailure(true);
-                        }
-                    }).
-                    fail(function(jqXHR, status, error) {
-                        this.footerView.showLoading(false);
-                        toastr.error('Lookup failed: ' + error);
-                    }
-                );
+            if (newName === '') {
+                this.showFormError('name', strings.NicknameRequired);
+                this.footerView.showLoading(false);
             } else {
-                this.updateHub();
+                this.showAddressLookupFailure(false);
+
+                if (this.addressChanged && newAddress) {
+                    // flag the address as unchaged
+                    this.addressChanged = false;
+
+                    toastr.info(strings.LookingUpAddress);
+
+                    // make call to Nominatim
+                    $.ajax('https://nominatim.openstreetmap.org/search?format=json&q=' + newAddress, {context: this}).
+                        done(function(data, status, jqxhr) {
+                            if (data.length == 1 && data[0].lat && data[0].lon) {
+
+                                // set the address data in the hub model
+                                var addrData = data[0];
+
+                                this.$el.find('#latitude').val(addrData.lat);
+                                this.$el.find('#longitude').val(addrData.lon);
+
+                                toastr.clear();
+
+                                // update hub information
+                                this.updateHub();
+                            } else {
+                                // stop the loading indicator
+                                this.footerView.showLoading(false);
+
+                                // show the lat/long fields
+                                this.showAddressLookupFailure(true);
+                            }
+                        }).
+                        fail(function(jqXHR, status, error) {
+                            this.footerView.showLoading(false);
+                            toastr.error(strings.LookupFailed + ': ' + error);
+                        }
+                    );
+                } else {
+                    this.updateHub();
+                }
             }
         },
 
@@ -143,12 +152,11 @@ define([
             this.$el.find('#lookupError').css('display', visible ? 'block' : 'none');
             this.$el.find('#latitude').val('');
             this.$el.find('#longitude').val('');
+
             if (visible) {
-                this.$el.find('#addressLabel').addClass('error');
-                this.$el.find('#address').addClass('error');
+                this.showFormError('address', strings.AddressLookupFailure);
             } else {
-                this.$el.find('#addressLabel').removeClass('error');
-                this.$el.find('#address').removeClass('error');
+                this.clearFormError('address');
             }
         },
 
@@ -181,7 +189,7 @@ define([
                     if (xhr.status == 202) {
                         Backbone.history.navigate('#plugins', {trigger: true});
                     } else {
-                        toastr.error('Error saving configuration. Check that your Hobson Hub is running.');
+                        toastr.error(strings.ConfigurationSaveError);
                     }
                 }
             });
@@ -189,5 +197,4 @@ define([
 
     });
 
-    return StartView;
 });

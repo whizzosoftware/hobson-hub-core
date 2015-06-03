@@ -7,7 +7,7 @@ define([
     'text!templates/wizard.html'
 ], function($, _, Backbone, strings, wizardTemplate) {
 
-    var WizardView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(wizardTemplate),
 
         render: function() {
@@ -29,5 +29,4 @@ define([
 
     });
 
-    return WizardView;
 });

@@ -1,4 +1,4 @@
-// Filename: views/start.js
+// Filename: views/complete.js
 define([
     'jquery',
     'underscore',
@@ -8,7 +8,7 @@ define([
     'text!templates/complete.html'
 ], function($, _, Backbone, FooterView, strings, completeTemplate) {
 
-    var CompleteView = Backbone.View.extend({
+    return Backbone.View.extend({
         template: _.template(completeTemplate),
 
         events: {
@@ -16,7 +16,7 @@ define([
         },
 
         initialize: function(options) {
-            this.footerView = new FooterView({previousTab: 'password', activeTab: 'complete', nextTab: null}); 
+            this.footerView = new FooterView({previousTab: 'password', activeTab: 'complete', nextTab: null, showBack: false}); 
             this.password = options.password;
         },
 
@@ -38,5 +38,4 @@ define([
 
     });
 
-    return CompleteView;
 });

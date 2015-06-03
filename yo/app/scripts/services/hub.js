@@ -6,12 +6,11 @@ define([
 
 		sendTestEmail: function(userId, hubId, model) {
 			var url = '/api/v1/users/' + userId + '/hubs/' + hubId + '/configuration/sendTestEmail';
-			var data = model.toJSON();
-			console.debug('POSTing to URL with data: ', url, data);
+			var json = {values: model.toJSON()};
 			return $.ajax(url, {
 				type: 'POST',
 				contentType: 'application/json',
-				data: JSON.stringify(data),
+				data: JSON.stringify(json),
 				dataType: 'json'
 			});
 		},
@@ -19,7 +18,6 @@ define([
 		setPassword: function(ctx, userId, hubId, password) {
 			var url = '/api/v1/users/' + userId + '/hubs/' + hubId + '/password';
 			var data = {currentPassword: 'local', newPassword: password};
-			console.debug('POSTing to URL with data: ', url, data);
 			return $.ajax(url, {
 				context: ctx,
 				type: 'POST',
@@ -41,7 +39,6 @@ define([
 			return $.ajax(url, {
 				type: 'POST'
 			});
-			console.debug('installing plugin: ', url);
 		}
 
 	};

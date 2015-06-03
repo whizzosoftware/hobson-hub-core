@@ -157,7 +157,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             adminPassword = DigestUtils.sha256Hex("local");
         }
 
-        return (adminPassword.equals(password));
+        return (adminPassword.equals(DigestUtils.sha256Hex(password)));
     }
 
     protected EmailConfiguration getHubEmailConfiguration(HubContext ctx) {

@@ -1,4 +1,4 @@
-// Filename: views/app
+// Filename: views/app.js
 define([
 	'jquery',
 	'underscore',
@@ -15,7 +15,7 @@ define([
 	'text!templates/app.html'
 ], function($, _, Backbone, NavView, WizardView, FooterView, StartView, PluginsView, EmailView, PasswordView, CompleteView, strings, appTemplate) {
 
-	var AppView = Backbone.View.extend({
+	return Backbone.View.extend({
 		el: $('body'),
 
 		template: _.template(appTemplate),
@@ -69,10 +69,8 @@ define([
 		},
 
 		onPasswordChange: function(event, password) {
-			console.debug('onCredentialChange: ', password);
 			this.password = password;
 		}
 	});
 
-	return AppView;
 });
