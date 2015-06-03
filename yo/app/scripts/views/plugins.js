@@ -3,13 +3,13 @@ define([
     'jquery',
     'underscore',
     'backbone',
-    'models/plugins',
+    'models/itemList',
     'services/hub',
     'views/plugin',
     'views/footer',
     'i18n!nls/strings',
     'text!templates/plugins.html'
-], function($, _, Backbone, PluginsCollection, HubService, PluginView, FooterView, strings, pluginsTemplate) {
+], function($, _, Backbone, ItemList, HubService, PluginView, FooterView, strings, pluginsTemplate) {
 
     var PluginsView = Backbone.View.extend({
         template: _.template(pluginsTemplate),
@@ -31,30 +31,31 @@ define([
         },
 
         render: function() {
-            var plugins = new PluginsCollection();
+            var plugins = new ItemList({
+                url: '/api/v1/users/local/hubs/local/plugins/remote?expand=item'
+            });
             plugins.fetch({
                 context: this, 
                 success: function(model, response, options) {
+                    console.debug(model);
+
                     var ctx = options.context;
                     ctx.$el.append(ctx.template({ strings: strings }));
                     ctx.$el.append(ctx.footerView.render().el);
 
-                    // filter full plugin list to just installable ones
-                    var installablePlugins  = model.filter(function(plugin) {
-                        return (plugin.get('links').install);
-                    });
-
                     // render all installable plugins
                     var row;
                     var containerEl = ctx.$el.find('#plugins-list');
-                    if (installablePlugins.length > 0) {
-                        for (var i = 0; i < installablePlugins.length; i++) {
+                    console.debug(model.numberOfItems());
+                    if (model.numberOfItems() > 0) {
+                        for (var i = 0; i < model.numberOfItems(); i++) {
                             if (i % 2 == 0) {
                                 row = $('<div class="row"></div>');
                                 containerEl.append(row);
                             }
-                            var plugin = installablePlugins[i];
-                            var pluginView = new PluginView(plugin.toJSON());
+                            var plugin = model.item(i);
+                            console.debug(plugin);
+                            var pluginView = new PluginView(plugin);
                             row.append(pluginView.render().el);
                             ctx.subviews.push(pluginView);
                         }
@@ -84,7 +85,8 @@ define([
             for (var i=0; i < this.subviews.length; i++) {
                 var pluginView = this.subviews[i];
                 if (pluginView.selected) {
-                    HubService.installPlugin(this, pluginView.plugin.links.install);
+                    console.debug('installing: ', pluginView.plugin.links.install);
+//                    HubService.installPlugin(this, pluginView.plugin.links.install);
                 }
             }
             Backbone.history.navigate('#email', {trigger: true});

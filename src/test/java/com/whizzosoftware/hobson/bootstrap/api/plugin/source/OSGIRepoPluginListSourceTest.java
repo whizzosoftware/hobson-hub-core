@@ -33,7 +33,7 @@ public class OSGIRepoPluginListSourceTest {
         assertEquals(1, pds.size());
         assertNotNull(pds.get("foo"));
         PluginDescriptor pd = pds.get("foo");
-        assertEquals("0.1.1", pd.getLatestVersionString());
+        assertEquals("0.1.1", pd.getVersionString());
     }
 
     private class MockResource implements Resource {

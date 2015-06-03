@@ -6,12 +6,12 @@ define([
     'toastr',
     'foundation',
     'models/emailConfiguration',
-    'models/hub',
+    'models/hubConfiguration',
     'services/hub',
     'views/footer',
     'i18n!nls/strings',
     'text!templates/email.html'
-], function($, _, Backbone, toastr, Foundation, EmailConfigurationModel, HubModel, HubService, FooterView, strings, emailTemplate) {
+], function($, _, Backbone, toastr, Foundation, EmailConfiguration, HubConfiguration, HubService, FooterView, strings, emailTemplate) {
 
     var StartView = Backbone.View.extend({
         template: _.template(emailTemplate),
@@ -35,14 +35,14 @@ define([
         },
 
         render: function() {
-            var hub = new HubModel();
+            var hub = new HubConfiguration();
             hub.fetch({
                 context: this,
                 success: function(model, response, options) {
                     var ctx = options.context;
 
                     // render templates
-                    ctx.$el.append(options.context.template({ hub: model.toJSON(), strings: strings }));
+                    ctx.$el.append(options.context.template({ config: model.get('values'), strings: strings }));
                     ctx.$el.append(options.context.footerView.render().el);
 
                     // squirrel away jquery selectors for later processing
@@ -53,7 +53,7 @@ define([
                     ctx.serverSender = ctx.$el.find('#serverSender');
 
                     // set the server type
-                    ctx.setServerType(model.getEmailServerType());
+                    ctx.setServerType(model.get('values').emailServer);
                 },
                 error: function(model, response, options) {
                     console.debug('Nope!');
@@ -105,11 +105,21 @@ define([
         onNext: function() {
             var config = this.createEmailConfiguration();
 
-            if (this.serverType && !this.serverType === 'none') {
+            console.debug('next: ', this.serverType);
+
+            if (this.serverType !== 'none') {
                 var error = config.validate();
 
                 if (!error) {
-                    var hub = new HubModel({ email: config.toJSON() });
+
+                    // create a new hub model object
+                    var hub = new HubConfiguration({
+                        id: '/api/v1/users/local/hubs/local/configuration',
+                        cclass: {
+                            "@id": '/api/v1/users/local/hubs/local/configurationClass'
+                        },
+                        values: this.createEmailConfiguration().toJSON()
+                    });
 
                     console.debug('saving model: ', hub.toJSON());
 
@@ -134,6 +144,8 @@ define([
         },
 
         setServerType: function(type) {
+            type = type ? ((type === 'smtp.gmail.com') ? 'gmail' : type) : 'none';
+
             var disabled = (!type || type === 'none');
 
             this.serverType = type;
@@ -154,12 +166,12 @@ define([
         },
 
         createEmailConfiguration: function() {
-            return new EmailConfigurationModel({
-                server: this.serverHost.val(),
-                secure: this.serverSecure.prop('checked'),
-                username: this.serverUsername.val(),
-                password: this.serverPassword.val(),
-                senderAddress: this.serverSender.val()
+            return new EmailConfiguration({
+                emailServer: this.serverHost.val(),
+                emailSecure: this.serverSecure.prop('checked'),
+                emailUsername: this.serverUsername.val(),
+                emailPassword: this.serverPassword.val(),
+                emailSender: this.serverSender.val()
             });
         }
     });

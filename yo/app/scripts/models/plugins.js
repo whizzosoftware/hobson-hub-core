@@ -6,7 +6,7 @@ define([
 
 	var PluginsCollection = Backbone.Collection.extend({
 		model: PluginModel,
-		url: '/api/v1/users/local/hubs/local/plugins?remote=true&details=true'
+		url: '/api/v1/users/local/hubs/local/plugins/remote?expand=item'
 	});
 
 	return PluginsCollection;

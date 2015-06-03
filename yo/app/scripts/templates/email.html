@@ -15,16 +15,16 @@
 	<div class="row">
 		<div class="large-9 medium-9 columns">
 			<label><%= strings.ServerHostname %>
-				<input id="serverHost" class="radius" type="text" value="<%= hub.email ? hub.email.server : '' %>" placeholder="Ex: 192.121.8.342" disabled />
+				<input id="serverHost" class="radius" type="text" value="<%= config.emailServer ? config.emailServer : '' %>" placeholder="Ex: 192.121.8.342" disabled />
 			</label>
             <p class="input-help-text" style="margin-bottom: .5em;"><%= strings.MailServerHelp %></p>
-			<input id="serverSecure" type="checkbox" <%= hub.email ? (hub.email.secure ? 'checked' : '') : '' %> disabled><label for="serverSecure"><%= strings.MailServerSecure %></label></input>
+			<input id="serverSecure" type="checkbox" <%= config.emailSecure ? 'checked' : '' %> disabled><label for="serverSecure"><%= strings.MailServerSecure %></label></input>
 		</div>
 	</div>
 	<div class="row">
 		<div class="large-9 medium-9 columns">
 			<label><%= strings.UserName %>
-				<input id="serverUsername" class="radius" type="text" value="<%= hub.email ? hub.email.username : '' %>" placeholder="Ex: joe@foo.com" disabled />
+				<input id="serverUsername" class="radius" type="text" value="<%= config.emailUsername ? config.emailUsername : '' %>" placeholder="Ex: joe@foo.com" disabled />
 			</label>
             <p class="input-help-text"><%= strings.MailUserHelp %></p>
 		</div>
@@ -40,7 +40,7 @@
 	<div class="row">
 		<div class="large-9 medium-9 columns">
 			<label><%= strings.SenderAddress %>
-				<input id="serverSender" class="radius" type="text" value="<%= hub.email ? hub.email.senderAddress : '' %>" placeholder="Ex: joe@foo.com" disabled />
+				<input id="serverSender" class="radius" type="text" value="<%= config.emailSender ? config.emailSender : '' %>" placeholder="Ex: joe@foo.com" disabled />
 			</label>
             <p class="input-help-text"><%= strings.MailSenderHelp %></p>
 		</div>

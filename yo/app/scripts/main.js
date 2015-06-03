@@ -6,13 +6,6 @@ require({locale: 'root'}, [
     'foundation',
     'router'
 ], function($, _, Backbone, Foundation, Router) {
-	$.ajaxSetup({
-		headers: {
-			'Authorization': 'Basic bG9jYWw6bG9jYWw=',
-			'X-StatusOnLoginFail': 418
-		}
-	});
-
     // initialize the router
     new Router();
 });

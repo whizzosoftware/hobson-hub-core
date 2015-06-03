@@ -6,11 +6,12 @@ define([
     'ladda',
     'dropzone',
     'models/hub',
+    'models/hubConfiguration',
     'views/footer',
     'views/error',
     'i18n!nls/strings',
     'text!templates/start.html'
-], function($, Backbone, toastr, Ladda, Dropzone, HubModel, FooterView, ErrorView, strings, startTemplate) {
+], function($, Backbone, toastr, Ladda, Dropzone, Hub, HubConfiguration, FooterView, ErrorView, strings, startTemplate) {
 
     var StartView = Backbone.View.extend({
         template: _.template(startTemplate),
@@ -30,41 +31,62 @@ define([
         },
 
         render: function() {
-            var hub = new HubModel();
-            hub.fetch({
+            // perform a login with default username/password
+            $.ajax('/api/v1/login', {
                 context: this,
-                success: function(model, response, options) {
-                    var ctx = options.context;
-                    ctx.$el.append(ctx.template({ hub: model.toJSON(), strings: strings }));
-                    ctx.$el.append(ctx.footerView.render().el);
-                    this.addressChanged = false;
+                method: 'POST',
+                mimeType: 'application/json',
+                data: "{username: 'local', password: 'local'}",
+                success: function(data, status, xhr) {
+                    // set the bearer token for all subsequent AJAX requests
+                    $.ajaxSetup({
+                        headers: {
+                            'Authorization': 'Bearer ' + data.token
+                        }
+                    });
 
-                    this.dropzone = new Dropzone('.upload-widget', { 
-                        url: '/api/v1/users/local/hubs/local/image', 
-                        method: 'put',
-                        maxFiles: 1,
-                        acceptedFiles: 'image/jpeg,image/png',
-                        previewTemplate: '<div class="dz-preview dz-file-preview"><div class="dz-details"><img data-dz-thumbnail /></div><div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div><div style="display: none;" class="dz-success-mark"><span><i class="fa fa-check-circle-o"></i></span></div><div style="display: none;" class="dz-error-mark"><span><i class="fa fa-times-circle-o"></i></span></div></div>'
-                    });
-                    this.dropzone.on('complete', function() {
-                        $('#upload-prompt').hide();
-                    });
-                    this.dropzone.on('success', function() {
-                        $('.dz-success-mark').css('display', 'block');
-                        toastr.success('Image successfully uploaded.');
-                    });
-                    this.dropzone.on('error', function(a, error, response) {
-                        $('.dz-error-mark').css('display', 'block');
-                        toastr.error(error.errors[0].message);
+                    // request hub information
+                    var hubConfig = new HubConfiguration();
+                    hubConfig.fetch({
+                        context: this,
+                        success: function(model, response, options) {
+                            console.debug(model);
+                            var ctx = options.context;
+                            ctx.$el.append(ctx.template({ config: model.toJSON(), strings: strings }));
+                            ctx.$el.append(ctx.footerView.render().el);
+                            this.addressChanged = false;
+
+                            this.dropzone = new Dropzone('.upload-widget', { 
+                                url: '/api/v1/users/local/hubs/local/image', 
+                                method: 'put',
+                                maxFiles: 1,
+                                acceptedFiles: 'image/jpeg,image/png',
+                                previewTemplate: '<div class="dz-preview dz-file-preview"><div class="dz-details"><img data-dz-thumbnail /></div><div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div><div style="display: none;" class="dz-success-mark"><span><i class="fa fa-check-circle-o"></i></span></div><div style="display: none;" class="dz-error-mark"><span><i class="fa fa-times-circle-o"></i></span></div></div>'
+                            });
+                            this.dropzone.on('complete', function() {
+                                $('#upload-prompt').hide();
+                            });
+                            this.dropzone.on('success', function() {
+                                $('.dz-success-mark').css('display', 'block');
+                                toastr.success('Image successfully uploaded.');
+                            });
+                            this.dropzone.on('error', function(a, error, response) {
+                                $('.dz-error-mark').css('display', 'block');
+                                toastr.error(error.errors[0].message);
+                            });
+                        },
+                        error: function(model, response, options) {
+                            console.debug('nope: ', response);
+                            if (response.status === 418) {
+                                options.context.$el.append(new ErrorView({message: strings.WizardPasswordError}).render().el);
+                            } else {
+                                options.context.$el.append(new ErrorView({message: strings.WizardGenericError}).render().el);
+                            }
+                        }
                     });
                 },
-                error: function(model, response, options) {
-                    console.debug('nope: ', response);
-                    if (response.status === 418) {
-                        options.context.$el.append(new ErrorView({message: strings.WizardPasswordError}).render().el);
-                    } else {
-                        options.context.$el.append(new ErrorView({message: strings.WizardGenericError}).render().el);
-                    }
+                error: function(xhr, status, error) {
+                    this.$el.append(new ErrorView({message: strings.WizardPasswordError}).render().el);
                 }
             });
 
@@ -132,11 +154,14 @@ define([
 
         updateHub: function() {
             // create a new hub model object
-            var hub = new HubModel({
-                id: 'local',
-                name: this.$el.find('#name').val(),
-                location: {
-                    text: this.$el.find('#address').val()
+            var hub = new HubConfiguration({
+                id: '/api/v1/users/local/hubs/local/configuration',
+                cclass: {
+                    "@id": '/api/v1/users/local/hubs/local/configurationClass'
+                },
+                values: {
+                    name: this.$el.find('#name').val(),
+                    address: this.$el.find('#address').val()
                 }
             });
 
@@ -144,8 +169,8 @@ define([
             var lat = this.$el.find('#latitude').val();
             var lon = this.$el.find('#longitude').val();
             if (lat && lon) {
-                hub.get('location').latitude = parseFloat(lat);
-                hub.get('location').longitude = parseFloat(lon);
+                hub.get('values').latitude = parseFloat(lat);
+                hub.get('values').longitude = parseFloat(lon);
             }
 
             // save the model to the server

@@ -1,5 +1,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.user;
 
+import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.user.UserStore;
@@ -20,7 +21,7 @@ public class LocalUserStore implements UserStore {
         if (username.equals("local") && password.equals("local")) {
             return createLocalUser();
         } else {
-            return null;
+            throw new HobsonAuthenticationException("The authentication credentials are invalid");
         }
     }
 

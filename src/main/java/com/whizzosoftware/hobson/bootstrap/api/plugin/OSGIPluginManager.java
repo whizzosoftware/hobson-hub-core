@@ -17,6 +17,8 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
+import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
+import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
@@ -90,14 +92,15 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public PluginList getPluginDescriptors(HubContext ctx, boolean includeRemoteInfo) {
+    public Collection<PluginDescriptor> getLocalPluginDescriptors(HubContext ctx) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource remoteSource = null;
-        if (includeRemoteInfo) {
-            remoteSource = new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource(context);
-        }
-        PluginListBuilder builder = new PluginListBuilder(new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource(context), remoteSource);
-        return builder.createPluginList();
+        return new OSGILocalPluginListSource(context).getPlugins().values();
+    }
+
+    @Override
+    public Collection<PluginDescriptor> getRemotePluginDescriptors(HubContext ctx) {
+        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        return new OSGIRepoPluginListSource(context).getPlugins().values();
     }
 
     @Override
@@ -209,7 +212,7 @@ public class OSGIPluginManager implements PluginManager {
         PluginDescriptor pd = source.getPlugin(ctx.getPluginId());
         String currentVersion = "0.0.0";
         if (pd != null) {
-            currentVersion = pd.getCurrentVersionString();
+            currentVersion = pd.getVersionString();
         }
         return currentVersion;
     }

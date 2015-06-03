@@ -22,6 +22,8 @@ import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
+import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.FrameworkUtil;
@@ -46,9 +48,7 @@ import java.util.*;
 public class OSGIHubManager implements HubManager, LocalHubManager {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
 
-    public static final String HUB_NAME = "hub.name";
-    public static final String ADMIN_PASSWORD = "admin.password";
-    public static final String SETUP_COMPLETE = "setup.complete";
+    public static final String ADMIN_PASSWORD = "adminPassword";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
 
     volatile private ConfigurationAdmin configAdmin;
@@ -73,75 +73,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void removeHub(HubContext ctx) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean authenticateHub(HubContext ctx, HubCredentials credentials) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void setHubDetails(HobsonHub hub) {
-        boolean needsUpdate = false;
-        Configuration config = getConfiguration();
-        Dictionary props = getConfigurationProperties(config);
-
-        if (hub.hasName()) {
-            props.put(HUB_NAME, hub.getName());
-            needsUpdate = true;
-        }
-
-//        if (hub.hasLocation()) {
-//            HubLocation location = hub.getLocation();
-//            if (location.getText() != null) {
-//                props.put(HubLocation.PROP_LOCATION_STRING, location.getText());
-//                needsUpdate = true;
-//            }
-//            if (location.hasLatitude()) {
-//                props.put(HubLocation.PROP_LATITUDE, location.getLatitude());
-//                needsUpdate = true;
-//            }
-//            if (location.hasLongitude()) {
-//                props.put(HubLocation.PROP_LONGITUDE, location.getLongitude());
-//                needsUpdate = true;
-//            }
-//        }
-//
-//        if (hub.hasEmail()) {
-//            EmailConfiguration email = hub.getEmail();
-//            props.put(EmailConfiguration.PROP_MAIL_SERVER, email.getServer());
-//            props.put(EmailConfiguration.PROP_MAIL_SECURE, email.isSecure());
-//            props.put(EmailConfiguration.PROP_MAIL_USERNAME, email.getUsername());
-//            if (email.hasPassword()) {
-//                props.put(EmailConfiguration.PROP_MAIL_PASSWORD, email.getPassword());
-//            }
-//            props.put(EmailConfiguration.PROP_MAIL_SENDER, email.getSenderAddress());
-//            needsUpdate = true;
-//        }
-//
-//        if (hub.hasLogLevel()) {
-//            Logger root = (Logger)LoggerFactory.getLogger(HOBSON_LOGGER);
-//            root.setLevel(Level.toLevel(hub.getLogLevel()));
-//        }
-//
-//        if (hub.hasSetupComplete()) {
-//            props.put(SETUP_COMPLETE, hub.isSetupComplete());
-//            needsUpdate = true;
-//        }
-
-        if (needsUpdate) {
-            try {
-                updateConfiguration(hub.getContext(), config, props);
-            } catch (IOException e) {
-                throw new HobsonRuntimeException("Error setting hub details", e);
-            }
-        }
-    }
-
-    @Override
-    public void clearHubDetails(HubContext ctx) {
+    public void deleteConfiguration(HubContext ctx) {
         Configuration config = getConfiguration();
         Dictionary props = new Hashtable();
         try {
@@ -152,10 +84,31 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
+    @Override
+    public void removeHub(HubContext ctx) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean authenticateHub(HubContext ctx, HubCredentials credentials) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public PropertyContainer getConfiguration(HubContext ctx) {
+        PropertyContainer pc = new PropertyContainer(
+            PropertyContainerClassContext.create(ctx, "hubConfiguration"),
+            getConfigurationPropertyMap(getConfiguration())
+        );
+        pc.setPropertyValue("logLevel", ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
+
+        return pc;
+    }
+
     protected String getHubName(HubContext ctx) {
         Configuration config = getConfiguration();
         Dictionary props = getConfigurationProperties(config);
-        String name = (String)props.get(HUB_NAME);
+        String name = (String)props.get("name");
         return (name == null) ? "Unnamed" : name;
     }
 
@@ -207,10 +160,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return (adminPassword.equals(password));
     }
 
-//    protected HubLocation getHubLocation(HubContext ctx) {
-//        return new HubLocation.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
-//    }
-
     protected EmailConfiguration getHubEmailConfiguration(HubContext ctx) {
         return new EmailConfiguration.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
     }
@@ -223,6 +172,23 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public void sendEmail(HubContext ctx, String recipientAddress, String subject, String body) {
         sendEmail(getHubEmailConfiguration(ctx), recipientAddress, subject, body);
+    }
+
+    @Override
+    public void setConfiguration(HubContext ctx, PropertyContainer configuration) {
+        Configuration config = getConfiguration();
+        Dictionary props = getConfigurationProperties(config);
+
+        // set properties
+        for (String name : configuration.getPropertyValues().keySet()) {
+            props.put(name, configuration.getPropertyValue(name));
+        }
+
+        try {
+            updateConfiguration(ctx, config, props);
+        } catch (IOException e) {
+            throw new HobsonRuntimeException("Error setting hub configuration", e);
+        }
     }
 
     protected void sendEmail(EmailConfiguration config, String recipientAddress, String subject, String body) {
@@ -271,17 +237,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             name(getHubName(ctx)).
             version(version).
             configuration(getConfigurationPropertyMap(getConfiguration())).
-//            email(getHubEmailConfiguration(ctx)).
-//            location(getHubLocation(ctx)).
-//            logLevel(((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString()).
-//            setupComplete(isSetupComplete()).
             build();
-    }
-
-    protected boolean isSetupComplete() {
-        Configuration config = getConfiguration();
-        Dictionary props = config.getProperties();
-        return (props != null && props.get(SETUP_COMPLETE) != null && (Boolean)props.get(SETUP_COMPLETE));
     }
 
     @Override

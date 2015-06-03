@@ -419,7 +419,7 @@ public class OSGITaskManager implements TaskManager {
             for (final PropertyContainer pc : actionSet.getProperties()) {
                 final HobsonPlugin plugin = pluginManager.getPlugin(pc.getContainerClassContext().getPluginContext());
                 if (plugin != null) {
-                    plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                    plugin.getRuntime().submitInEventLoop(new Runnable() {
                         public void run() {
                             plugin.getRuntime().onExecuteAction(pc);
                         }

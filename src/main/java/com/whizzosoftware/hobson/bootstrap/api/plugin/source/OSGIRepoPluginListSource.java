@@ -74,9 +74,9 @@ public class OSGIRepoPluginListSource implements PluginListSource {
                 if (isSatisfied(getAPIRequirement(repoResource), apiCapabilities)) {
                     // TODO: check result map for existing version and compare before replacing...
                     PluginDescriptor oldPd = resultMap.get(sname);
-                    if (oldPd == null || VersionUtil.versionCompare(oldPd.getLatestVersionString(), repoResource.getVersion().toString()) < 0) {
+                    if (oldPd == null || VersionUtil.versionCompare(oldPd.getVersionString(), repoResource.getVersion().toString()) < 0) {
                         PluginDescriptor pd = new PluginDescriptor(sname, repoResource.getPresentationName(), buildRepoDescription(repoResource), pluginType, PluginStatus.notInstalled(), null);
-                        pd.setLatestVersionString(repoResource.getVersion().toString());
+                        pd.setVersionString(repoResource.getVersion().toString());
                         resultMap.put(sname, pd);
                     }
                 }
