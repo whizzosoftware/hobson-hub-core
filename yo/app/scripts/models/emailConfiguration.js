@@ -6,9 +6,15 @@ define([
 
 		validate: function(attrs, options) {
 			if (!this.get('emailServer')) {
-				return 'No server hostname has been set.';
+				return {
+					name: 'emailServer',
+					msg: 'No server hostname has been set.'
+				};
 			} else if (!this.get('emailSender')) {
-				return 'No sender address has been set.';
+				return {
+					name: 'emailSender',
+					msg: 'No sender address has been set.'
+				};
 			}
 		},
 

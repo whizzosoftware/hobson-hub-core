@@ -47,8 +47,10 @@ define([
                         if (response.status === 202) {
                             this.$el.trigger('passwordChange', password);
                             Backbone.history.navigate('#complete', {trigger: true});
+                        } else if (response.status === 401) {
+                            Backbone.history.navigate('#', {trigger: true});
                         } else if (response.status === 400 && response.responseJSON && response.responseJSON.errors && response.responseJSON.errors[0]) {
-                            this.showPasswordFieldError(true, response.responseJSON.errors[0].message);
+                            this.showFormError('password', response.responseJSON.errors[0].message);
                             this.footerView.showLoading(false);
                         } else {
                             toastr.error(strings.PasswordGenericError);

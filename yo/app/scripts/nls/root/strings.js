@@ -6,6 +6,7 @@ define({
 	"CompleteWelcome": "Congratulations! Your new Hobson Hub is ready to use. Click the button below to go to the Hub management console. Note: You will need to enter the password you just set.",
 	"ConfigurationSaveError": "Error saving configuration. Check that your Hobson Hub is running.",
 	"Email": "Email",
+	"EmailConfigSaveError": "An error occurred saving the e-mail configuration.",
 	"EmailWelcome": "You're almost there. Here's where we set up your e-mail. This is optional but doing so allows you to receive mail notifications from Hobson.",
 	"Gmail": "Gmail",
 	"GotoConsole": "Management console",

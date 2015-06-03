@@ -14,9 +14,10 @@
 	</div>
 	<div class="row">
 		<div class="large-9 medium-9 columns">
-			<label><%= strings.ServerHostname %>
-				<input id="serverHost" class="radius" type="text" value="<%= config.emailServer ? config.emailServer : '' %>" placeholder="Ex: 192.121.8.342" disabled />
+			<label id="emailServerLabel"><%= strings.ServerHostname %>
+				<input id="emailServer" class="radius" type="text" value="<%= config.emailServer ? config.emailServer : '' %>" placeholder="Ex: 192.121.8.342" disabled />
 			</label>
+            <small id="emailServerError" class="error" style="display: none;"></small>
             <p class="input-help-text" style="margin-bottom: .5em;"><%= strings.MailServerHelp %></p>
 			<input id="serverSecure" type="checkbox" <%= config.emailSecure ? 'checked' : '' %> disabled><label for="serverSecure"><%= strings.MailServerSecure %></label></input>
 		</div>
@@ -39,9 +40,10 @@
 	</div>	
 	<div class="row">
 		<div class="large-9 medium-9 columns">
-			<label><%= strings.SenderAddress %>
-				<input id="serverSender" class="radius" type="text" value="<%= config.emailSender ? config.emailSender : '' %>" placeholder="Ex: joe@foo.com" disabled />
+			<label id="emailSenderLabel"><%= strings.SenderAddress %>
+				<input id="emailSender" class="radius" type="text" value="<%= config.emailSender ? config.emailSender : '' %>" placeholder="Ex: joe@foo.com" disabled />
 			</label>
+            <small id="emailSenderError" class="error" style="display: none;"></small>
             <p class="input-help-text"><%= strings.MailSenderHelp %></p>
 		</div>
 	</div>	

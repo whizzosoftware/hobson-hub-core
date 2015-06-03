@@ -184,10 +184,12 @@ define([
             // save the model to the server
             hub.save(null, {
                 context: this,
-                error: function(model, xhr, options) {
+                error: function(model, response, options) {
                     options.context.footerView.showLoading(false);
-                    if (xhr.status == 202) {
+                    if (response.status == 202) {
                         Backbone.history.navigate('#plugins', {trigger: true});
+                    } else if (response.status == 401) {
+                        Backbone.history.navigate('#', {trigger: true});
                     } else {
                         toastr.error(strings.ConfigurationSaveError);
                     }
