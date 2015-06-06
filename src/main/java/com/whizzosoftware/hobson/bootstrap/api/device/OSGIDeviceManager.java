@@ -8,10 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
-import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
-import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
@@ -21,9 +18,13 @@ import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.EventLoopExecutor;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
+import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
+import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
@@ -84,7 +85,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     public Collection<HobsonDevice> getAllDevices(PluginContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            List<HobsonDevice> results = new ArrayList<HobsonDevice>();
+            List<HobsonDevice> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + ctx.getPluginId() + "))");
             if (references != null) {
                 for (ServiceReference ref : references) {
@@ -115,17 +116,18 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
-    public Configuration getDeviceConfiguration(DeviceContext ctx) {
+    public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
         org.osgi.service.cm.Configuration config = getOSGIDeviceConfiguration(ctx);
         Dictionary props = config.getProperties();
 
-        // build a list of ConfigurationProperty objects
+        // build a list of PropertyContainer objects
         HobsonDevice device = getDevice(ctx);
-        Collection<ConfigurationPropertyMetaData> metas = device.getConfigurationPropertyMetaData();
+        PropertyContainerClass metas = device.getConfigurationClass();
 
-        Configuration ci = new Configuration();
+        PropertyContainer ci = new PropertyContainer();
 
-        for (ConfigurationPropertyMetaData meta : metas) {
+        for (TypedProperty meta : metas.getSupportedProperties()) {
+
             Object value = null;
             if (props != null) {
                 value = props.get(meta.getId());
@@ -136,7 +138,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                 value = device.getName();
             }
 
-            ci.addProperty(new ConfigurationProperty(meta, value));
+            ci.setPropertyValue(meta.getId(), value);
         }
 
         return ci;
@@ -288,7 +290,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
-    public void setDeviceConfiguration(DeviceContext ctx, Configuration config) {
+    public void setDeviceConfiguration(DeviceContext ctx, PropertyContainer config) {
         // TODO
     }
 
@@ -300,26 +302,31 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     @Override
     public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite) {
         try {
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
-                    if (configAdmin != null) {
-                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
-                        Dictionary dic = config.getProperties();
-                        if (dic == null) {
-                            dic = new Hashtable();
-                        }
-                        for (String name : values.keySet()) {
-                            if (dic.get(name) == null || overwrite) {
-                                dic.put(name, values.get(name));
-                            }
-                        }
-                        config.update(dic);
-                        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceConfigurationUpdateEvent(System.currentTimeMillis(), ctx.getPluginId(), ctx.getDeviceId(), new Configuration(dic)));
-                        return;
-                    } else {
-                        throw new ConfigurationException("Unable to set device name: ConfigurationAdmin service is not available");
-                    }
+            if (configAdmin != null) {
+                Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
+
+                if (bundle != null) {
+                    // get configuration
+                    org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
+
+                    // update configuration dictionary
+                    DictionaryUtil.updateConfigurationDictionary(config, values, overwrite);
+
+                    // send update event
+                    eventManager.postEvent(
+                        ctx.getPluginContext().getHubContext(),
+                        new DeviceConfigurationUpdateEvent(
+                            System.currentTimeMillis(),
+                            ctx.getPluginId(),
+                            ctx.getDeviceId(),
+                            getDeviceConfiguration(ctx)
+                        )
+                    );
+                } else {
+                    throw new ConfigurationException("Unable to set device configuration: no bundle found for " + ctx.getPluginId());
                 }
+            } else {
+                throw new ConfigurationException("Unable to set device configuration: ConfigurationAdmin service is not available");
             }
         } catch (IOException e) {
             throw new ConfigurationException("Error obtaining configuration", e);

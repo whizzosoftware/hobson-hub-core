@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
+import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.TaskExecutionEvent;
@@ -375,14 +376,18 @@ public class OSGITaskManager implements TaskManager {
     @Override
     public void createTask(String name, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
         if (conditionSet != null && conditionSet.hasPrimaryProperty()) {
-            HobsonPlugin plugin = pluginManager.getPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
-            if (plugin.getRuntime().getTaskProvider() != null) {
-                plugin.getRuntime().getTaskProvider().onCreateTask(name, conditionSet, actionSet);
+            if (conditionSet.getPrimaryProperty().getContainerClassContext() != null) {
+                HobsonPlugin plugin = pluginManager.getPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
+                if (plugin.getRuntime().getTaskProvider() != null) {
+                    plugin.getRuntime().getTaskProvider().onCreateTask(name, conditionSet, actionSet);
+                } else {
+                    throw new HobsonRuntimeException("Plugin associated with trigger condition does not support task creation");
+                }
             } else {
-                throw new HobsonRuntimeException("Plugin associated with trigger condition does not support task creation");
+                throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
         } else {
-            throw new HobsonRuntimeException("No trigger condition found");
+            throw new HobsonInvalidRequestException("No trigger condition found");
         }
     }
 

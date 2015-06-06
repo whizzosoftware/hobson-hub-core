@@ -9,18 +9,19 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.Configuration;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
-import com.whizzosoftware.hobson.api.config.ConfigurationProperty;
-import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
+import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
+import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
+import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
 import org.apache.felix.bundlerepository.Resolver;
 import org.apache.felix.bundlerepository.Resource;
@@ -51,9 +52,6 @@ public class OSGIPluginManager implements PluginManager {
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
 
-    private final static String DEVICE_PID_SEPARATOR = ".";
-
-    private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
     private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<PluginRef>();
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
@@ -104,37 +102,38 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public Configuration getPluginConfiguration(PluginContext ctx) {
+    public PropertyContainer getPluginConfiguration(PluginContext ctx) {
         return getPluginConfiguration(getPlugin(ctx));
     }
 
     @Override
     public Object getPluginConfigurationProperty(PluginContext ctx, String name) {
-        Configuration c = getPluginConfiguration(ctx);
+        PropertyContainer c = getPluginConfiguration(ctx);
         if (c != null) {
-            return c.getProperty(name);
+            return c.getPropertyValue(name);
         } else {
             return null;
         }
     }
 
-    @Override
-    public Configuration getPluginConfiguration(HobsonPlugin plugin) {
+    protected PropertyContainer getPluginConfiguration(HobsonPlugin plugin) {
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(plugin.getContext().getPluginId());
         Dictionary props = config.getProperties();
 
-        // build a list of ConfigurationProperty objects
-        Collection<ConfigurationPropertyMetaData> metas = plugin.getConfigurationPropertyMetaData();
+        // build a list of PropertyContainer objects
+        PropertyContainerClass metas = plugin.getConfigurationClass();
 
-        Configuration ci = new Configuration();
+        PropertyContainer ci = new PropertyContainer();
 
-        for (ConfigurationPropertyMetaData meta : metas) {
-            Object value = null;
-            if (props != null) {
-                value = props.get(meta.getId());
-                props.remove(meta.getId());
+        if (metas != null && metas.hasSupportedProperties()) {
+            for (TypedProperty meta : metas.getSupportedProperties()) {
+                Object value = null;
+                if (props != null) {
+                    value = props.get(meta.getId());
+                    props.remove(meta.getId());
+                }
+                ci.setPropertyValue(meta.getId(), value);
             }
-            ci.addProperty(new ConfigurationProperty(meta, value));
         }
 
         // On first run, the plugin will not have had its onStartup() method called and so may not have registered
@@ -144,7 +143,7 @@ public class OSGIPluginManager implements PluginManager {
             Enumeration e = props.keys();
             while (e.hasMoreElements()) {
                 String key = (String)e.nextElement();
-                ci.addProperty(new ConfigurationProperty(new ConfigurationPropertyMetaData(key), props.get(key)));
+                ci.setPropertyValue(key, props.get(key));
             }
         }
 
@@ -179,31 +178,35 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public void setPluginConfiguration(PluginContext ctx, Configuration newConfig) {
+    public void setPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
         // get the current configuration
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
-        Dictionary props = getDictionFromOSGIConfiguration(config);
 
-        // update the new configuration properties
-        for (ConfigurationProperty p : newConfig.getProperties()) {
-            props.put(p.getId(), p.getValue());
+        try {
+            // update the new configuration properties
+            DictionaryUtil.updateConfigurationDictionary(config, newConfig.getPropertyValues(), true);
+
+            // save the new configuration
+            postPluginConfigurationUpdateEvent(ctx);
+        } catch (IOException e) {
+            throw new ConfigurationException("Error updating plugin configuration", e);
         }
-
-        // save the new configuration
-        updateOSGIConfiguration(ctx, config, props);
     }
 
     @Override
     public void setPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
         // get the current configuration
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
-        Dictionary dic = getDictionFromOSGIConfiguration(config);
 
-        // update the new configuration property
-        dic.put(name, value);
+        try {
+            // update the new configuration property
+            DictionaryUtil.updateConfigurationDictionary(config, Collections.singletonMap(name, value), true);
 
-        // save the new configuration
-        updateOSGIConfiguration(ctx, config, dic);
+            // save the new configuration
+            postPluginConfigurationUpdateEvent(ctx);
+        } catch (IOException e) {
+            throw new ConfigurationException("Error updating plugin configuration", e);
+        }
     }
 
     @Override
@@ -309,21 +312,16 @@ public class OSGIPluginManager implements PluginManager {
         throw new ConfigurationException("Unable to obtain configuration for " + pluginId);
     }
 
-    private Dictionary getDictionFromOSGIConfiguration(org.osgi.service.cm.Configuration config) {
-        Dictionary d = config.getProperties();
-        if (d == null) {
-            d = new Hashtable();
-        }
-        return d;
-    }
-
-    private void updateOSGIConfiguration(PluginContext ctx, org.osgi.service.cm.Configuration config, Dictionary d) {
-        try {
-            config.update(d);
-            eventManager.postEvent(ctx.getHubContext(), new PluginConfigurationUpdateEvent(System.currentTimeMillis(), ctx, new Configuration(d)));
-        } catch (IOException e) {
-            throw new ConfigurationException("Error updating plugin configuration", e);
-        }
+    private void postPluginConfigurationUpdateEvent(PluginContext ctx) {
+        // post event
+        eventManager.postEvent(
+            ctx.getHubContext(),
+            new PluginConfigurationUpdateEvent(
+                System.currentTimeMillis(),
+                ctx,
+                getPluginConfiguration(ctx)
+            )
+        );
     }
 
     /**

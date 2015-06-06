@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.ConfigurationPropertyMetaData;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
@@ -16,6 +15,7 @@ import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
@@ -198,8 +198,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     }
 
     @Override
-    public Collection<ConfigurationPropertyMetaData> getConfigurationPropertyMetaData() {
-        return plugin.getConfigurationPropertyMetaData();
+    public PropertyContainerClass getConfigurationClass() {
+        return plugin.getConfigurationClass();
     }
 
     @Override

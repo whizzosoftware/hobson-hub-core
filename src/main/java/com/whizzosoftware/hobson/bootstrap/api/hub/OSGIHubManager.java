@@ -182,6 +182,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         // set properties
         for (String name : configuration.getPropertyValues().keySet()) {
             props.put(name, configuration.getPropertyValue(name));
+            if (name.equals("logLevel")) {
+                ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel((String)configuration.getPropertyValue(name)));
+            }
         }
 
         try {
