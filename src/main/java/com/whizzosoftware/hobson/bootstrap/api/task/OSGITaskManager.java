@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.TaskExecutionEvent;
@@ -135,6 +136,22 @@ public class OSGITaskManager implements TaskManager {
                 }
                 serviceRegistrationMap.remove(ctx.getPluginId());
             }
+        }
+    }
+
+    @Override
+    public void unpublishTask(TaskContext ctx) {
+        synchronized (serviceRegistrationMap) {
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
+            if (srl != null) {
+                for (ServiceRegistration sr : srl) {
+                    if (sr.getReference().getProperty("taskId").equals(ctx.getTaskId())) {
+                        sr.unregister();
+                        return;
+                    }
+                }
+            }
+            throw new HobsonNotFoundException("Unable to find task: " + ctx);
         }
     }
 
@@ -349,14 +366,14 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void updateTask(final TaskContext ctx, final String name, final PropertyContainerSet conditionSet, final PropertyContainerSet actionSet) {
+    public void updateTask(final TaskContext ctx, final String name, final String description, final PropertyContainerSet conditionSet, final PropertyContainerSet actionSet) {
         final HobsonPlugin plugin = pluginManager.getPlugin(ctx.getPluginContext());
         if (plugin != null) {
             final TaskProvider provider = getTaskProvider(plugin);
             plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                provider.onUpdateTask(ctx, name, conditionSet, actionSet);
+                provider.onUpdateTask(ctx, name, description, conditionSet, actionSet);
                 }
             });
         } else {
@@ -365,7 +382,7 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void createTask(HubContext ctx, String name, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
+    public void createTask(HubContext ctx, String name, String description, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
         if (conditionSet != null && conditionSet.hasPrimaryProperty()) {
             if (conditionSet.getPrimaryProperty().getContainerClassContext() != null) {
                 // convert explicit action set to action set ID
@@ -376,7 +393,7 @@ public class OSGITaskManager implements TaskManager {
                 // send the create task request to the appropriate task provider
                 HobsonPlugin plugin = pluginManager.getPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
                 if (plugin.getRuntime().getTaskProvider() != null) {
-                    plugin.getRuntime().getTaskProvider().onCreateTask(name, conditionSet, actionSet);
+                    plugin.getRuntime().getTaskProvider().onCreateTask(name, description, conditionSet, actionSet);
                 } else {
                     throw new HobsonRuntimeException("Plugin associated with trigger condition does not support task creation");
                 }
