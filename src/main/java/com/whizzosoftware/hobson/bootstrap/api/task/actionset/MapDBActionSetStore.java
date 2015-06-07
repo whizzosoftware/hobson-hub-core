@@ -31,7 +31,7 @@ public class MapDBActionSetStore implements ActionSetStore, CollectionPersistenc
         for (String key : fullDb.keySet()) {
             String actionSetId = persister.getActionSetIdFromKey(ctx, key);
             if (actionSetId != null) {
-                results.add(persister.restoreActionSet(this, taskManager, ctx, actionSetId));
+                results.add(persister.restoreActionSet(ctx, this, taskManager, actionSetId));
             }
         }
         return results;
@@ -39,7 +39,7 @@ public class MapDBActionSetStore implements ActionSetStore, CollectionPersistenc
 
     @Override
     public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
-        return persister.restoreActionSet(this, taskManager, ctx, actionSetId);
+        return persister.restoreActionSet(ctx, this, taskManager, actionSetId);
     }
 
     @Override
@@ -50,7 +50,7 @@ public class MapDBActionSetStore implements ActionSetStore, CollectionPersistenc
             al.add(ta);
         }
         tas.setProperties(al);
-        persister.saveActionSet(this, tas);
+        persister.saveActionSet(ctx, this, tas);
         return tas;
     }
 

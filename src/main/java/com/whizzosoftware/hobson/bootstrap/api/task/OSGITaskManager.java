@@ -19,7 +19,6 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.*;
 import com.whizzosoftware.hobson.api.task.*;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.bootstrap.api.task.action.*;
 import com.whizzosoftware.hobson.bootstrap.api.task.actionset.ActionSetStore;
 import com.whizzosoftware.hobson.bootstrap.api.task.actionset.MapDBActionSetStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -53,14 +52,6 @@ public class OSGITaskManager implements TaskManager {
 
         // create action set store
         actionSetStore = new MapDBActionSetStore(pluginManager.getDataFile(ctx, "actionSets"), this);
-
-        // publish default actions
-        publishActionClass(PropertyContainerClassContext.create(ctx, "email"), "Send an e-mail", EmailActionExecutor.getProperties());
-        publishActionClass(PropertyContainerClassContext.create(ctx, "log"), "Log a message", LogActionExecutor.getProperties());
-        publishActionClass(PropertyContainerClassContext.create(ctx, "turnOn"), "Turn on bulbs or switches", TurnDeviceOnActionExecutor.getProperties());
-        publishActionClass(PropertyContainerClassContext.create(ctx, "turnOff"), "Turn off bulbs or switches", TurnDeviceOffActionExecutor.getProperties());
-        publishActionClass(PropertyContainerClassContext.create(ctx, "setLevel"), "Set dimmer or switch levels", SetDeviceLevelActionExecutor.getProperties());
-        publishActionClass(PropertyContainerClassContext.create(ctx, "setColor"), "Set bulb colors", SetDeviceColorActionExecutor.getProperties());
     }
 
     @Override
@@ -374,9 +365,15 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void createTask(String name, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
+    public void createTask(HubContext ctx, String name, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
         if (conditionSet != null && conditionSet.hasPrimaryProperty()) {
             if (conditionSet.getPrimaryProperty().getContainerClassContext() != null) {
+                // convert explicit action set to action set ID
+                if (!actionSet.hasId()) {
+                    actionSet = publishActionSet(ctx, null, actionSet.getProperties());
+                }
+
+                // send the create task request to the appropriate task provider
                 HobsonPlugin plugin = pluginManager.getPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
                 if (plugin.getRuntime().getTaskProvider() != null) {
                     plugin.getRuntime().getTaskProvider().onCreateTask(name, conditionSet, actionSet);

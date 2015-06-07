@@ -3,6 +3,8 @@ package com.whizzosoftware.hobson.bootstrap.api.user;
 import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import org.junit.Test;
 
@@ -46,6 +48,11 @@ public class LocalUserStoreTest {
 
             @Override
             public PropertyContainer getConfiguration(HubContext ctx) {
+                return null;
+            }
+
+            @Override
+            public PropertyContainerClass getContainerClass(PropertyContainerClassContext ctx) {
                 return null;
             }
 

@@ -23,10 +23,11 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
-import org.osgi.framework.FrameworkUtil;
+import org.osgi.framework.*;
 import org.osgi.service.cm.Configuration;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.LoggerFactory;
@@ -51,6 +52,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     public static final String ADMIN_PASSWORD = "adminPassword";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
 
+    private volatile BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
 
@@ -103,6 +105,21 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         pc.setPropertyValue("logLevel", ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
 
         return pc;
+    }
+
+    @Override
+    public PropertyContainerClass getContainerClass(PropertyContainerClassContext ctx) {
+        try {
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");
+            ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
+            if (refs != null && refs.length == 1) {
+                return (PropertyContainerClass)bundleContext.getService(refs[0]);
+            } else {
+                throw new HobsonRuntimeException("Unable to find container class: " + ctx);
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving container class: " + ctx, e);
+        }
     }
 
     protected String getHubName(HubContext ctx) {
