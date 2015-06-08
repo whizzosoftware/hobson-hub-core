@@ -59,7 +59,7 @@ public class OSGITelemetryManager implements TelemetryManager {
     public Map<String, Collection<TemporalValue>> getDeviceTelemetry(DeviceContext ctx, long endTime, TelemetryInterval interval) {
         Map<String,Collection<TemporalValue>> results = new HashMap<>();
         HobsonDevice device = deviceManager.getDevice(ctx);
-        String[] variables = device.getRuntime().getTelemetryVariableNames();
+        String[] variables = device.getTelemetryVariableNames();
         if (variables != null) {
             for (String varName : variables) {
                 results.put(varName, getDeviceVariableTelemetry(ctx, varName, endTime, interval));
