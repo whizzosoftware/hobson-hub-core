@@ -28,7 +28,6 @@ import org.osgi.framework.ServiceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -227,8 +226,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 otherTopicsCount = otherTopics.length;
             }
             String[] topics = new String[otherTopicsCount + 2];
-            topics[0] = EventTopics.VARIABLES_TOPIC; // all plugins need to listen for variable events
-            topics[1] = EventTopics.CONFIG_TOPIC; // all plugins need to listen for configuration events
+            topics[0] = EventTopics.STATE_TOPIC; // all plugins need to listen for state events
             if (otherTopicsCount > 0) {
                 System.arraycopy(otherTopics, 0, topics, 2, otherTopicsCount);
             }

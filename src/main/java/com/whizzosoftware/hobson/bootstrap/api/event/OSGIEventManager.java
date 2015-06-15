@@ -39,13 +39,14 @@ public class OSGIEventManager implements EventManager {
 
     public OSGIEventManager() {
         try {
-            eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
-            eventFactory.addEventClass(VariableUpdateRequestEvent.ID, VariableUpdateRequestEvent.class);
-            eventFactory.addEventClass(PresenceUpdateEvent.ID, PresenceUpdateEvent.class);
+            eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
             eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
-            eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
+            eventFactory.addEventClass(PresenceUpdateEvent.ID, PresenceUpdateEvent.class);
+            eventFactory.addEventClass(TaskExecutionEvent.ID, TaskExecutionEvent.class);
+            eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
+            eventFactory.addEventClass(VariableUpdateRequestEvent.ID, VariableUpdateRequestEvent.class);
         } catch (NoSuchMethodException e) {
             logger.error("An error occurred during event registration", e);
         }
@@ -107,6 +108,8 @@ public class OSGIEventManager implements EventManager {
                 HobsonEvent he = eventFactory.createEvent(props);
                 if (he != null) {
                     listener.onHobsonEvent(he);
+                } else {
+                    logger.error("Unable to unmarshal event: {}", props);
                 }
             } else {
                 logger.warn("No event listener registered; ignoring event {}", HobsonEvent.readEventId(props));

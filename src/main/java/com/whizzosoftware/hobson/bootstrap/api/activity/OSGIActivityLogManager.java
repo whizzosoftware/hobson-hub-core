@@ -45,7 +45,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
 
     public void start() {
         // TODO: if this remains file-based, a file size throttling mechanism is needed
-        eventManager.addListener(HubContext.createLocal(), this, new String[]{EventTopics.STATE_TOPIC, EventTopics.VARIABLES_TOPIC});
+        eventManager.addListener(HubContext.createLocal(), this, new String[]{EventTopics.STATE_TOPIC});
     }
 
     @Override

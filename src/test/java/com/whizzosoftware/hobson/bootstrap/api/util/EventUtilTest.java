@@ -34,13 +34,13 @@ public class EventUtilTest {
         Map props = new HashMap();
         props.put(DeviceStartedEvent.PROP_EVENT_ID, DeviceStartedEvent.ID);
         props.put(DeviceStartedEvent.PROP_DEVICE, device);
-        Event e = new Event(EventTopics.DEVICES_TOPIC, props);
+        Event e = new Event(EventTopics.STATE_TOPIC, props);
 
         DeviceStartedEvent dse = new DeviceStartedEvent(EventUtil.createMapFromEvent(e));
 
         assertEquals("pid", dse.getDevice().getContext().getPluginId());
         assertEquals(DeviceStartedEvent.ID, dse.getEventId());
-        assertEquals(EventTopics.DEVICES_TOPIC, dse.getTopic());
+        assertEquals(EventTopics.STATE_TOPIC, dse.getTopic());
         assertEquals(device, dse.getDevice());
     }
 
@@ -65,13 +65,13 @@ public class EventUtilTest {
         Map props = new HashMap();
         props.put(DeviceStoppedEvent.PROP_EVENT_ID, DeviceStoppedEvent.ID);
         props.put(DeviceStoppedEvent.PROP_DEVICE, device);
-        Event e = new Event(EventTopics.DEVICES_TOPIC, props);
+        Event e = new Event(EventTopics.STATE_TOPIC, props);
 
         DeviceStoppedEvent dse = new DeviceStoppedEvent(EventUtil.createMapFromEvent(e));
 
         assertEquals("pid", dse.getDevice().getContext().getPluginId());
         assertEquals(DeviceStoppedEvent.ID, dse.getEventId());
-        assertEquals(EventTopics.DEVICES_TOPIC, dse.getTopic());
+        assertEquals(EventTopics.STATE_TOPIC, dse.getTopic());
         assertEquals(device, dse.getDevice());
     }
 }
