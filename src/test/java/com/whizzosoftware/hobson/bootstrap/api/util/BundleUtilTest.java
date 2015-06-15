@@ -8,9 +8,9 @@ import org.osgi.framework.Bundle;
 public class BundleUtilTest {
     @Test
     public void testPluginStatusFromBundleState() {
-        assertEquals(PluginStatus.Status.RUNNING, BundleUtil.createPluginStatusFromBundleState(Bundle.ACTIVE).getStatus());
-        assertEquals(PluginStatus.Status.STOPPED, BundleUtil.createPluginStatusFromBundleState(Bundle.INSTALLED).getStatus());
-        assertEquals(PluginStatus.Status.STOPPED, BundleUtil.createPluginStatusFromBundleState(Bundle.RESOLVED).getStatus());
-        assertEquals(PluginStatus.Status.NOT_INSTALLED, BundleUtil.createPluginStatusFromBundleState(Bundle.UNINSTALLED).getStatus());
+        assertEquals(PluginStatus.Code.RUNNING, BundleUtil.createPluginStatusFromBundleState(Bundle.ACTIVE).getCode());
+        assertEquals(PluginStatus.Code.STOPPED, BundleUtil.createPluginStatusFromBundleState(Bundle.INSTALLED).getCode());
+        assertEquals(PluginStatus.Code.STOPPED, BundleUtil.createPluginStatusFromBundleState(Bundle.RESOLVED).getCode());
+        assertEquals(PluginStatus.Code.NOT_INSTALLED, BundleUtil.createPluginStatusFromBundleState(Bundle.UNINSTALLED).getCode());
     }
 }

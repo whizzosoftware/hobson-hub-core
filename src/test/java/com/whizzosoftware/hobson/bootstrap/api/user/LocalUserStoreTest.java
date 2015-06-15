@@ -1,6 +1,5 @@
 package com.whizzosoftware.hobson.bootstrap.api.user;
 
-import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
@@ -87,7 +86,7 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public void sendTestEmail(HubContext ctx, EmailConfiguration config) {
+            public void sendTestEmail(HubContext ctx, PropertyContainer config) {
 
             }
 

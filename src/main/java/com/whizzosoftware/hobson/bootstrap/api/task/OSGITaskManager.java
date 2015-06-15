@@ -298,8 +298,13 @@ public class OSGITaskManager implements TaskManager {
         executorService.submit(new Runnable() {
             @Override
             public void run() {
-                task.execute();
-                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), task.getName()));
+                Throwable error = null;
+                try {
+                    task.execute();
+                } catch (Throwable e) {
+                    error = e;
+                }
+                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), task.getName(), error));
             }
         });
     }
@@ -379,6 +384,11 @@ public class OSGITaskManager implements TaskManager {
         } else {
             throw new TaskException("No plugin found: " + ctx);
         }
+    }
+
+    @Override
+    public void fireTaskExecutionEvent(HobsonTask task, long now, Throwable error) {
+        eventManager.postEvent(HubContext.createLocal(), new TaskExecutionEvent(now, task.getName(), error));
     }
 
     @Override

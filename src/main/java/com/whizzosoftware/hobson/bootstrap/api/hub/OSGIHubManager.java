@@ -18,7 +18,6 @@ import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.EmailConfiguration;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
@@ -177,13 +176,13 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return (adminPassword.equals(DigestUtils.sha256Hex(password)));
     }
 
-    protected EmailConfiguration getHubEmailConfiguration(HubContext ctx) {
-        return new EmailConfiguration.Builder().dictionary(getConfigurationProperties(getConfiguration())).build();
+    protected PropertyContainer getHubEmailConfiguration(HubContext ctx) {
+        return new PropertyContainer(getConfigurationPropertyMap(getConfiguration()));
     }
 
     @Override
-    public void sendTestEmail(HubContext ctx, EmailConfiguration config) {
-        sendEmail(config, config.getSenderAddress(), "Hobson Test Message", "This is a test message from Hobson. If you're reading this, your e-mail configuration is working!");
+    public void sendTestEmail(HubContext ctx, PropertyContainer config) {
+        sendEmail(config, config.getStringPropertyValue(HubConfigurationClass.EMAIL_SENDER), "Hobson Test Message", "This is a test message from Hobson. If you're reading this, your e-mail configuration is working!");
     }
 
     @Override
@@ -211,11 +210,11 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
-    protected void sendEmail(EmailConfiguration config, String recipientAddress, String subject, String body) {
-        String mailHost = config.getServer();
-        Boolean mailSecure = config.isSecure();
-        String mailUser = config.getUsername();
-        String mailPassword = config.getPassword();
+    protected void sendEmail(PropertyContainer config, String recipientAddress, String subject, String body) {
+        String mailHost = config.getStringPropertyValue(HubConfigurationClass.EMAIL_SERVER);
+        Boolean mailSecure = config.getBooleanPropertyValue(HubConfigurationClass.EMAIL_SECURE);
+        String mailUser = config.getStringPropertyValue(HubConfigurationClass.EMAIL_USER);
+        String mailPassword = config.getStringPropertyValue(HubConfigurationClass.EMAIL_PASSWORD);
 
         if (mailHost == null) {
             throw new HobsonRuntimeException("No mail host is configured; unable to execute e-mail action");
@@ -385,8 +384,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
      *
      * @since hobson-hub-api 0.1.6
      */
-    protected Message createMessage(Session session, EmailConfiguration config, String recipientAddress, String subject, String message) {
-        if (config.getSenderAddress() == null) {
+    protected Message createMessage(Session session, PropertyContainer config, String recipientAddress, String subject, String message) {
+        if (!config.hasPropertyValue(HubConfigurationClass.EMAIL_SENDER)) {
             throw new HobsonInvalidRequestException("No sender address specified; unable to execute e-mail action");
         } else if (recipientAddress == null) {
             throw new HobsonInvalidRequestException("No recipient address specified; unable to execute e-mail action");
@@ -398,7 +397,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
         try {
             Message msg = new MimeMessage(session);
-            msg.setFrom(new InternetAddress(config.getSenderAddress()));
+            msg.setFrom(new InternetAddress(config.getStringPropertyValue(HubConfigurationClass.EMAIL_SENDER)));
             msg.setRecipient(Message.RecipientType.TO, new InternetAddress(recipientAddress));
             msg.setSubject(subject);
             msg.setText(message);
