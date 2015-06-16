@@ -10,7 +10,9 @@ package com.whizzosoftware.hobson.bootstrap.api.event;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.bootstrap.api.util.EventUtil;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -31,7 +33,6 @@ import java.util.Map;
 public class OSGIEventManager implements EventManager {
     private static final Logger logger = LoggerFactory.getLogger(OSGIEventManager.class);
 
-    volatile private BundleContext bundleContext;
     volatile private EventAdmin eventAdmin;
 
     private final Map<EventListener,ServiceRegistration> serviceRegMap = new HashMap<EventListener,ServiceRegistration>();
@@ -39,10 +40,14 @@ public class OSGIEventManager implements EventManager {
 
     public OSGIEventManager() {
         try {
-            eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
             eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
+            eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
+            eventFactory.addEventClass(DeviceStartedEvent.ID, DeviceStartedEvent.class);
+            eventFactory.addEventClass(DeviceStoppedEvent.ID, DeviceStoppedEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
+            eventFactory.addEventClass(PluginStartedEvent.ID, PluginStartedEvent.class);
+            eventFactory.addEventClass(PluginStoppedEvent.ID, PluginStoppedEvent.class);
             eventFactory.addEventClass(PresenceUpdateEvent.ID, PresenceUpdateEvent.class);
             eventFactory.addEventClass(TaskExecutionEvent.ID, TaskExecutionEvent.class);
             eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
@@ -54,16 +59,32 @@ public class OSGIEventManager implements EventManager {
 
     @Override
     public void addListener(HubContext ctx, EventListener listener, String[] topics) {
-        Hashtable ht = new Hashtable();
-        ht.put(EventConstants.EVENT_TOPIC, topics);
-        synchronized (serviceRegMap) {
-            if (serviceRegMap.containsKey(listener)) {
-                serviceRegMap.get(listener).unregister();
+        if (topics != null) {
+            Hashtable ht = new Hashtable();
+            ht.put(EventConstants.EVENT_TOPIC, topics);
+
+            synchronized (serviceRegMap) {
+                if (serviceRegMap.containsKey(listener)) {
+                    serviceRegMap.get(listener).unregister();
+                }
+                Bundle bundle = FrameworkUtil.getBundle(getClass());
+                if (bundle != null) {
+                    BundleContext context = bundle.getBundleContext();
+                    if (context != null) {
+                        ServiceRegistration sr = context.registerService(EventHandler.class.getName(), new EventHandlerAdapter(listener), ht);
+                        if (sr != null) {
+                            serviceRegMap.put(
+                                listener,
+                                sr
+                            );
+                        } else {
+                            logger.error("Received null service registration registering listener: " + listener);
+                        }
+                    }
+                }
             }
-            serviceRegMap.put(
-                listener,
-                bundleContext.registerService(EventHandler.class.getName(), new EventHandlerAdapter(listener), ht)
-            );
+        } else {
+            logger.error("Ignoring null topic subscription");
         }
     }
 

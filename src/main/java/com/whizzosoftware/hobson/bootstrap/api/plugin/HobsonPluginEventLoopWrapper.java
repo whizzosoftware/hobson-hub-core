@@ -225,10 +225,10 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             if (otherTopics != null) {
                 otherTopicsCount = otherTopics.length;
             }
-            String[] topics = new String[otherTopicsCount + 2];
+            String[] topics = new String[otherTopicsCount + 1];
             topics[0] = EventTopics.STATE_TOPIC; // all plugins need to listen for state events
             if (otherTopicsCount > 0) {
-                System.arraycopy(otherTopics, 0, topics, 2, otherTopicsCount);
+                System.arraycopy(otherTopics, 0, topics, 1, otherTopicsCount);
             }
             eventManager.addListener(plugin.getContext().getHubContext(), this, topics);
 

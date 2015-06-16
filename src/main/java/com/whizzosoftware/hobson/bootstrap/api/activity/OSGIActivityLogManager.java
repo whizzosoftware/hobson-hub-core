@@ -52,12 +52,14 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
     public List<ActivityLogEntry> getActivityLog(long eventCount) {
         List<ActivityLogEntry> events = new ArrayList<>();
         try {
-            try (ReversedLinesFileReader reader = new ReversedLinesFileReader(activityFile)) {
-                String line;
-                int count = 0;
-                while ((line = reader.readLine()) != null && count < eventCount) {
-                    JSONObject json = new JSONObject(line);
-                    events.add(new ActivityLogEntry(json.getLong("timestamp"), json.getString("name")));
+            if (activityFile.exists()) {
+                try (ReversedLinesFileReader reader = new ReversedLinesFileReader(activityFile)) {
+                    String line;
+                    int count = 0;
+                    while ((line = reader.readLine()) != null && count < eventCount) {
+                        JSONObject json = new JSONObject(line);
+                        events.add(new ActivityLogEntry(json.getLong("timestamp"), json.getString("name")));
+                    }
                 }
             }
         } catch (IOException e) {
