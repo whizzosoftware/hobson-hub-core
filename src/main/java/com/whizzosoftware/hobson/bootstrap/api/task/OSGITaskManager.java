@@ -79,9 +79,9 @@ public class OSGITaskManager implements TaskManager {
                 }
                 regList.add(
                     context.registerService(
-                            HobsonTask.class.getName(),
-                            task,
-                            props
+                        HobsonTask.class.getName(),
+                        task,
+                        props
                     )
                 );
             }
@@ -196,7 +196,7 @@ public class OSGITaskManager implements TaskManager {
 
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonTask.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(taskId=" + ctx.getTaskId() + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(TaskProvider.class.getName(), filter.toString());
+            ServiceReference[] refs = bundleContext.getServiceReferences(HobsonTask.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
                 result = (HobsonTask)bundleContext.getService(refs[0]);
             } else if (failOnError) {
