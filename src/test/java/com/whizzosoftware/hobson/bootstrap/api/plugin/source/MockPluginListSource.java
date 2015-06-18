@@ -7,8 +7,10 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,5 +24,10 @@ public class MockPluginListSource implements PluginListSource {
     @Override
     public Map<String, PluginDescriptor> getPlugins() {
         return pluginMap;
+    }
+
+    @Override
+    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
+        return null;
     }
 }

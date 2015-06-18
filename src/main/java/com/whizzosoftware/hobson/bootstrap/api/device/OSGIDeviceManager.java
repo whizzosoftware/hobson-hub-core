@@ -390,7 +390,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     public void serviceChanged(ServiceEvent serviceEvent) {
         if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
             final HobsonDevice device = (HobsonDevice)bundleContext.getService(serviceEvent.getServiceReference());
-            final HobsonPlugin plugin = pluginManager.getPlugin(device.getContext().getPluginContext());
+            final HobsonPlugin plugin = pluginManager.getLocalPlugin(device.getContext().getPluginContext());
 
             logger.debug("Device {} registered", device.getContext().getDeviceId());
 

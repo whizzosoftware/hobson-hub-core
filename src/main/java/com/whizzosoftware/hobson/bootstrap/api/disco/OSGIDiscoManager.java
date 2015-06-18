@@ -57,7 +57,7 @@ public class OSGIDiscoManager implements DiscoManager {
     synchronized public void requestDeviceAdvertisementSnapshot(PluginContext ctx, String protocolId) {
         try {
             BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-            HobsonPlugin plugin = pluginManager.getPlugin(ctx);
+            HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
             if (references != null && references.length > 0) {
                 long now = System.currentTimeMillis();

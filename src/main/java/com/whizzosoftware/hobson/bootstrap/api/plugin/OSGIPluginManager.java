@@ -52,28 +52,11 @@ public class OSGIPluginManager implements PluginManager {
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
 
-    private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<PluginRef>();
+    private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<>();
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
     @Override
-    public Collection<HobsonPlugin> getAllPlugins(HubContext ctx) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + "))");
-            List<HobsonPlugin> plugins = new ArrayList<>();
-            if (references != null) {
-                for (ServiceReference ref : references) {
-                    plugins.add((HobsonPlugin)context.getService(ref));
-                }
-            }
-            return plugins;
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving plugin", e);
-        }
-    }
-
-    @Override
-    public HobsonPlugin getPlugin(PluginContext ctx) {
+    public HobsonPlugin getLocalPlugin(PluginContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + ")(pluginId=" + ctx.getPluginId() + "))");
@@ -102,13 +85,25 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public PropertyContainer getPluginConfiguration(PluginContext ctx) {
-        return getPluginConfiguration(getPlugin(ctx));
+    public PluginDescriptor getRemotePluginDescriptor(PluginContext ctx, String version) {
+        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+        OSGIRepoPluginListSource src = new OSGIRepoPluginListSource(context);
+        for (PluginDescriptor pd : src.getPlugin(ctx)) {
+            if (version.equals(pd.getVersionString())) {
+                return pd;
+            }
+        }
+        return null;
     }
 
     @Override
-    public Object getPluginConfigurationProperty(PluginContext ctx, String name) {
-        PropertyContainer c = getPluginConfiguration(ctx);
+    public PropertyContainer getLocalPluginConfiguration(PluginContext ctx) {
+        return getPluginConfiguration(getLocalPlugin(ctx));
+    }
+
+    @Override
+    public Object getLocalPluginConfigurationProperty(PluginContext ctx, String name) {
+        PropertyContainer c = getLocalPluginConfiguration(ctx);
         if (c != null) {
             return c.getPropertyValue(name);
         } else {
@@ -151,7 +146,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public ImageInputStream getPluginIcon(PluginContext ctx) {
+    public ImageInputStream getLocalPluginIcon(PluginContext ctx) {
         try {
             Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
             URL url = null;
@@ -178,7 +173,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public void setPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
+    public void setLocalPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
         // get the current configuration
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
 
@@ -194,7 +189,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public void setPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
+    public void setLocalPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
         // get the current configuration
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
 
@@ -210,18 +205,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public String getPluginCurrentVersion(PluginContext ctx) {
-        com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource source = new com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource();
-        PluginDescriptor pd = source.getPlugin(ctx.getPluginId());
-        String currentVersion = "0.0.0";
-        if (pd != null) {
-            currentVersion = pd.getVersionString();
-        }
-        return currentVersion;
-    }
-
-    @Override
-    public void reloadPlugin(PluginContext ctx) {
+    public void reloadLocalPlugin(PluginContext ctx) {
         try {
             Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
             if (bundle != null) {
@@ -234,12 +218,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public void publishPlugin(HobsonPlugin plugin) {
-        // TODO
-    }
-
-    @Override
-    public void installPlugin(PluginContext ctx, String pluginVersion) {
+    public void installRemotePlugin(PluginContext ctx, String pluginVersion) {
         logger.debug("Queuing plugin " + ctx.getPluginId() + " for installation");
 
         BundleContext context = FrameworkUtil.getBundle(OSGIPluginManager.class).getBundleContext();
@@ -319,7 +298,7 @@ public class OSGIPluginManager implements PluginManager {
             new PluginConfigurationUpdateEvent(
                 System.currentTimeMillis(),
                 ctx,
-                getPluginConfiguration(ctx)
+                getLocalPluginConfiguration(ctx)
             )
         );
     }

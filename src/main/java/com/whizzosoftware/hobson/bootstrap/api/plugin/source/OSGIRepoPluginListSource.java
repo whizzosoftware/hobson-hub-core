@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
 import com.whizzosoftware.hobson.api.plugin.PluginStatus;
 import com.whizzosoftware.hobson.api.plugin.PluginType;
@@ -22,10 +23,7 @@ import org.osgi.framework.wiring.BundleRevision;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A PluginListSource implementation that returns plugin information about bundles available in the OBR repository
@@ -52,6 +50,11 @@ public class OSGIRepoPluginListSource implements PluginListSource {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error retrieving plugins", e);
         }
+    }
+
+    @Override
+    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
+        return null;
     }
 
     protected Map<String,PluginDescriptor> getPlugins(Resource[] resources) {

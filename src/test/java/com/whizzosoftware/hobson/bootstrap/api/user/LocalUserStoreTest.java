@@ -106,8 +106,8 @@ public class LocalUserStoreTest {
         assertNotNull(user);
 
         assertEquals("local", user.getId());
-        assertEquals("Local", user.getFirstName());
-        assertEquals("User", user.getLastName());
+        assertEquals("Local", user.getGivenName());
+        assertEquals("User", user.getFamilyName());
         assertNull(user.getEmail());
     }
 }

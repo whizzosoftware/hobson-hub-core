@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
+import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
@@ -15,9 +16,7 @@ import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * A PluginListSource implementation that returns plugin information about bundles installed in the OSGi runtime.
@@ -39,7 +38,7 @@ public class OSGILocalPluginListSource implements PluginListSource {
 
     @Override
     public Map<String,PluginDescriptor> getPlugins() {
-        Map<String,PluginDescriptor> resultMap = new HashMap<String,PluginDescriptor>();
+        Map<String,PluginDescriptor> resultMap = new HashMap<>();
 
         // build collection of all installed OSGi bundles
         Bundle[] bundles = bundleContext.getBundles();
@@ -62,10 +61,11 @@ public class OSGILocalPluginListSource implements PluginListSource {
         return resultMap;
     }
 
-    public PluginDescriptor getPlugin(String pluginId) {
+    @Override
+    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (pluginId.equals(bundle.getSymbolicName())) {
-                return createPluginDescriptor(bundle, pluginId);
+            if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
+                return Collections.singletonList(createPluginDescriptor(bundle, ctx.getPluginId()));
             }
         }
         return null;

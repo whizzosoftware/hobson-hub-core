@@ -372,7 +372,7 @@ public class OSGITaskManager implements TaskManager {
 
     @Override
     public void updateTask(final TaskContext ctx, final String name, final String description, final PropertyContainerSet conditionSet, final PropertyContainerSet actionSet) {
-        final HobsonPlugin plugin = pluginManager.getPlugin(ctx.getPluginContext());
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx.getPluginContext());
         if (plugin != null) {
             final TaskProvider provider = getTaskProvider(plugin);
             plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
@@ -401,7 +401,7 @@ public class OSGITaskManager implements TaskManager {
                 }
 
                 // send the create task request to the appropriate task provider
-                HobsonPlugin plugin = pluginManager.getPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
+                HobsonPlugin plugin = pluginManager.getLocalPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
                 if (plugin.getRuntime().getTaskProvider() != null) {
                     plugin.getRuntime().getTaskProvider().onCreateTask(name, description, conditionSet, actionSet);
                 } else {
@@ -417,7 +417,7 @@ public class OSGITaskManager implements TaskManager {
 
     @Override
     public void deleteTask(final TaskContext ctx) {
-        final HobsonPlugin plugin = pluginManager.getPlugin(ctx.getPluginContext());
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx.getPluginContext());
         if (plugin != null) {
             final TaskProvider provider = getTaskProvider(plugin);
             final HobsonTask task = getTask(ctx);
@@ -446,7 +446,7 @@ public class OSGITaskManager implements TaskManager {
         PropertyContainerSet actionSet = actionSetStore.getActionSet(ctx, actionSetId);
         if (actionSet != null) {
             for (final PropertyContainer pc : actionSet.getProperties()) {
-                final HobsonPlugin plugin = pluginManager.getPlugin(pc.getContainerClassContext().getPluginContext());
+                final HobsonPlugin plugin = pluginManager.getLocalPlugin(pc.getContainerClassContext().getPluginContext());
                 if (plugin != null) {
                     plugin.getRuntime().submitInEventLoop(new Runnable() {
                         public void run() {

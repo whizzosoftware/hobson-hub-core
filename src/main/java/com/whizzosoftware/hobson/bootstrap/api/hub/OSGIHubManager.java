@@ -281,7 +281,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
                 if (s == null) {
                     break;
                 }
-                appendable.append(s);
+                appendable.append("{\"item\":").append(s).append("}");
                 if (count < lineCount - 1) {
                     appendable.append(",");
                 }
