@@ -20,7 +20,6 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
-import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
@@ -39,6 +38,7 @@ import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
 import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
+import com.whizzosoftware.hobson.rest.v1.util.LinkProvider;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -138,7 +138,7 @@ public class Activator extends DependencyActivatorBase {
 
                     // register the REST API application
                     ApiV1Application app = new ApiV1Application();
-                    registerRestletApplication(app, ApiV1Application.PATH);
+                    registerRestletApplication(app, LinkProvider.API_ROOT);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");
