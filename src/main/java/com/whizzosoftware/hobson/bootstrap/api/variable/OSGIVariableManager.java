@@ -7,7 +7,6 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.variable;
 
-import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -211,6 +210,7 @@ public class OSGIVariableManager implements VariableManager {
             HobsonVariable variable = getDeviceVariable(ctx, name);
             if (variable != null) {
                 results.put(name, variable.getLastUpdate());
+                updates.add(new VariableUpdate(ctx, name, values.get(name)));
             }
         }
         eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), updates));
