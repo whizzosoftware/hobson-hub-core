@@ -263,6 +263,17 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
+    public File getDataDirectory(PluginContext ctx) {
+        Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
+        if (bundle != null) {
+            BundleContext context = bundle.getBundleContext();
+            return context.getDataFile("tmp").getParentFile();
+        } else {
+            throw new ConfigurationException("Error obtaining data file");
+        }
+    }
+
+    @Override
     public File getDataFile(PluginContext ctx, String filename) {
         Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
         if (bundle != null) {
