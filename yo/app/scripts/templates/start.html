@@ -36,16 +36,21 @@
             </div>
             <div id="latlong" class="row" style="display: none;">
                 <div class="large-6 medium-6 columns">
-                    <label>Latitude
+                    <label><%= strings.Latitude %>
                     <input id="latitude" class="radius" type="text" value="<%= config.values ? config.values.latitude : '' %>" placeholder="<%= strings.Latitude %>" />
                     </label>
                 </div>
                 <div class="large-6 medium-6 columns">
-                    <label>Longitude
+                    <label><%= strings.Longitude %>
                     <input id="longitude" class="radius" type="text" value="<%= config.values ? config.values.longitude : '' %>" placeholder="<%= strings.Longitude %>" />
                     </label>
                 </div>
             </div>
+        </div>
+    </div>
+    <div class="row" style="margin-top: 50px; margin-bottom: 50px;">
+        <div class="small-12 columns" style="text-align: center;">
+            <%= strings.SkipSetupPrompt %>
         </div>
     </div>
 </div>
