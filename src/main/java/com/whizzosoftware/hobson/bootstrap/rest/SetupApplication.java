@@ -8,8 +8,11 @@
 package com.whizzosoftware.hobson.bootstrap.rest;
 
 import org.restlet.Application;
+import org.restlet.Request;
+import org.restlet.Response;
 import org.restlet.Restlet;
 import org.restlet.data.ChallengeScheme;
+import org.restlet.data.Reference;
 import org.restlet.routing.Router;
 import org.restlet.security.ChallengeAuthenticator;
 
@@ -23,7 +26,16 @@ public class SetupApplication extends Application {
     public Restlet createInboundRoot() {
         Router router = new Router();
         router.attach("/", new ClassLoaderOverrideDirectory(getContext(), "clap://class/www/", getClass().getClassLoader()));
-
         return router;
+    }
+
+    @Override
+    public void handle(Request request, Response response) {
+        Reference ref = request.getResourceRef();
+        if ("/setup".equals(ref.getPath()) || "/setup/".equals(ref.getPath())) {
+            response.redirectPermanent("/setup/index.html");
+        } else {
+            super.handle(request, response);
+        }
     }
 }

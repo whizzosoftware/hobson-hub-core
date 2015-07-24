@@ -2,9 +2,29 @@
  * Navigation.
  */
 
-.navbar {
-	background: $color-background;
-	color: $color-text;
-	padding: 15px 25px;
-	border-bottom: 1px solid $color-2;
+.nav {
+	width: 100%; 
+	height: $nav-height; 
+	line-height: $nav-height; 
+	background: $color-panel-bg;
+	border-bottom: 1px solid $color-subnav-bg;
+	vertical-align: middle;
+	img {
+		margin-top: -5px;
+		margin-left: $margin-side;
+	}
+	select {
+		width: 20%;
+		outline: none;
+		margin-right: $margin-side * 2;
+	}
+	.fa-bars {
+		font-size: 1.5em;
+		margin-right: $margin-side;
+	}
+	.right {
+		i {
+			color: $color-btn-primary;
+		}
+	}
 }
