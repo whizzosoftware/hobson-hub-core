@@ -50,10 +50,18 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     public static final String ADMIN_PASSWORD = "adminPassword";
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
+    public static final String LOG_LEVEL = "logLevel";
 
     private volatile BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
+
+    public void start() {
+        String logLevel = (String)getConfigurationProperty(LOG_LEVEL);
+        if (logLevel != null) {
+            ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel(logLevel));
+        }
+    }
 
     public Collection<HobsonHub> getHubs(String userId) {
         return Arrays.asList(createLocalHubDetails());
@@ -101,7 +109,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             PropertyContainerClassContext.create(ctx, "hubConfiguration"),
             getConfigurationPropertyMap(getConfiguration())
         );
-        pc.setPropertyValue("logLevel", ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
+        pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
 
         return pc;
     }
@@ -198,7 +206,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         // set properties
         for (String name : configuration.getPropertyValues().keySet()) {
             props.put(name, configuration.getPropertyValue(name));
-            if (name.equals("logLevel")) {
+            if (name.equals(LOG_LEVEL)) {
                 ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel((String)configuration.getPropertyValue(name)));
             }
         }
@@ -338,11 +346,26 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     private Configuration getConfiguration() {
-        try {
-            return configAdmin.getConfiguration("com.whizzosoftware.hobson.hub");
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Unable to retrieve hub configuration", e);
+        if (configAdmin != null) {
+            try {
+                return configAdmin.getConfiguration("com.whizzosoftware.hobson.hub");
+            } catch (IOException e) {
+                throw new HobsonRuntimeException("Unable to retrieve hub configuration", e);
+            }
+        } else {
+            return null;
         }
+    }
+
+    private Object getConfigurationProperty(String name) {
+        Configuration config = getConfiguration();
+        if (config != null) {
+            Dictionary d = config.getProperties();
+            if (d != null) {
+                return d.get(name);
+            }
+        }
+        return null;
     }
 
     private Dictionary getConfigurationProperties(Configuration config) {
