@@ -288,11 +288,10 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
                 String s = reader.readLine();
                 if (s == null) {
                     break;
-                }
-                appendable.append("{\"item\":").append(s).append("}");
-                if (count < lineCount - 1) {
+                } else if (count > 0) {
                     appendable.append(",");
                 }
+                appendable.append("{\"item\":").append(s).append("}");
             }
             appendable.append("\n]");
 
