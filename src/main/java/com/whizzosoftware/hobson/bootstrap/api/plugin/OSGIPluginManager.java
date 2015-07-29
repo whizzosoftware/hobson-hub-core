@@ -56,6 +56,22 @@ public class OSGIPluginManager implements PluginManager {
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
     @Override
+    public void enableRemoteRepository(String url, boolean enabled) {
+        ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
+        RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
+        if (enabled) {
+            try {
+                repoAdmin.addRepository(url);
+            } catch (Exception e) {
+                throw new HobsonRuntimeException("Unable to add activate repository: " + url, e);
+            }
+        } else {
+            repoAdmin.removeRepository(url);
+        }
+
+    }
+
+    @Override
     public HobsonPlugin getLocalPlugin(PluginContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
