@@ -81,13 +81,13 @@ public class OSGIPluginManager implements PluginManager {
     @Override
     public Collection<PluginDescriptor> getRemotePluginDescriptors(HubContext ctx) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        return new OSGIRepoPluginListSource(context).getPlugins().values();
+        return new OSGIRepoPluginListSource(context, getLocalPluginDescriptors(ctx)).getPlugins().values();
     }
 
     @Override
     public PluginDescriptor getRemotePluginDescriptor(PluginContext ctx, String version) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        OSGIRepoPluginListSource src = new OSGIRepoPluginListSource(context);
+        OSGIRepoPluginListSource src = new OSGIRepoPluginListSource(context, null);
         for (PluginDescriptor pd : src.getPlugin(ctx)) {
             if (version.equals(pd.getVersionString())) {
                 return pd;

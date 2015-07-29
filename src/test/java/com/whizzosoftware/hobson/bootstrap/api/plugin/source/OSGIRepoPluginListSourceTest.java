@@ -28,7 +28,7 @@ public class OSGIRepoPluginListSourceTest {
         resources.add(new MockResource("foo", new Version(0, 1, 1)));
         resources.add(new MockResource("foo", new Version(0, 1, 0)));
 
-        OSGIRepoPluginListSource pls = new OSGIRepoPluginListSource(null);
+        OSGIRepoPluginListSource pls = new OSGIRepoPluginListSource(null, null);
         Map<String,PluginDescriptor> pds = pls.getPlugins(resources.toArray(new Resource[resources.size()]));
         assertEquals(1, pds.size());
         assertNotNull(pds.get("foo"));

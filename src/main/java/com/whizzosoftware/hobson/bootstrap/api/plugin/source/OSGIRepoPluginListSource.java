@@ -35,9 +35,24 @@ public class OSGIRepoPluginListSource implements PluginListSource {
     private static final Logger logger = LoggerFactory.getLogger(OSGIRepoPluginListSource.class);
 
     private BundleContext bundleContext;
+    private Map<String,String> installedPlugins;
 
-    public OSGIRepoPluginListSource(BundleContext bundleContext) {
+    /**
+     * Constructor.
+     *
+     * @param bundleContext the bundle context
+     * @param installedPlugins a Map of plugin id -> version string for all installed plugins
+     */
+    public OSGIRepoPluginListSource(BundleContext bundleContext, Collection<PluginDescriptor> installedPlugins) {
         this.bundleContext = bundleContext;
+
+        // build in installed plugin name to version string map
+        if (installedPlugins != null) {
+            this.installedPlugins = new HashMap<>();
+            for (PluginDescriptor pd : installedPlugins) {
+                this.installedPlugins.put(pd.getId(), pd.getVersionString());
+            }
+        }
     }
 
     @Override
@@ -75,9 +90,14 @@ public class OSGIRepoPluginListSource implements PluginListSource {
             // check that plugin requirements are satisfied by installed capabilities
             try {
                 if (isSatisfied(getAPIRequirement(repoResource), apiCapabilities)) {
-                    // TODO: check result map for existing version and compare before replacing...
-                    PluginDescriptor oldPd = resultMap.get(sname);
-                    if (oldPd == null || VersionUtil.versionCompare(oldPd.getVersionString(), repoResource.getVersion().toString()) < 0) {
+                    // get the last processed version number for this plugin
+                    String lastVersionString = resultMap.get(sname) != null ? resultMap.get(sname).getVersionString() : null;
+                    // if there was no last processed version number, get the currently installed version
+                    if (lastVersionString == null && installedPlugins != null) {
+                        lastVersionString = installedPlugins.get(sname);
+                    }
+                    // only add the remote plugin to the result list if its version is newer than what is currently known
+                    if (lastVersionString == null || VersionUtil.versionCompare(lastVersionString, repoResource.getVersion().toString()) < 0) {
                         PluginDescriptor pd = new PluginDescriptor(sname, repoResource.getPresentationName(), buildRepoDescription(repoResource), pluginType, PluginStatus.notInstalled(), null);
                         pd.setVersionString(repoResource.getVersion().toString());
                         resultMap.put(sname, pd);

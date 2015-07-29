@@ -28,10 +28,6 @@ public class OSGILocalPluginListSource implements PluginListSource {
 
     private BundleContext bundleContext;
 
-    public OSGILocalPluginListSource() {
-        this(FrameworkUtil.getBundle(OSGILocalPluginListSource.class).getBundleContext());
-    }
-
     public OSGILocalPluginListSource(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
