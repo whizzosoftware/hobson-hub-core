@@ -22,6 +22,7 @@ import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListS
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
+import org.apache.felix.bundlerepository.Repository;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
 import org.apache.felix.bundlerepository.Resolver;
 import org.apache.felix.bundlerepository.Resource;
@@ -56,19 +57,15 @@ public class OSGIPluginManager implements PluginManager {
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
 
     @Override
-    public void enableRemoteRepository(String url, boolean enabled) {
+    public Collection<String> getRemoteRepositories() {
         ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
         RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
-        if (enabled) {
-            try {
-                repoAdmin.addRepository(url);
-            } catch (Exception e) {
-                throw new HobsonRuntimeException("Unable to add activate repository: " + url, e);
-            }
-        } else {
-            repoAdmin.removeRepository(url);
+        Repository[] repositories = repoAdmin.listRepositories();
+        List<String> results = new ArrayList<>();
+        for (Repository repository : repositories) {
+            results.add(repository.getURI());
         }
-
+        return results;
     }
 
     @Override
@@ -234,6 +231,13 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
+    public void removeRemoteRepository(String uri) {
+        ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
+        RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
+        repoAdmin.removeRepository(uri);
+    }
+
+    @Override
     public void installRemotePlugin(PluginContext ctx, String pluginVersion) {
         logger.debug("Queuing plugin " + ctx.getPluginId() + " for installation");
 
@@ -275,6 +279,17 @@ public class OSGIPluginManager implements PluginManager {
                 // The assumption here is that since the currently executing Runnable will drain the queue before
                 // exiting, there is no need to have more than one pending runnable in the work queue
             }
+        }
+    }
+
+    @Override
+    public void addRemoteRepository(String uri) {
+        ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
+        RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
+        try {
+            repoAdmin.addRepository(uri);
+        } catch (Exception e) {
+            throw new HobsonRuntimeException("Error adding remote repository", e);
         }
     }
 

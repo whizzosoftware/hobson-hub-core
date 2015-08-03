@@ -21,6 +21,7 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
+import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
@@ -52,9 +53,10 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
     public static final String LOG_LEVEL = "logLevel";
 
-    private volatile BundleContext bundleContext;
+    volatile private BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
+    volatile private PluginManager pluginManager;
 
     public void start() {
         String logLevel = (String)getConfigurationProperty(LOG_LEVEL);
