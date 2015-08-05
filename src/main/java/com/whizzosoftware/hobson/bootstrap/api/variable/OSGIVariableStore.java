@@ -50,6 +50,21 @@ public class OSGIVariableStore implements VariableStore {
     }
 
     @Override
+    public Collection<String> getVariableNames() {
+        List<String> names = new ArrayList<>();
+        synchronized (variableRegistrations) {
+            for (List<VariableRegistration> lreg : variableRegistrations.values()) {
+                for (VariableRegistration ref : lreg) {
+                    if (!names.contains(ref.getName())) {
+                        names.add(ref.getName());
+                    }
+                }
+            }
+        }
+        return names;
+    }
+
+    @Override
     public void publishVariable(HobsonVariable variable) {
         // publish the variable
         Dictionary<String,String> props = new Hashtable<>();

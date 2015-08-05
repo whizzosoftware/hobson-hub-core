@@ -12,6 +12,7 @@ import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.HobsonVariable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class MockVariableStore implements VariableStore {
@@ -26,6 +27,11 @@ public class MockVariableStore implements VariableStore {
             }
         }
         return results;
+    }
+
+    @Override
+    public Collection<String> getVariableNames() {
+        return null;
     }
 
     @Override

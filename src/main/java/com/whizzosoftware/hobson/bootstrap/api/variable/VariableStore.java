@@ -11,6 +11,7 @@ import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.HobsonVariable;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -21,6 +22,7 @@ import java.util.List;
 public interface VariableStore {
     public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId);
     public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId, String name);
+    public Collection<String> getVariableNames();
     public void publishVariable(HobsonVariable variable);
     public void unpublishVariable(PluginContext ctx, String deviceId, String name);
     public void unpublishVariables(PluginContext ctx, String deviceId);

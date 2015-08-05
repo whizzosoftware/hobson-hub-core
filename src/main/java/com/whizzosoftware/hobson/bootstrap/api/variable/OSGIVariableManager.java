@@ -92,6 +92,11 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
+    public Collection<String> getPublishedVariableNames(HubContext ctx) {
+        return variableStore.getVariableNames();
+    }
+
+    @Override
     public HobsonVariable getDeviceVariable(DeviceContext ctx, String name) {
         return getDeviceVariable(ctx, name, null);
     }
