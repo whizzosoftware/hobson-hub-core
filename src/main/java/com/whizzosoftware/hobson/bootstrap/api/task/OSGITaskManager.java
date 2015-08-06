@@ -330,15 +330,19 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public Collection<PropertyContainerClass> getAllActionClasses(HubContext ctx) {
+    public Collection<PropertyContainerClass> getAllActionClasses(HubContext ctx, boolean applyConstraints) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass))");
             List<PropertyContainerClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
+                Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
                 for (ServiceReference ref : references) {
-                    results.add((PropertyContainerClass)context.getService(ref));
+                    PropertyContainerClass pcc = (PropertyContainerClass)context.getService(ref);
+                    if (!applyConstraints || pcc.evaluatePropertyConstraints(publishedVariableNames)) {
+                        results.add((PropertyContainerClass) context.getService(ref));
+                    }
                 }
             }
             return results;
