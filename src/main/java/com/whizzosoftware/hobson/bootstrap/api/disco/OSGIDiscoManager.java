@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 
 /**
  * An OSGi implementation of DiscoManager.
@@ -36,7 +35,6 @@ public class OSGIDiscoManager implements DiscoManager {
     private volatile BundleContext bundleContext;
     private volatile PluginManager pluginManager;
     private volatile EventManager eventManager;
-    private volatile ExecutorService executorService;
 
     private final Map<String,ServiceRegistration> localDiscoveryList = new HashMap<>();
 

@@ -14,6 +14,7 @@ import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.variable.VariableConstants;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.apache.commons.io.FileUtils;
@@ -40,6 +41,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
     private volatile BundleContext bundleContext;
     private volatile EventManager eventManager;
     private volatile DeviceManager deviceManager;
+    private volatile TaskManager taskManager;
 
     private File activityFile = new File("logs/activity.log");
 
@@ -75,7 +77,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
             TaskExecutionEvent tee = (TaskExecutionEvent)event;
             JSONObject json = new JSONObject();
             json.put("timestamp", tee.getTimestamp());
-            json.put("name", "Task " + tee.getName() + " was executed");
+            json.put("name", "Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
             appendEvent(json.toString());
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;

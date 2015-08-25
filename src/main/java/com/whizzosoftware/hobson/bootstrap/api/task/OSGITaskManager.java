@@ -8,10 +8,9 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
-import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.event.EventManager;
-import com.whizzosoftware.hobson.api.event.TaskExecutionEvent;
+import com.whizzosoftware.hobson.api.event.*;
+import com.whizzosoftware.hobson.api.event.EventListener;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
@@ -19,46 +18,141 @@ import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.*;
 import com.whizzosoftware.hobson.api.task.*;
+import com.whizzosoftware.hobson.api.task.action.TaskActionClass;
+import com.whizzosoftware.hobson.api.task.condition.*;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.bootstrap.api.task.actionset.ActionSetStore;
-import com.whizzosoftware.hobson.bootstrap.api.task.actionset.MapDBActionSetStore;
+import com.whizzosoftware.hobson.bootstrap.api.task.store.MapDBTaskStore;
+import com.whizzosoftware.hobson.bootstrap.api.task.store.TaskStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 /**
  * An OSGi implementation of TaskManager.
  *
  * @author Dan Noguerol
  */
-public class OSGITaskManager implements TaskManager {
+public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private volatile BundleContext bundleContext;
     private volatile EventManager eventManager;
-    private volatile ExecutorService executorService;
     private volatile HubManager hubManager;
     private volatile PluginManager pluginManager;
     private volatile VariableManager variableManager;
 
     private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
-    private ActionSetStore actionSetStore = null;
+    private TaskStore taskStore;
+    private TaskConditionClassProvider taskConditionClassProvider;
+    private TaskConditionProcessor conditionProcessor = new TaskConditionProcessor();
+    private EventListener pluginStartListener;
+    /**
+     * This executor is responsible for registering any unregistered tasks with the plugins that handle
+     * their trigger condition.
+     */
+    private final ScheduledThreadPoolExecutor taskRegistrationPool = new ScheduledThreadPoolExecutor(1);
+    /**
+     * Class that handles the actual check for resolved tasks and makes the plugin call to register them.
+     * It implements the Runnable that the taskRegistrationPool will ultimately invoke. This task is also
+     * responsible for tracking which tasks have/have not been registered.
+     */
+    private TaskRegistrationExecutor taskRegistrationExecutor;
+    /**
+     * A context provided to the TaskRegistrationExecutor giving it targeted access to the task facilities
+     * it requires to do its job.
+     */
+    private TaskRegistrationContext taskRegistrationContext;
 
     public void start() {
-        PluginContext ctx = PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName());
+        try {
+            // create the condition class provider if it hasn't already been set
+            if (taskConditionClassProvider == null) {
+                taskConditionClassProvider = new OSGITaskConditionClassProvider(bundleContext);
+            }
 
-        // create action set store
-        actionSetStore = new MapDBActionSetStore(pluginManager.getDataFile(ctx, "actionSets"), this);
+            if (taskRegistrationContext == null) {
+                taskRegistrationContext = this;
+            }
+
+            taskRegistrationExecutor = new TaskRegistrationExecutor(HubContext.createLocal(), taskRegistrationContext);
+
+            synchronized (taskRegistrationPool) {
+                // add listener for any plugin startups
+                if (eventManager != null) {
+                    pluginStartListener = new EventListener() {
+                        @Override
+                        public void onHobsonEvent(HobsonEvent event) {
+                            // any time a plugin starts, queue up a task registration check
+                            if (event.getEventId().equals(PluginStartedEvent.ID)) {
+                                queueTaskRegistration();
+                            }
+                        }
+                    };
+                    eventManager.addListener(HubContext.createLocal(), pluginStartListener, new String[]{EventTopics.STATE_TOPIC});
+                } else {
+                    logger.error("No event manager available - will not be able to provide tasks to their plugins");
+                }
+
+                // if a task store hasn't already been injected, create a default one
+                if (taskStore == null) {
+                    this.taskStore = new MapDBTaskStore(
+                        pluginManager.getDataFile(
+                            PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                            "tasks"
+                        ),
+                        this
+                    );
+                }
+
+                // publish all tasks found in the store
+                Collection<HobsonTask> tasks = this.taskStore.getAllTasks();
+                if (tasks != null) {
+                    for (HobsonTask task : tasks) {
+                        publishTask(task, false);
+                    }
+                }
+
+                // alert any plugins if their tasks are ready for registration
+                queueTaskRegistration();
+            }
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
     }
 
-    @Override
-    public void publishTask(HobsonTask task) {
-        String pluginId = task.getContext().getPluginId();
-        BundleContext context = BundleUtil.getBundleContext(getClass(), pluginId);
+    public void stop() {
+        taskRegistrationPool.shutdown();
+        if (pluginStartListener != null) {
+            eventManager.removeListener(HubContext.createLocal(), pluginStartListener, new String[]{EventTopics.STATE_TOPIC});
+        }
+    }
+
+    public void setPluginManager(PluginManager pluginManager) {
+        this.pluginManager = pluginManager;
+    }
+
+    public void setTaskStore(TaskStore taskStore) {
+        this.taskStore = taskStore;
+    }
+
+    public void setTaskRegistrationContext(TaskRegistrationContext taskRegistrationContext) {
+        this.taskRegistrationContext = taskRegistrationContext;
+    }
+
+    protected void queueTaskRegistration() {
+        synchronized (taskRegistrationPool) {
+            if (taskRegistrationPool.getQueue().size() < 2) {
+                taskRegistrationPool.execute(taskRegistrationExecutor);
+            }
+        }
+    }
+
+    private void publishTask(HobsonTask task, boolean performRegistration) {
+        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
 
         // check that the task doesn't already exist
         if (getTask(task.getContext(), false) != null) {
@@ -66,16 +160,19 @@ public class OSGITaskManager implements TaskManager {
         }
 
         if (context != null) {
+            String taskId = task.getContext().getTaskId();
+
             // register task as a service
             Dictionary<String,String> props = new Hashtable<>();
-            props.put("pluginId", pluginId);
-            props.put("taskId", task.getContext().getTaskId());
+            props.put("taskId", taskId);
+
+            logger.debug("Publishing task with ID: {}", taskId);
 
             synchronized (serviceRegistrationMap) {
-                List<ServiceRegistration> regList = serviceRegistrationMap.get(pluginId);
+                List<ServiceRegistration> regList = serviceRegistrationMap.get(taskId);
                 if (regList == null) {
                     regList = new ArrayList<>();
-                    serviceRegistrationMap.put(pluginId, regList);
+                    serviceRegistrationMap.put(taskId, regList);
                 }
                 regList.add(
                     context.registerService(
@@ -84,6 +181,10 @@ public class OSGITaskManager implements TaskManager {
                         props
                     )
                 );
+            }
+
+            if (performRegistration) {
+                queueTaskRegistration();
             }
 
             logger.debug("Task {} registered", task.getContext());
@@ -125,37 +226,6 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void unpublishAllTasks(PluginContext ctx) {
-        synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
-            if (srl != null) {
-                for (ServiceRegistration sr : srl) {
-                    if (sr.getReference().getProperty("taskId") != null) {
-                        sr.unregister();
-                    }
-                }
-                serviceRegistrationMap.remove(ctx.getPluginId());
-            }
-        }
-    }
-
-    @Override
-    public void unpublishTask(TaskContext ctx) {
-        synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
-            if (srl != null) {
-                for (ServiceRegistration sr : srl) {
-                    if (sr.getReference().getProperty("taskId").equals(ctx.getTaskId())) {
-                        sr.unregister();
-                        return;
-                    }
-                }
-            }
-            throw new HobsonNotFoundException("Unable to find task: " + ctx);
-        }
-    }
-
-    @Override
     public Collection<HobsonTask> getAllTasks(HubContext ctx) {
         List<HobsonTask> tasks = new ArrayList<>();
         try {
@@ -172,18 +242,8 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public PropertyContainerClass getConditionClass(PropertyContainerClassContext ctx) {
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(conditionClassId=" + ctx.getContainerClassId() + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                return (PropertyContainerClass)bundleContext.getService(refs[0]);
-            } else {
-                throw new HobsonRuntimeException("Unable to find action class: " + ctx);
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error executing action: " + ctx, e);
-        }
+    public TaskConditionClass getConditionClass(PropertyContainerClassContext ctx) {
+        return taskConditionClassProvider.getConditionClass(ctx);
     }
 
     @Override
@@ -195,7 +255,7 @@ public class OSGITaskManager implements TaskManager {
         HobsonTask result = null;
 
         try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonTask.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(taskId=" + ctx.getTaskId() + "))");
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonTask.class.getName() + ")(taskId=" + ctx.getTaskId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(HobsonTask.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
                 result = (HobsonTask)bundleContext.getService(refs[0]);
@@ -210,8 +270,8 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void publishActionClass(PropertyContainerClassContext context, String name, List<TypedProperty> properties) {
-        String pluginId = context.getPluginContext().getPluginId();
+    public void publishActionClass(TaskActionClass actionClass) {
+        String pluginId = actionClass.getContext().getPluginId();
         BundleContext ctx = BundleUtil.getBundleContext(getClass(), pluginId);
 
         if (ctx != null) {
@@ -222,7 +282,7 @@ public class OSGITaskManager implements TaskManager {
             } else {
                 props.put("pluginId", pluginId);
                 props.put("type", "actionClass");
-                props.put("classId", context.getContainerClassId());
+                props.put("classId", actionClass.getContext().getContainerClassId());
 
                 synchronized (serviceRegistrationMap) {
                     List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
@@ -233,13 +293,15 @@ public class OSGITaskManager implements TaskManager {
                     srl.add(
                         ctx.registerService(
                             PropertyContainerClass.class,
-                            new PropertyContainerClass(context, name, properties),
+                            actionClass,
                             props
                         )
                     );
                 }
 
-                logger.debug("Action class {} published", context);
+                queueTaskRegistration();
+
+                logger.debug("Action class {} published", actionClass.getContext());
             }
         } else {
             throw new HobsonRuntimeException("Unable to obtain context to publish action");
@@ -248,24 +310,24 @@ public class OSGITaskManager implements TaskManager {
 
     @Override
     public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
-        return actionSetStore.addActionSet(ctx, name, actions);
+        return taskStore.addActionSet(ctx, name, actions);
     }
 
     @Override
-    public void publishConditionClass(PropertyContainerClassContext ctx, String name, List<TypedProperty> properties) {
+    public void publishConditionClass(TaskConditionClass conditionClass) {
         try {
-            String pluginId = ctx.getPluginContext().getPluginId();
+            String pluginId = conditionClass.getContext().getPluginId();
             BundleContext context = BundleUtil.getBundleContext(getClass(), pluginId);
 
             if (context != null) {
-                // register device as a service
+                // register condition class as a service
                 Dictionary<String,String> props = new Hashtable<>();
                 if (pluginId == null) {
-                    logger.error("Unable to publish action with null plugin ID");
+                    logger.error("Unable to publish condition class with null plugin ID");
                 } else {
                     props.put("pluginId", pluginId);
                     props.put("type", "conditionClass");
-                    props.put("classId", ctx.getContainerClassId());
+                    props.put("classId", conditionClass.getContext().getContainerClassId());
 
                     synchronized (serviceRegistrationMap) {
                         List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
@@ -276,13 +338,15 @@ public class OSGITaskManager implements TaskManager {
                         srl.add(
                             context.registerService(
                                 PropertyContainerClass.class,
-                                new PropertyContainerClass(ctx, name, properties),
+                                conditionClass,
                                 props
                             )
                         );
                     }
 
-                    logger.debug("Condition class {} published", ctx);
+                    queueTaskRegistration();
+
+                    logger.debug("Condition class {} published", conditionClass.getContext());
                 }
             } else {
                 throw new HobsonRuntimeException("Unable to obtain context to publish action");
@@ -293,29 +357,12 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void executeTask(final TaskContext ctx) {
-        final HobsonTask task = getTask(ctx);
-        executorService.submit(new Runnable() {
-            @Override
-            public void run() {
-                Throwable error = null;
-                try {
-                    task.execute();
-                } catch (Throwable e) {
-                    error = e;
-                }
-                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), task.getName(), error));
-            }
-        });
-    }
-
-    @Override
-    public PropertyContainerClass getActionClass(PropertyContainerClassContext ctx) {
+    public TaskActionClass getActionClass(PropertyContainerClassContext ctx) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(type=actionClass)(classId=" + ctx.getContainerClassId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
-                return (PropertyContainerClass)bundleContext.getService(refs[0]);
+                return (TaskActionClass)bundleContext.getService(refs[0]);
             } else {
                 throw new HobsonRuntimeException("Unable to find action class: " + ctx);
             }
@@ -326,22 +373,22 @@ public class OSGITaskManager implements TaskManager {
 
     @Override
     public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
-        return actionSetStore.getActionSet(ctx, actionSetId);
+        return taskStore.getActionSet(ctx, actionSetId);
     }
 
     @Override
-    public Collection<PropertyContainerClass> getAllActionClasses(HubContext ctx, boolean applyConstraints) {
+    public Collection<TaskActionClass> getAllActionClasses(HubContext ctx, boolean applyConstraints) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass))");
-            List<PropertyContainerClass> results = new ArrayList<>();
+            List<TaskActionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
                 Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     PropertyContainerClass pcc = (PropertyContainerClass)context.getService(ref);
                     if (!applyConstraints || pcc.evaluatePropertyConstraints(publishedVariableNames)) {
-                        results.add((PropertyContainerClass) context.getService(ref));
+                        results.add((TaskActionClass)context.getService(ref));
                     }
                 }
             }
@@ -353,22 +400,22 @@ public class OSGITaskManager implements TaskManager {
 
     @Override
     public Collection<PropertyContainerSet> getAllActionSets(HubContext ctx) {
-        return actionSetStore.getAllActionSets(ctx);
+        return taskStore.getAllActionSets(ctx);
     }
 
     @Override
-    public Collection<PropertyContainerClass> getAllConditionClasses(HubContext ctx, boolean applyConstraints) {
+    public Collection<TaskConditionClass> getAllConditionClasses(HubContext ctx, ConditionClassType type, boolean applyConstraints) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=conditionClass))");
-            List<PropertyContainerClass> results = new ArrayList<>();
+            List<TaskConditionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
                 Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
                 for (ServiceReference ref : references) {
-                    PropertyContainerClass pcc = (PropertyContainerClass)context.getService(ref);
-                    if (!applyConstraints || pcc.evaluatePropertyConstraints(publishedVariableNames)) {
-                        results.add(pcc);
+                    TaskConditionClass tcc = (TaskConditionClass)context.getService(ref);
+                    if ((type == null || tcc.getType() == type) && (!applyConstraints || tcc.evaluatePropertyConstraints(publishedVariableNames))) {
+                        results.add(tcc);
                     }
                 }
             }
@@ -379,79 +426,135 @@ public class OSGITaskManager implements TaskManager {
     }
 
     @Override
-    public void updateTask(final TaskContext ctx, final String name, final String description, final PropertyContainerSet conditionSet, final PropertyContainerSet actionSet) {
-        final HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx.getPluginContext());
-        if (plugin != null) {
-            final TaskProvider provider = getTaskProvider(plugin);
-            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                provider.onUpdateTask(ctx, name, description, conditionSet, actionSet);
+    public void updateTask(final TaskContext ctx, final String name, final String description, final List<PropertyContainer> conditions, final PropertyContainerSet actionSet) {
+        if (conditions != null) {
+            PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
+            if (triggerCondition != null) {
+                final HobsonPlugin plugin = pluginManager.getLocalPlugin(triggerCondition.getContainerClassContext().getPluginContext());
+                if (plugin != null) {
+                    final TaskProvider provider = getTaskProvider(plugin);
+                    final HobsonTask task = getTask(ctx);
+                    if (task != null) {
+                        // update task attributes
+                        task.setName(name);
+                        task.setDescription(description);
+                        task.setConditions(conditions);
+                        task.setActionSet(actionSet);
+
+                        // update the task in the task store
+                        taskStore.addTask(task);
+
+                        // alert the plugin that the task has been updated
+                        plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                            @Override
+                            public void run() {
+                                provider.onUpdateTask(task);
+                            }
+                        });
+                    } else {
+                        throw new HobsonInvalidRequestException("No task found to update: " + ctx);
+                    }
+                } else {
+                    throw new TaskException("No plugin found: " + ctx);
                 }
-            });
+            } else {
+                throw new HobsonInvalidRequestException("No trigger condition found for task: " + ctx);
+            }
         } else {
-            throw new TaskException("No plugin found: " + ctx);
+            throw new HobsonInvalidRequestException("No task conditions found: " + ctx);
         }
     }
 
     @Override
-    public void fireTaskExecutionEvent(HobsonTask task, long now, Throwable error) {
-        eventManager.postEvent(HubContext.createLocal(), new TaskExecutionEvent(now, task.getName(), error));
+    public void updateTaskProperties(TaskContext ctx, Map<String, Object> properties) {
+        HobsonTask task = getTask(ctx);
+        for (String key : properties.keySet()) {
+            task.setProperty(key, properties.get(key));
+        }
     }
 
     @Override
-    public void createTask(HubContext ctx, String name, String description, PropertyContainerSet conditionSet, PropertyContainerSet actionSet) {
-        if (conditionSet != null && conditionSet.hasPrimaryProperty()) {
-            if (conditionSet.getPrimaryProperty().getContainerClassContext() != null) {
+    public void createTask(HubContext ctx, String name, String description, List<PropertyContainer> conditions, PropertyContainerSet actionSet) {
+        if (conditions != null) {
+            PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
+            if (triggerCondition != null) {
                 // convert explicit action set to action set ID
                 if (!actionSet.hasId()) {
                     actionSet = publishActionSet(ctx, null, actionSet.getProperties());
                 }
 
-                // send the create task request to the appropriate task provider
-                HobsonPlugin plugin = pluginManager.getLocalPlugin(conditionSet.getPrimaryProperty().getContainerClassContext().getPluginContext());
-                if (plugin.getRuntime().getTaskProvider() != null) {
-                    plugin.getRuntime().getTaskProvider().onCreateTask(name, description, conditionSet, actionSet);
-                } else {
-                    throw new HobsonRuntimeException("Plugin associated with trigger condition does not support task creation");
-                }
+                // create task and add to task store
+                final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
+                taskStore.addTask(task);
+
+                // publish the task as a service
+                publishTask(task, true);
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
         } else {
-            throw new HobsonInvalidRequestException("No trigger condition found");
+            throw new HobsonInvalidRequestException("No task conditions found");
         }
     }
 
     @Override
     public void deleteTask(final TaskContext ctx) {
-        final HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx.getPluginContext());
-        if (plugin != null) {
-            final TaskProvider provider = getTaskProvider(plugin);
-            final HobsonTask task = getTask(ctx);
-            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    // delete the task from the provider
-                    provider.onDeleteTask(task.getContext());
+        final HobsonTask task = getTask(ctx);
+        if (task != null) {
+            PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, task.getConditions());
+            if (triggerCondition != null) {
+                final HobsonPlugin plugin = pluginManager.getLocalPlugin(triggerCondition.getContainerClassContext().getPluginContext());
+                if (plugin != null) {
+                    final TaskProvider provider = getTaskProvider(plugin);
+                    plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                        @Override
+                        public void run() {
+                            // delete the task from the provider
+                            provider.onDeleteTask(task.getContext());
 
-                    // unpublish the task service
-                    List<ServiceRegistration> regs = serviceRegistrationMap.get(ctx.getPluginId());
-                    if (regs != null) {
-                        for (ServiceRegistration sr : regs) {
-                            // TODO
+                            // unpublish the task service
+                            List<ServiceRegistration> regs = serviceRegistrationMap.get(ctx.getTaskId());
+                            if (regs != null) {
+                                for (ServiceRegistration sr : regs) {
+                                    // TODO
+                                }
+                            }
                         }
-                    }
+                    });
+                } else {
+                    throw new TaskException("No plugin found: " + ctx);
                 }
-            });
+            } else {
+                throw new TaskException("No trigger condition found in task: " + ctx);
+            }
         } else {
-            throw new TaskException("No plugin found: " + ctx);
+            throw new HobsonInvalidRequestException("Task not found: " + ctx);
         }
     }
 
     @Override
+    public void fireTaskTrigger(final TaskContext ctx) {
+        logger.debug("Task trigger fired: {}", ctx);
+
+        Throwable error = null;
+        try {
+            // get the task
+            HobsonTask task = getTask(ctx);
+
+            if (conditionProcessor.evaluate(OSGITaskManager.this, task, variableManager, ctx)) {
+                logger.debug("Executing action set for task: {}", ctx);
+                executeActionSet(task.getContext().getHubContext(), task.getActionSet().getId());
+            }
+        } catch (Throwable e) {
+            logger.error("Error firing task trigger", e);
+            error = e;
+        }
+        eventManager.postEvent(ctx.getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), ctx, error));
+    }
+
+    @Override
     public void executeActionSet(HubContext ctx, String actionSetId) {
-        PropertyContainerSet actionSet = actionSetStore.getActionSet(ctx, actionSetId);
+        PropertyContainerSet actionSet = taskStore.getActionSet(ctx, actionSetId);
         if (actionSet != null) {
             for (final PropertyContainer pc : actionSet.getProperties()) {
                 final HobsonPlugin plugin = pluginManager.getLocalPlugin(pc.getContainerClassContext().getPluginContext());
@@ -480,5 +583,31 @@ public class OSGITaskManager implements TaskManager {
         } else {
             throw new TaskException("No plugin runtime available for task " + plugin.getContext());
         }
+    }
+
+    @Override
+    public boolean isTaskFullyResolved(HobsonTask task) {
+        Collection<PropertyContainerClassContext> deps = task.getDependencies(new OSGITaskActionClassProvider(bundleContext, taskStore));
+        try {
+            for (PropertyContainerClassContext pccc : deps) {
+                Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + pccc.getPluginContext().getPluginId() + ")(classId=" + pccc.getContainerClassId() + "))");
+                ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
+                if (refs != null && refs.length == 1) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error trying to check resolved task", e);
+        }
+        return false;
+    }
+
+    @Override
+    public HobsonPlugin getPluginForTask(HobsonTask task) {
+        PropertyContainer pc = TaskHelper.getTriggerCondition(OSGITaskManager.this, task.getConditions());
+        if (pc != null) {
+            return pluginManager.getLocalPlugin(pc.getContainerClassContext().getPluginContext());
+        }
+        return null;
     }
 }

@@ -187,7 +187,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     protected PropertyContainer getHubEmailConfiguration(HubContext ctx) {
-        return new PropertyContainer(getConfigurationPropertyMap(getConfiguration()));
+        return new PropertyContainer(null, getConfigurationPropertyMap(getConfiguration()));
     }
 
     @Override
