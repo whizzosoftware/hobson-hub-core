@@ -249,7 +249,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                             public void run() {
                                 try {
                                     getRuntime().onRefresh();
-                                } catch (Exception e) {
+                                } catch (Throwable e) {
                                     logger.error("Error refreshing plugin: " + plugin.getContext(), e);
                                 }
                             }
@@ -261,7 +261,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             // wait for the async task to complete so that the OSGi framework knows that we've really started
             try {
                 f.get();
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 logger.error("Error waiting for plugin to start", e);
             }
         }
