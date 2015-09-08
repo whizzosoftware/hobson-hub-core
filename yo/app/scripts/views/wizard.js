@@ -20,9 +20,9 @@ define([
             var tabName = tab + 'Tab';
             this.$el.find('.wizard-item').each(function(index, obj) {
                 if (obj.id === tabName) {
-                    $(obj).addClass('active');
+                    $(obj).addClass('active shadow-2');
                 } else {
-                    $(obj).removeClass('active');
+                    $(obj).removeClass('active shadow-2');
                 }
             });
         }

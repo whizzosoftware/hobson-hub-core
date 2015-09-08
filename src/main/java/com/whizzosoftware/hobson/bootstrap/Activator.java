@@ -168,10 +168,14 @@ public class Activator extends DependencyActivatorBase {
                     }
 
                     // launch a browser
-                    if (Desktop.isDesktopSupported()) {
-                        Desktop.getDesktop().browse(new URI(consoleURI));
-                    } else {
-                        System.out.println("Hobson is now available at " + consoleURI);
+                    try {
+                        if (Desktop.isDesktopSupported()) {
+                            Desktop.getDesktop().browse(new URI(consoleURI));
+                        } else {
+                            System.out.println("Hobson is now available at " + consoleURI);
+                        }
+                    } catch (Throwable t) {
+                        logger.warn("Unable to launch web browser", t);
                     }
                 } catch (Exception e) {
                     logger.error("Error starting REST API server", e);
