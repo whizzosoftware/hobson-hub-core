@@ -33,7 +33,6 @@ import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
 import com.whizzosoftware.hobson.bootstrap.api.telemetry.OSGITelemetryManager;
 import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
-import com.whizzosoftware.hobson.bootstrap.discovery.Advertiser;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
 import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
@@ -85,7 +84,6 @@ public class Activator extends DependencyActivatorBase {
     private ServiceTracker applicationTracker;
     private ServiceTracker hubManagerTracker;
     private final Component component = new Component();
-    private Advertiser advertiser;
 
     @Override
     public void init(BundleContext context, DependencyManager manager) throws Exception {
@@ -216,7 +214,7 @@ public class Activator extends DependencyActivatorBase {
                 if (ref != null) {
                     // start advertisements
                     ConfigurationAdmin configAdmin = (ConfigurationAdmin) context.getService(ref);
-                    startAdvertiser();
+                    // TODO
                     return configAdmin;
                 } else {
                     return null;
@@ -239,9 +237,6 @@ public class Activator extends DependencyActivatorBase {
             manager.remove(c);
         }
 
-        if (advertiser != null) {
-            advertiser.stop();
-        }
         if (component != null) {
             component.stop();
         }
@@ -354,29 +349,6 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(ConfigurationAdmin.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
-    }
-
-    private void startAdvertiser() {
-        try {
-            // determine server name
-            String hubName = "New Hobson Hub";
-            Configuration config = getConfiguration();
-            if (config != null) {
-                Dictionary d = config.getProperties();
-                if (d != null) {
-                    String name = (String) d.get("hub.name");
-                    if (name != null) {
-                        hubName = name;
-                    }
-                }
-            }
-
-            // start advertiser
-            advertiser = new Advertiser(hubName);
-            advertiser.start();
-        } catch (Exception e) {
-            logger.error("Error starting advertisements", e);
-        }
     }
 
     private void registerRestletApplication(ServiceReference ref) {
