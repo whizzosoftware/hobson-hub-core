@@ -82,7 +82,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
             for (VariableUpdate update : vune.getUpdates()) {
-                if (update.getValue() != null) {
+                if (update.getValue() != null && update.getDeviceContext().hasDeviceId()) {
                     HobsonDevice device = deviceManager.getDevice(update.getDeviceContext());
                     String s = createVariableChangeString(device.getName(), update.getName(), update.getValue());
                     if (s != null) {

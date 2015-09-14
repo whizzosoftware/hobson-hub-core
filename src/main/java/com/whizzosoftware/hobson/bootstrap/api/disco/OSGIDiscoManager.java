@@ -37,6 +37,7 @@ public class OSGIDiscoManager implements DiscoManager {
     private volatile EventManager eventManager;
 
     private final Map<String,ServiceRegistration> localDiscoveryList = new HashMap<>();
+    private final Map<String,ServiceRegistration> localPublishList = new HashMap<>();
 
     public void start() {
         logger.debug("OSGIDiscoManager starting");
@@ -49,14 +50,20 @@ public class OSGIDiscoManager implements DiscoManager {
         for (ServiceRegistration sr : localDiscoveryList.values()) {
             sr.unregister();
         }
+        localDiscoveryList.clear();
+
+        for (ServiceRegistration sr : localPublishList.values()) {
+            sr.unregister();
+        }
+        localPublishList.clear();
     }
 
     @Override
-    synchronized public void requestDeviceAdvertisementSnapshot(PluginContext ctx, String protocolId) {
+    synchronized public void requestExternalDeviceAdvertisementSnapshot(PluginContext ctx, String protocolId) {
         try {
             BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
             HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx);
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + "))");
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + ")(internal=false))");
             if (references != null && references.length > 0) {
                 long now = System.currentTimeMillis();
                 for (ServiceReference ref : references) {
@@ -73,18 +80,55 @@ public class OSGIDiscoManager implements DiscoManager {
     }
 
     @Override
-    synchronized public void fireDeviceAdvertisement(HubContext ctx, final DeviceAdvertisement advertisement) {
+    synchronized public Collection<DeviceAdvertisement> getInternalDeviceAdvertisements(HubContext ctx, String protocolId) {
+        try {
+            BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + ")(internal=true))");
+            if (references != null && references.length > 0) {
+                List<DeviceAdvertisement> advs = new ArrayList<>();
+                for (ServiceReference ref : references) {
+                    DeviceAdvertisement adv = (DeviceAdvertisement)context.getService(ref);
+                    advs.add(adv);
+                }
+                return advs;
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving internal device advertisements", e);
+        }
+        return null;
+    }
+
+    @Override
+    public DeviceAdvertisement getInternalDeviceAdvertisement(HubContext ctx, String protocolId, String advId) {
+        try {
+            BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + ")(id=" + advId + ")(internal=true))");
+            if (references != null && references.length == 1) {
+                return (DeviceAdvertisement)context.getService(references[0]);
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving internal device advertisements", e);
+        }
+        return null;
+    }
+
+    @Override
+    synchronized public void publishDeviceAdvertisement(HubContext ctx, final DeviceAdvertisement advertisement, boolean internal) {
+        logger.debug("Publishing device advertisement: {}", advertisement);
+
         String fqId = advertisement.getProtocolId() + ":" + advertisement.getId();
-        if (!localDiscoveryList.containsKey(fqId)) {
+
+        if ((internal && !localPublishList.containsKey(fqId)) || (!internal && !localDiscoveryList.containsKey(fqId))) {
             try {
                 // check if we've seen this advertisement before
                 BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-                ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + "))");
+                ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + advertisement.getProtocolId() + ")(id=" + advertisement.getId() + ")(internal=" + internal + "))");
                 if (references == null || references.length == 0) {
                     // publish the advertisement as a service if we haven't already done so
                     Hashtable props = new Hashtable();
                     props.put("protocolId", advertisement.getProtocolId());
                     props.put("id", advertisement.getId());
+                    props.put("internal", internal);
                     ServiceRegistration sr = context.registerService(DeviceAdvertisement.class.getName(), advertisement, props);
 
                     logger.debug("Registered device advertisement: {}", fqId);

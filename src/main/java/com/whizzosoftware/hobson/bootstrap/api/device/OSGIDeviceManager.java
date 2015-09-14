@@ -51,6 +51,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
     private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
+    private final Map<String,DeviceBootstrap> bootstraps = new HashMap<>();
 
     public void start() {
         try {
@@ -62,6 +63,67 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     public void stop() {
         bundleContext.removeServiceListener(this);
+    }
+
+    @Override
+    public DeviceBootstrap createDeviceBootstrap(HubContext hubContext, String deviceId) {
+        // make sure a bootstrap hasn't already been created for this device ID
+        for (DeviceBootstrap db : bootstraps.values()) {
+            if (db.getDeviceId().equals(deviceId)) {
+                return null;
+            }
+        }
+
+        // create the device bootstrap
+        DeviceBootstrap db = new DeviceBootstrap(UUID.randomUUID().toString(), deviceId, System.currentTimeMillis());
+        db.setSecret(UUID.randomUUID().toString());
+        bootstraps.put(db.getId(), db);
+        return db;
+    }
+
+    @Override
+    public Collection<DeviceBootstrap> getDeviceBootstraps(HubContext hubContext) {
+        List<DeviceBootstrap> results = new ArrayList<>();
+        for (DeviceBootstrap db : bootstraps.values()) {
+            results.add(db);
+        }
+        return results;
+    }
+
+    @Override
+    public DeviceBootstrap getDeviceBootstrap(HubContext hubContext, String id) {
+        return bootstraps.get(id);
+    }
+
+    @Override
+    public DeviceBootstrap registerDeviceBootstrap(HubContext hubContext, String deviceId) {
+        DeviceBootstrap bootstrap = null;
+        for (DeviceBootstrap db : bootstraps.values()) {
+            if (db.getDeviceId().equals(deviceId)) {
+                bootstrap = db;
+            }
+        }
+
+        if (bootstrap != null && bootstrap.getBootstrapTime() == null) {
+            bootstrap.setBootstrapTime(System.currentTimeMillis());
+            return bootstrap;
+        }
+
+        return null;
+    }
+
+    @Override
+    public void deleteDeviceBootstrap(HubContext hubContext, String id) {
+
+    }
+
+    @Override
+    public boolean verifyDeviceBootstrap(HubContext hubContext, String id, String secret) {
+        DeviceBootstrap db = bootstraps.get(id);
+        if (db != null) {
+            return secret.equals(db.getSecret());
+        }
+        return false;
     }
 
     @Override
