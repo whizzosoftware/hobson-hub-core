@@ -419,6 +419,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 // create task and add to task store
                 final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
                 taskStore.addTask(task);
+
+                queueTaskRegistration();
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
