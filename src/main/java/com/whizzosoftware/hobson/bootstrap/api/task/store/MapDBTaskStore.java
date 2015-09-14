@@ -132,7 +132,15 @@ public class MapDBTaskStore implements TaskStore {
 
     @Override
     public void deleteTask(TaskContext context) {
-        throw new UnsupportedOperationException();
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+            logger.debug("Deleting task: {}", context.toString());
+            persister.deleteTask(new MapDBCollectionPersistenceContext(db, "tasks"), context);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
     }
 
     @Override

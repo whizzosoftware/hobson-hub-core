@@ -55,6 +55,11 @@ public class MapDBCollectionPersistenceContext implements CollectionPersistenceC
     }
 
     @Override
+    public void removeMap(String key) {
+        this.map.remove(key);
+    }
+
+    @Override
     public Set<String> getKeySet() {
         return map.keySet();
     }

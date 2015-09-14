@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.EventListener;
@@ -108,14 +109,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     );
                 }
 
-                // publish all tasks found in the store
-                Collection<HobsonTask> tasks = this.taskStore.getAllTasks();
-                if (tasks != null) {
-                    for (HobsonTask task : tasks) {
-                        publishTask(task, false);
-                    }
-                }
-
                 // alert any plugins if their tasks are ready for registration
                 queueTaskRegistration();
             }
@@ -148,46 +141,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             if (taskRegistrationPool.getQueue().size() < 2) {
                 taskRegistrationPool.execute(taskRegistrationExecutor);
             }
-        }
-    }
-
-    private void publishTask(HobsonTask task, boolean performRegistration) {
-        BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-
-        // check that the task doesn't already exist
-        if (getTask(task.getContext(), false) != null) {
-            throw new HobsonRuntimeException("Attempt to publish a duplicate task: " + task.getContext());
-        }
-
-        if (context != null) {
-            String taskId = task.getContext().getTaskId();
-
-            // register task as a service
-            Dictionary<String,String> props = new Hashtable<>();
-            props.put("taskId", taskId);
-
-            logger.debug("Publishing task with ID: {}", taskId);
-
-            synchronized (serviceRegistrationMap) {
-                List<ServiceRegistration> regList = serviceRegistrationMap.get(taskId);
-                if (regList == null) {
-                    regList = new ArrayList<>();
-                    serviceRegistrationMap.put(taskId, regList);
-                }
-                regList.add(
-                    context.registerService(
-                        HobsonTask.class.getName(),
-                        task,
-                        props
-                    )
-                );
-            }
-
-            if (performRegistration) {
-                queueTaskRegistration();
-            }
-
-            logger.debug("Task {} registered", task.getContext());
         }
     }
 
@@ -227,18 +180,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public Collection<HobsonTask> getAllTasks(HubContext ctx) {
-        List<HobsonTask> tasks = new ArrayList<>();
-        try {
-            ServiceReference[] refs = bundleContext.getServiceReferences(HobsonTask.class.getName(), null);
-            if (refs != null) {
-                for (ServiceReference ref : refs) {
-                    tasks.add((HobsonTask) bundleContext.getService(ref));
-                }
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task providers", e);
-        }
-        return tasks;
+        return new ArrayList<>(taskStore.getAllTasks());
     }
 
     @Override
@@ -252,21 +194,12 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     protected HobsonTask getTask(TaskContext ctx, boolean failOnError) {
-        HobsonTask result = null;
-
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + HobsonTask.class.getName() + ")(taskId=" + ctx.getTaskId() + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(HobsonTask.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                result = (HobsonTask)bundleContext.getService(refs[0]);
-            } else if (failOnError) {
-                throw new TaskException("Unable to find unique task for id: " + ctx);
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new TaskException("Error obtaining task", e);
+        HobsonTask task = taskStore.getTask(ctx);
+        if (task == null && failOnError) {
+            throw new HobsonNotFoundException("Task not found");
+        } else {
+            return task;
         }
-
-        return result;
     }
 
     @Override
@@ -486,9 +419,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 // create task and add to task store
                 final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
                 taskStore.addTask(task);
-
-                // publish the task as a service
-                publishTask(task, true);
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
@@ -509,15 +439,14 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
                         @Override
                         public void run() {
-                            // delete the task from the provider
-                            provider.onDeleteTask(task.getContext());
+                            try {
+                                // delete the task from the provider
+                                provider.onDeleteTask(task.getContext());
 
-                            // unpublish the task service
-                            List<ServiceRegistration> regs = serviceRegistrationMap.get(ctx.getTaskId());
-                            if (regs != null) {
-                                for (ServiceRegistration sr : regs) {
-                                    // TODO
-                                }
+                                // remove it from the task store
+                                taskStore.deleteTask(task.getContext());
+                            } catch (Throwable t) {
+                                logger.error("Error deleting task", t);
                             }
                         }
                     });
