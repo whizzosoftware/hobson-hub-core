@@ -114,7 +114,7 @@ public class OSGIDiscoManager implements DiscoManager {
 
     @Override
     synchronized public void publishDeviceAdvertisement(HubContext ctx, final DeviceAdvertisement advertisement, boolean internal) {
-        logger.debug("Publishing device advertisement: {}", advertisement);
+        logger.trace("Publishing device advertisement: {}", advertisement);
 
         String fqId = advertisement.getProtocolId() + ":" + advertisement.getId();
 
