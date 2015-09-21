@@ -104,12 +104,16 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             }
         }
 
-        if (bootstrap != null && bootstrap.getBootstrapTime() == null) {
-            bootstrap.setBootstrapTime(System.currentTimeMillis());
-            return bootstrap;
+        if (bootstrap != null) {
+            if (bootstrap.getBootstrapTime() == null) {
+                bootstrap.setBootstrapTime(System.currentTimeMillis());
+                return bootstrap;
+            } else {
+                throw new DeviceAlreadyBoostrappedException(bootstrap.getId());
+            }
+        } else {
+            throw new DeviceBootstrapNotFoundException();
         }
-
-        return null;
     }
 
     @Override
