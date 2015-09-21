@@ -8,7 +8,7 @@ import com.whizzosoftware.hobson.api.task.HobsonTask;
 import com.whizzosoftware.hobson.api.task.TaskContext;
 import com.whizzosoftware.hobson.api.task.TaskHelper;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.bootstrap.api.task.store.TaskStore;
+import com.whizzosoftware.hobson.api.task.store.TaskStore;
 
 import java.util.*;
 

@@ -10,6 +10,7 @@ package com.whizzosoftware.hobson.bootstrap.api.device;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.device.*;
+import com.whizzosoftware.hobson.api.device.store.DeviceBootstrapStore;
 import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
@@ -22,6 +23,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.api.device.store.MapDBDeviceBootstrapStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
@@ -50,9 +52,19 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     volatile private PluginManager pluginManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
-    private final Map<String,DeviceBootstrap> bootstraps = new HashMap<>();
+    private DeviceBootstrapStore bootstrapStore;
 
     public void start() {
+        // if a bootstrap store hasn't already been injected, create a default one
+        if (bootstrapStore == null) {
+            this.bootstrapStore = new MapDBDeviceBootstrapStore(
+                pluginManager.getDataFile(
+                        PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                        "bootstraps"
+                )
+            );
+        }
+
         try {
             bundleContext.addServiceListener(this, "(objectclass=" + HobsonDevice.class.getName() + ")");
         } catch (InvalidSyntaxException e) {
@@ -67,23 +79,21 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     @Override
     public DeviceBootstrap createDeviceBootstrap(HubContext hubContext, String deviceId) {
         // make sure a bootstrap hasn't already been created for this device ID
-        for (DeviceBootstrap db : bootstraps.values()) {
-            if (db.getDeviceId().equals(deviceId)) {
-                return null;
-            }
+        if (bootstrapStore.hasBootstrapForDeviceId(hubContext, deviceId)) {
+            return null;
         }
 
         // create the device bootstrap
         DeviceBootstrap db = new DeviceBootstrap(UUID.randomUUID().toString(), deviceId, System.currentTimeMillis());
         db.setSecret(UUID.randomUUID().toString());
-        bootstraps.put(db.getId(), db);
+        bootstrapStore.saveBootstrap(hubContext, db);
         return db;
     }
 
     @Override
     public Collection<DeviceBootstrap> getDeviceBootstraps(HubContext hubContext) {
         List<DeviceBootstrap> results = new ArrayList<>();
-        for (DeviceBootstrap db : bootstraps.values()) {
+        for (DeviceBootstrap db : bootstrapStore.getAllBootstraps(hubContext)) {
             results.add(db);
         }
         return results;
@@ -91,21 +101,16 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public DeviceBootstrap getDeviceBootstrap(HubContext hubContext, String id) {
-        return bootstraps.get(id);
+        return bootstrapStore.getBootstrap(hubContext, id);
     }
 
     @Override
     public DeviceBootstrap registerDeviceBootstrap(HubContext hubContext, String deviceId) {
-        DeviceBootstrap bootstrap = null;
-        for (DeviceBootstrap db : bootstraps.values()) {
-            if (db.getDeviceId().equals(deviceId)) {
-                bootstrap = db;
-            }
-        }
-
+        DeviceBootstrap bootstrap = bootstrapStore.getBoostrapForDeviceId(hubContext, deviceId);
         if (bootstrap != null) {
             if (bootstrap.getBootstrapTime() == null) {
                 bootstrap.setBootstrapTime(System.currentTimeMillis());
+                bootstrapStore.saveBootstrap(hubContext, bootstrap);
                 return bootstrap;
             } else {
                 throw new DeviceAlreadyBoostrappedException(bootstrap.getId());
@@ -117,20 +122,21 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public void deleteDeviceBootstrap(HubContext hubContext, String id) {
-        bootstraps.remove(id);
+        bootstrapStore.deleteBootstrap(hubContext, id);
     }
 
     @Override
     public boolean verifyDeviceBootstrap(HubContext hubContext, String id, String secret) {
-        DeviceBootstrap db = bootstraps.get(id);
+        DeviceBootstrap db = bootstrapStore.getBootstrap(hubContext, id);
         return (db != null && secret.equals(db.getSecret()));
     }
 
     @Override
     public void resetDeviceBootstrap(HubContext hubContext, String id) {
-        DeviceBootstrap db = bootstraps.get(id);
+        DeviceBootstrap db = bootstrapStore.getBootstrap(hubContext, id);
         if (db != null) {
             db.setBootstrapTime(null);
+            bootstrapStore.saveBootstrap(hubContext, db);
         }
     }
 

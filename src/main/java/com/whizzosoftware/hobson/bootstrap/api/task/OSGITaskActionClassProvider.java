@@ -15,7 +15,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
 import com.whizzosoftware.hobson.api.task.action.TaskActionClass;
 import com.whizzosoftware.hobson.api.task.action.TaskActionClassProvider;
-import com.whizzosoftware.hobson.bootstrap.api.task.store.TaskStore;
+import com.whizzosoftware.hobson.api.task.store.TaskStore;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.InvalidSyntaxException;

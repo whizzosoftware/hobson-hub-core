@@ -5,11 +5,9 @@
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
  *******************************************************************************/
-package com.whizzosoftware.hobson.bootstrap.api.task.store;
+package com.whizzosoftware.hobson.bootstrap.util;
 
 import com.whizzosoftware.hobson.api.persist.CollectionPersistenceContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import org.mapdb.DB;
 
 import java.util.*;
