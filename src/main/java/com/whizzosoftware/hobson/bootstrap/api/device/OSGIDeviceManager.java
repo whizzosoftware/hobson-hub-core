@@ -50,7 +50,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     volatile private PluginManager pluginManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
-    private final Map<String,ServiceRegistration> managedServiceRegistrations = new HashMap<>();
     private final Map<String,DeviceBootstrap> bootstraps = new HashMap<>();
 
     public void start() {
@@ -118,16 +117,21 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public void deleteDeviceBootstrap(HubContext hubContext, String id) {
-
+        bootstraps.remove(id);
     }
 
     @Override
     public boolean verifyDeviceBootstrap(HubContext hubContext, String id, String secret) {
         DeviceBootstrap db = bootstraps.get(id);
+        return (db != null && secret.equals(db.getSecret()));
+    }
+
+    @Override
+    public void resetDeviceBootstrap(HubContext hubContext, String id) {
+        DeviceBootstrap db = bootstraps.get(id);
         if (db != null) {
-            return secret.equals(db.getSecret());
+            db.setBootstrapTime(null);
         }
-        return false;
     }
 
     @Override
