@@ -82,7 +82,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
             for (VariableUpdate update : vune.getUpdates()) {
-                if (update.getValue() != null && update.getDeviceContext().hasDeviceId()) {
+                if (!update.isInitial() && update.getValue() != null && update.getDeviceContext().hasDeviceId()) {
                     HobsonDevice device = deviceManager.getDevice(update.getDeviceContext());
                     String s = createVariableChangeString(device.getName(), update.getName(), update.getValue());
                     if (s != null) {
@@ -112,6 +112,8 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
                 } else {
                     return deviceName + " was turned off";
                 }
+            case VariableConstants.LEVEL:
+                return deviceName + " level was changed";
             case VariableConstants.TARGET_TEMP_F:
             case VariableConstants.TARGET_TEMP_C:
                 return deviceName + " target temperature set to " + varValue;

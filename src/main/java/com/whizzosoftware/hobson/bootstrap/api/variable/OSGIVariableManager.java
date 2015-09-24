@@ -61,8 +61,16 @@ public class OSGIVariableManager implements VariableManager {
 
             if (var != null && (var.getValue() == null || !var.getValue().equals(update.getValue()))) {
                 logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
-                ((HobsonVariableImpl)var).setValue(update.getValue());
-                appliedUpdates.add(update);
+                Object oldValue = var.getValue();
+                Object newValue = update.getValue();
+                if (oldValue == null) {
+                    update.setInitial(true);
+                }
+                // TODO: write unit test to verify this logic
+                if ((newValue == null && oldValue != null) || (newValue != null && !newValue.equals(oldValue))) {
+                    ((HobsonVariableImpl)var).setValue(update.getValue());
+                    appliedUpdates.add(update);
+                }
             }
         }
 
