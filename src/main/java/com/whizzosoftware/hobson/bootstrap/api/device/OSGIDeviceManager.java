@@ -305,6 +305,14 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
+    public void checkInDevice(DeviceContext ctx, Long checkInTime) {
+        HobsonDevice device = getDevice(ctx);
+        if (device != null && device.getRuntime() != null) {
+            device.getRuntime().checkInDevice(checkInTime);
+        }
+    }
+
+    @Override
     synchronized public void unpublishDevice(final DeviceContext ctx, final EventLoopExecutor executor) {
         List<DeviceServiceRegistration> regs = serviceRegistrations.get(ctx.getPluginId());
         if (regs != null) {
