@@ -36,7 +36,7 @@ import java.util.List;
  * @author Dan Noguerol
  */
 public class OSGIActivityLogManager implements ActivityLogManager, EventListener {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private final Logger activityLog = LoggerFactory.getLogger("ACTIVITY");
 
     private volatile BundleContext bundleContext;
     private volatile EventManager eventManager;
@@ -75,10 +75,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
         // TODO: make this more efficient
         if (event instanceof TaskExecutionEvent) {
             TaskExecutionEvent tee = (TaskExecutionEvent)event;
-            JSONObject json = new JSONObject();
-            json.put("timestamp", tee.getTimestamp());
-            json.put("name", "Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
-            appendEvent(json.toString());
+            appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
             for (VariableUpdate update : vune.getUpdates()) {
@@ -86,10 +83,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
                     HobsonDevice device = deviceManager.getDevice(update.getDeviceContext());
                     String s = createVariableChangeString(device.getName(), update.getName(), update.getValue());
                     if (s != null) {
-                        JSONObject json = new JSONObject();
-                        json.put("timestamp", update.getTimestamp());
-                        json.put("name", s);
-                        appendEvent(json.toString());
+                        appendEvent(s);
                     }
                 }
             }
@@ -97,11 +91,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
     }
 
     protected void appendEvent(String s) {
-        try {
-            FileUtils.writeStringToFile(activityFile, s + "\n", true);
-        } catch (IOException e) {
-            logger.error("Error writing to activity log");
-        }
+        activityLog.info(s);
     }
 
     protected String createVariableChangeString(String deviceName, String varName, Object varValue) {
