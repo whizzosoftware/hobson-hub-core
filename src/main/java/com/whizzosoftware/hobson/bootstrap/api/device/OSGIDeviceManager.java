@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * An OSGi implementation of DeviceManager.
@@ -53,6 +54,14 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
     private DeviceBootstrapStore bootstrapStore;
+    private DeviceAvailabilityMonitor deviceAvailabilityMonitor;
+    private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "Device Availability Monitor");
+        }
+    });
+    private ScheduledFuture deviceAvailabilityFuture;
 
     public void start() {
         // if a bootstrap store hasn't already been injected, create a default one
@@ -70,10 +79,24 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error adding listener for device registrations");
         }
+
+        // start device availability monitor
+        deviceAvailabilityMonitor = new DeviceAvailabilityMonitor(HubContext.createLocal(), this, eventManager);
+        deviceAvailabilityFuture = deviceAvailabilityExecutor.scheduleAtFixedRate(
+            deviceAvailabilityMonitor,
+            Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
+            Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
+            TimeUnit.SECONDS
+        );
     }
 
     public void stop() {
         bundleContext.removeServiceListener(this);
+
+        // stop the device availability monitor
+        if (deviceAvailabilityFuture != null) {
+            deviceAvailabilityFuture.cancel(true);
+        }
     }
 
     @Override

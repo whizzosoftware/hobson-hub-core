@@ -8,9 +8,11 @@
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
+import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -54,5 +56,19 @@ public class EventFactoryTest {
         assertEquals("plugin", vune.getUpdates().get(0).getPluginId());
         assertEquals("name", vune.getUpdates().get(0).getName());
         assertEquals("value", vune.getUpdates().get(0).getValue());
+    }
+
+    @Test
+    public void testDeviceUnavailableEvent() throws Exception {
+        EventFactory ef = new EventFactory();
+        ef.addEventClass(DeviceUnavailableEvent.ID, DeviceUnavailableEvent.class);
+
+        Map<String,Object> props = new HashMap<>();
+        props.put(HobsonEvent.PROP_EVENT_ID, DeviceUnavailableEvent.ID);
+        props.put(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT, DeviceContext.create(HubContext.createLocal(), "plugin", "device"));
+
+        HobsonEvent event = ef.createEvent(props);
+        assertTrue(event instanceof DeviceUnavailableEvent);
+        assertEquals("local:local:plugin:device", ((DeviceUnavailableEvent)event).getDeviceContext().toString());
     }
 }
