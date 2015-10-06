@@ -67,7 +67,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Dictionary;
 import java.util.List;
 
 /**

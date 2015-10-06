@@ -11,10 +11,8 @@ import org.restlet.Application;
 import org.restlet.Request;
 import org.restlet.Response;
 import org.restlet.Restlet;
-import org.restlet.data.ChallengeScheme;
 import org.restlet.data.Reference;
 import org.restlet.routing.Router;
-import org.restlet.security.ChallengeAuthenticator;
 
 /**
  * A Restlet application for the Hobson Hub setup wizard.

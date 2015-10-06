@@ -24,7 +24,7 @@ public interface PluginListSource {
      *
      * @return a Map
      */
-    public Map<String,PluginDescriptor> getPlugins();
+    Map<String,PluginDescriptor> getPlugins();
 
     /**
      * Returns a specific plugin descriptor. Note that there may be more than one
@@ -34,5 +34,5 @@ public interface PluginListSource {
      *
      * @return a PluginDescriptor instance (or null if not found)
      */
-    public Collection<PluginDescriptor> getPlugin(PluginContext ctx);
+    Collection<PluginDescriptor> getPlugin(PluginContext ctx);
 }

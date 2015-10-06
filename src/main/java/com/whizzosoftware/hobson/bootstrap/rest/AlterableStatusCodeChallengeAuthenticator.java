@@ -15,7 +15,6 @@ import org.restlet.security.ChallengeAuthenticator;
 import org.restlet.security.Verifier;
 import org.restlet.util.Series;
 
-import java.util.Map;
 import java.util.logging.Level;
 
 /**
