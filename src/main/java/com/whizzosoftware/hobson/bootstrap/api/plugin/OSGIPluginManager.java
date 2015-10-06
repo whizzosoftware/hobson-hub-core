@@ -114,16 +114,6 @@ public class OSGIPluginManager implements PluginManager {
         return getPluginConfiguration(getLocalPlugin(ctx));
     }
 
-    @Override
-    public Object getLocalPluginConfigurationProperty(PluginContext ctx, String name) {
-        PropertyContainer c = getLocalPluginConfiguration(ctx);
-        if (c != null) {
-            return c.getPropertyValue(name);
-        } else {
-            return null;
-        }
-    }
-
     protected PropertyContainer getPluginConfiguration(HobsonPlugin plugin) {
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(plugin.getContext().getPluginId());
         Dictionary props = config.getProperties();

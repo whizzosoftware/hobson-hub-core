@@ -72,7 +72,7 @@ public class OSGITelemetryManager implements TelemetryManager {
     public void writeDeviceTelemetry(DeviceContext ctx, Map<String, TemporalValue> values) {
         for (String name : values.keySet()) {
             TemporalValue val = values.get(name);
-            writeDeviceVariableTelemetry(ctx, name, val.getValue(), val.getTime());
+            writeDeviceVariableTelemetry(ctx, name, val);
         }
     }
 
@@ -119,14 +119,14 @@ public class OSGITelemetryManager implements TelemetryManager {
     }
 
     @Override
-    public void writeDeviceVariableTelemetry(DeviceContext ctx, String name, Object value, long time) {
+    public void writeDeviceVariableTelemetry(DeviceContext ctx, String name, TemporalValue value) {
         try {
             final Object mutex = getTelemetryMutex(ctx, name);
             synchronized (mutex) {
                 File file = getTelemetryFile(ctx, name);
                 RrdDb db = new RrdDb(file.getAbsolutePath(), false);
                 Sample sample = db.createSample();
-                sample.setAndUpdate(Long.toString(time) + ":" + value);
+                sample.setAndUpdate(Long.toString(value.getTime()) + ":" + value.getValue());
                 db.close();
             }
         } catch (IOException e) {

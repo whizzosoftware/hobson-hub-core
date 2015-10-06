@@ -20,10 +20,10 @@ import java.util.List;
  * @author Dan Noguerol
  */
 public interface VariableStore {
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId);
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId, String name);
-    public Collection<String> getVariableNames();
-    public void publishVariable(HobsonVariable variable);
-    public void unpublishVariable(PluginContext ctx, String deviceId, String name);
-    public void unpublishVariables(PluginContext ctx, String deviceId);
+    List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId);
+    List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId, String name);
+    Collection<String> getVariableNames();
+    void publishVariable(HobsonVariable variable);
+    void unpublishVariable(PluginContext ctx, String deviceId, String name);
+    void unpublishVariables(PluginContext ctx, String deviceId);
 }
