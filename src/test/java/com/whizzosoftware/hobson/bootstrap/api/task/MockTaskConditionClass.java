@@ -17,7 +17,7 @@ public class MockTaskConditionClass extends TaskConditionClass {
     }
 
     @Override
-    public ConditionClassType getType() {
+    public ConditionClassType getConditionClassType() {
         return ConditionClassType.evaluator;
     }
 

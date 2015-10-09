@@ -7,6 +7,8 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.util;
 
+import com.whizzosoftware.hobson.api.device.DeviceContext;
+
 import java.io.IOException;
 import java.util.Dictionary;
 import java.util.Hashtable;
@@ -19,6 +21,15 @@ import java.util.Map;
  */
 public class DictionaryUtil {
 
+    /**
+     * Updates a configuration dictionary with a Map of values.
+     *
+     * @param config the configuration dictionary to update
+     * @param values the updated values
+     * @param overwrite indicates whether an existing value should be overwritten
+     *
+     * @throws IOException on failure
+     */
     static public void updateConfigurationDictionary(org.osgi.service.cm.Configuration config, Map<String,Object> values, boolean overwrite) throws IOException {
         Dictionary props = config.getProperties();
         if (props == null) {
@@ -27,7 +38,11 @@ public class DictionaryUtil {
 
         for (String key : values.keySet()) {
             if (props.get(key) == null || overwrite) {
-                props.put(key, values.get(key));
+                Object v = values.get(key);
+                if (v instanceof DeviceContext) {
+                    v = v.toString();
+                }
+                props.put(key, v);
             }
         }
 

@@ -43,7 +43,7 @@ public class TaskHelperTest {
         PropertyContainerClassContext ccCtx = PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1");
         tm.publishConditionClass(new TaskConditionClass(ccCtx, "foo", "") {
             @Override
-            public ConditionClassType getType() {
+            public ConditionClassType getConditionClassType() {
                 return ConditionClassType.evaluator;
             }
 
@@ -69,7 +69,7 @@ public class TaskHelperTest {
         PropertyContainerClassContext ccCtx2 = PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc2");
         tm.publishConditionClass(new TaskConditionClass(ccCtx1, "foo1", "") {
             @Override
-            public ConditionClassType getType() {
+            public ConditionClassType getConditionClassType() {
                 return ConditionClassType.evaluator;
             }
 
@@ -85,7 +85,7 @@ public class TaskHelperTest {
         });
         tm.publishConditionClass(new TaskConditionClass(ccCtx2, "foo2", "") {
             @Override
-            public ConditionClassType getType() {
+            public ConditionClassType getConditionClassType() {
                 return ConditionClassType.trigger;
             }
 

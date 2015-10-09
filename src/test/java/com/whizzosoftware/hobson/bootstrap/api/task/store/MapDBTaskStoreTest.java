@@ -188,7 +188,7 @@ public class MapDBTaskStoreTest {
         PropertyContainerClassContext pccc2 = PropertyContainerClassContext.create(PluginContext.createLocal("plugin2"), "cc2");
         taskManager.publishConditionClass(new TaskConditionClass(pccc1, "", "") {
             @Override
-            public ConditionClassType getType() {
+            public ConditionClassType getConditionClassType() {
                 return ConditionClassType.trigger;
             }
 
@@ -204,7 +204,7 @@ public class MapDBTaskStoreTest {
         });
         taskManager.publishConditionClass(new TaskConditionClass(pccc2, "", "") {
             @Override
-            public ConditionClassType getType() {
+            public ConditionClassType getConditionClassType() {
                 return ConditionClassType.trigger;
             }
 

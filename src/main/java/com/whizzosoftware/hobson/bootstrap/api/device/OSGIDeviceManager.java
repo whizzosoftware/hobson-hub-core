@@ -244,6 +244,11 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
+    public PropertyContainerClass getDeviceConfigurationClass(DeviceContext ctx) {
+        return getDevice(ctx).getConfigurationClass();
+    }
+
+    @Override
     public Object getDeviceConfigurationProperty(DeviceContext ctx, String name) {
         try {
             for (Bundle bundle : bundleContext.getBundles()) {

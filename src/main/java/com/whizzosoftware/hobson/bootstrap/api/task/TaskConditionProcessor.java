@@ -45,7 +45,7 @@ public class TaskConditionProcessor {
             for (PropertyContainer pc : task.getConditions()) {
                 TaskConditionClass pcc = taskManager.getConditionClass(pc.getContainerClassContext());
                 if (pcc != null) {
-                    if (pcc.getType() == ConditionClassType.evaluator && !pcc.evaluate(new ConditionEvaluationContext() {
+                    if (pcc.getConditionClassType() == ConditionClassType.evaluator && !pcc.evaluate(new ConditionEvaluationContext() {
                         @Override
                         public VariableManager getVariableManager() {
                             return varManager;

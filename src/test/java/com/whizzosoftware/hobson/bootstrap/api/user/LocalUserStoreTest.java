@@ -51,6 +51,11 @@ public class LocalUserStoreTest {
             }
 
             @Override
+            public PropertyContainerClass getConfigurationClass(HubContext ctx) {
+                return null;
+            }
+
+            @Override
             public PropertyContainerClass getContainerClass(PropertyContainerClassContext ctx) {
                 return null;
             }

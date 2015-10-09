@@ -117,6 +117,11 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
+    public PropertyContainerClass getConfigurationClass(HubContext ctx) {
+        return getHub(ctx).getConfigurationClass();
+    }
+
+    @Override
     public PropertyContainerClass getContainerClass(PropertyContainerClassContext ctx) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");

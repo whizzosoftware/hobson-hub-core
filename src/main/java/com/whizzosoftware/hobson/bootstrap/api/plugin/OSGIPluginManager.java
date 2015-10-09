@@ -10,6 +10,7 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -111,10 +112,10 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public PropertyContainer getLocalPluginConfiguration(PluginContext ctx) {
-        return getPluginConfiguration(getLocalPlugin(ctx));
+        return getLocalPluginConfiguration(getLocalPlugin(ctx));
     }
 
-    protected PropertyContainer getPluginConfiguration(HobsonPlugin plugin) {
+    protected PropertyContainer getLocalPluginConfiguration(HobsonPlugin plugin) {
         org.osgi.service.cm.Configuration config = getOSGIConfiguration(plugin.getContext().getPluginId());
         Dictionary props = config.getProperties();
 
@@ -127,7 +128,11 @@ public class OSGIPluginManager implements PluginManager {
             for (TypedProperty meta : metas.getSupportedProperties()) {
                 Object value = null;
                 if (props != null) {
-                    value = props.get(meta.getId());
+                    if (meta.getType() == TypedProperty.Type.DEVICE) {
+                        value = DeviceContext.create((String)props.get(meta.getId()));
+                    } else {
+                        value = props.get(meta.getId());
+                    }
                     props.remove(meta.getId());
                 }
                 ci.setPropertyValue(meta.getId(), value);

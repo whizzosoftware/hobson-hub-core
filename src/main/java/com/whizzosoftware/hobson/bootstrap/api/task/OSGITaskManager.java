@@ -347,7 +347,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     TaskConditionClass tcc = (TaskConditionClass)context.getService(ref);
-                    if ((type == null || tcc.getType() == type) && (!applyConstraints || tcc.evaluatePropertyConstraints(publishedVariableNames))) {
+                    if ((type == null || tcc.getConditionClassType() == type) && (!applyConstraints || tcc.evaluatePropertyConstraints(publishedVariableNames))) {
                         results.add(tcc);
                     }
                 }
