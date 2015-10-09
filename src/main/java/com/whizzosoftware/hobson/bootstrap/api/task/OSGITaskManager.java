@@ -409,6 +409,14 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     @Override
     public void createTask(HubContext ctx, String name, String description, List<PropertyContainer> conditions, PropertyContainerSet actionSet) {
         if (conditions != null) {
+            // assign IDs to all conditions that don't already have one
+            for (PropertyContainer pc : conditions) {
+                if (!pc.hasId()) {
+                    pc.setId(UUID.randomUUID().toString());
+                }
+            }
+
+            // make sure task has a trigger condition
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
                 // convert explicit action set to action set ID

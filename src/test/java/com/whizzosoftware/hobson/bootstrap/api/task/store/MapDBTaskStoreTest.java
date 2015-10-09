@@ -71,7 +71,8 @@ public class MapDBTaskStoreTest {
         MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
 
         List<PropertyContainer> conditions = new ArrayList<>();
-        conditions.add(new PropertyContainer(PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
+        conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
+        conditions.add(new PropertyContainer("c2", PropertyContainerClassContext.create(HubContext.createLocal(), "cc2"), Collections.singletonMap("bar", (Object) "value")));
         TaskContext tctx = TaskContext.create(HubContext.createLocal(), "task1");
         HobsonTask task = new HobsonTask(
             tctx,
@@ -93,6 +94,7 @@ public class MapDBTaskStoreTest {
         assertEquals("Do something", t.getDescription());
         assertNull(t.getProperties());
         assertNotNull(t.getConditions());
+        assertEquals(2, t.getConditions().size());
         assertNotNull(t.getActionSet());
     }
 
@@ -105,7 +107,7 @@ public class MapDBTaskStoreTest {
         MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
 
         List<PropertyContainer> conditions = new ArrayList<>();
-        conditions.add(new PropertyContainer(PropertyContainerClassContext.create(HubContext.createLocal(), "turnOn"), Collections.singletonMap("devices", (Object)Collections.singletonList(DeviceContext.createLocal("plugin1", "device1")))));
+        conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "turnOn"), Collections.singletonMap("devices", (Object)Collections.singletonList(DeviceContext.createLocal("plugin1", "device1")))));
         TaskContext tctx = TaskContext.create(HubContext.createLocal(), "task1");
         HobsonTask task = new HobsonTask(
                 tctx,
