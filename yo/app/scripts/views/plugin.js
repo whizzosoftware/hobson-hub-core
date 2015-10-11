@@ -25,14 +25,10 @@ define([
         },
 
         render: function() {
-            this.$el.append(this.template({ 
-                plugin: this.plugin, 
-                strings: strings 
+            this.$el.append(this.template({
+                plugin: this.plugin,
+                strings: strings
             }));
-            HubService.getPluginImage(this, null).success(function(response, b, c) {
-                console.debug();
-                this.$el.find('.plugin-image').html($('<img src="data:' + c.getResponseHeader('content-type') + ';base64,' + response + '" />'));
-            });
             return this;
         },
 

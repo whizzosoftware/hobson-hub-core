@@ -28,7 +28,7 @@ define([
         subviews: [],
 
         initialize: function() {
-            this.footerView = new FooterView({previousTab: 'start', activeTab: 'plugins', nextTab: 'email'}); 
+            this.footerView = new FooterView({previousTab: 'start', activeTab: 'plugins', nextTab: 'email'});
         },
 
         remove: function() {
@@ -44,10 +44,8 @@ define([
             this.$el.append(this.loadingTemplate({strings: strings}));
 
             plugins.fetch({
-                context: this, 
+                context: this,
                 success: function(model, response, options) {
-                    console.debug(model);
-
                     var ctx = options.context;
                     ctx.$el.html(ctx.template({ strings: strings }));
                     ctx.$el.append(ctx.footerView.render().el);
@@ -62,7 +60,6 @@ define([
                                 containerEl.append(row);
                             }
                             var plugin = model.item(i);
-                            console.debug(plugin);
                             var pluginView = new PluginView(plugin);
                             row.append(pluginView.render().el);
                             ctx.subviews.push(pluginView);

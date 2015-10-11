@@ -56,7 +56,7 @@ define([
                     ctx.emailSender = ctx.$el.find('#emailSender');
 
                     // set the server type
-                    ctx.setServerType(model.get('values').emailServer);
+                    ctx.setServerType(model.get('values') && model.get('values').emailServer ? model.get('values').emailServer : null);
                 },
                 error: function(model, response, options) {
                     if (response.status === 401) {
