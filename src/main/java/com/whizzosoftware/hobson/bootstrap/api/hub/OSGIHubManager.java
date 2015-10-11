@@ -39,6 +39,8 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.util.*;
 
 /**
@@ -57,6 +59,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
     volatile private PluginManager pluginManager;
+
+    private NetworkInfo networkInfo;
 
     public void start() {
         String logLevel = (String)getConfigurationProperty(LOG_LEVEL);
@@ -168,6 +172,26 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub password", e);
         }
+    }
+
+    @Override
+    public NetworkInfo getNetworkInfo() throws IOException {
+        if (networkInfo == null) {
+            String nicString = System.getProperty("force.nic");
+            NetworkInterface nic;
+            InetAddress addr;
+            if (nicString != null) {
+                addr = InetAddress.getByName(nicString);
+                nic = NetworkInterface.getByInetAddress(addr);
+            } else {
+                addr = InetAddress.getLocalHost();
+                nic = NetworkInterface.getByInetAddress(addr);
+            }
+            networkInfo = new NetworkInfo(nic, addr);
+            logger.info("Using network address: " + addr.getHostAddress());
+        }
+
+        return networkInfo;
     }
 
     @Override

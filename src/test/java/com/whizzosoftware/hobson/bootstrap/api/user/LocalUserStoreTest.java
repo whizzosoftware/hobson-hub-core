@@ -7,6 +7,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import org.junit.Test;
 
+import java.net.NetworkInterface;
 import java.util.Collection;
 
 import static org.junit.Assert.*;
@@ -68,6 +69,11 @@ public class LocalUserStoreTest {
             @Override
             public LocalHubManager getLocalManager() {
                 return new LocalHubManager() {
+                    @Override
+                    public NetworkInfo getNetworkInfo() {
+                        return null;
+                    }
+
                     @Override
                     public boolean authenticateLocal(HubContext ctx, String password) {
                         return (password.equals("local"));
