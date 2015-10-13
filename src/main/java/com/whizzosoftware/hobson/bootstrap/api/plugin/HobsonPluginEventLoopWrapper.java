@@ -144,7 +144,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             @Override
             public void run() {
                 try {
-                    if (plugin.getContext() != null) {
+                    if (plugin != null && plugin.getContext() != null && plugin.getContext().getPluginId() != null) {
                         String pluginId = plugin.getContext().getPluginId();
                         if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent) event).getPluginId())) {
                             PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent) event;
@@ -166,6 +166,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                             logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
                             plugin.getRuntime().onHobsonEvent(event);
                         }
+                    } else {
+                        logger.error("Error processing event for plugin " + plugin + ": " + event);
                     }
                 } catch (Throwable e) {
                     logger.error("An error occurred processing an event", e);

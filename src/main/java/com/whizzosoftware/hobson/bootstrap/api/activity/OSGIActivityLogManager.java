@@ -56,8 +56,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
             if (activityFile.exists()) {
                 try (ReversedLinesFileReader reader = new ReversedLinesFileReader(activityFile)) {
                     String line;
-                    int count = 0;
-                    while ((line = reader.readLine()) != null && count < eventCount) {
+                    while ((line = reader.readLine()) != null && events.size() < eventCount) {
                         JSONObject json = new JSONObject(line);
                         events.add(new ActivityLogEntry(json.getLong("timestamp"), json.getString("name")));
                     }
@@ -73,7 +72,6 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
     public void onHobsonEvent(HobsonEvent event) {
         // TODO: make this more efficient
         if (event instanceof TaskExecutionEvent) {
-            TaskExecutionEvent tee = (TaskExecutionEvent)event;
             appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
