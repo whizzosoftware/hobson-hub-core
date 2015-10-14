@@ -40,7 +40,7 @@ public class MockTaskStore implements TaskStore {
     }
 
     @Override
-    public HobsonTask addTask(HobsonTask task) {
+    public HobsonTask saveTask(HobsonTask task) {
         tasks.put(task.getContext(), task);
         return task;
     }

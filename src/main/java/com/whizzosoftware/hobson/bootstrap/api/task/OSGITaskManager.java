@@ -375,7 +375,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                         task.setActionSet(actionSet);
 
                         // update the task in the task store
-                        taskStore.addTask(task);
+                        taskStore.saveTask(task);
 
                         // alert the plugin that the task has been updated
                         plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
@@ -404,6 +404,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         for (String key : properties.keySet()) {
             task.setProperty(key, properties.get(key));
         }
+        taskStore.saveTask(task);
     }
 
     @Override
@@ -426,7 +427,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
                 // create task and add to task store
                 final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
-                taskStore.addTask(task);
+                taskStore.saveTask(task);
 
                 queueTaskRegistration();
             } else {

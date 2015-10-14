@@ -24,10 +24,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class MapDBTaskStoreTest {
     @Test
@@ -73,16 +70,18 @@ public class MapDBTaskStoreTest {
         List<PropertyContainer> conditions = new ArrayList<>();
         conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
         conditions.add(new PropertyContainer("c2", PropertyContainerClassContext.create(HubContext.createLocal(), "cc2"), Collections.singletonMap("bar", (Object) "value")));
+        Map<String,Object> props = new HashMap<>();
+        props.put("foo", "bar");
         TaskContext tctx = TaskContext.create(HubContext.createLocal(), "task1");
         HobsonTask task = new HobsonTask(
             tctx,
             "My Task",
             "Do something",
-            null,
+            props,
             conditions,
             new PropertyContainerSet("actionSet1")
         );
-        store.addTask(task);
+        store.saveTask(task);
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
@@ -92,7 +91,9 @@ public class MapDBTaskStoreTest {
         assertNotNull(t);
         assertEquals("My Task", t.getName());
         assertEquals("Do something", t.getDescription());
-        assertNull(t.getProperties());
+        assertNotNull(t.getProperties());
+        assertEquals(1, t.getProperties().size());
+        assertEquals("bar", t.getProperties().get("foo"));
         assertNotNull(t.getConditions());
         assertEquals(2, t.getConditions().size());
         assertNotNull(t.getActionSet());
@@ -117,7 +118,7 @@ public class MapDBTaskStoreTest {
                 conditions,
                 new PropertyContainerSet("actionSet1")
         );
-        store.addTask(task);
+        store.saveTask(task);
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
@@ -167,7 +168,7 @@ public class MapDBTaskStoreTest {
                 conditions,
                 new PropertyContainerSet("actionSet1")
         );
-        store.addTask(task);
+        store.saveTask(task);
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
@@ -233,7 +234,7 @@ public class MapDBTaskStoreTest {
                 conditions,
                 new PropertyContainerSet("actionSet1")
         );
-        store.addTask(task);
+        store.saveTask(task);
 
         // add task 2
         conditions = new ArrayList<>();
@@ -247,7 +248,7 @@ public class MapDBTaskStoreTest {
                 conditions,
                 new PropertyContainerSet("actionSet1")
         );
-        store.addTask(task);
+        store.saveTask(task);
 
         // make sure only 1 task comes back
         Collection<HobsonTask> tasks = store.getAllTasks(taskManager, PluginContext.createLocal("plugin1"));
@@ -263,5 +264,51 @@ public class MapDBTaskStoreTest {
         task = tasks.iterator().next();
         assertEquals("My Task", task.getName());
         assertEquals("Do something", task.getDescription());
+    }
+
+    @Test
+    public void testUpdateTaskProperties() throws Exception {
+        File dbFile = File.createTempFile("test", ".mapdb");
+        dbFile.deleteOnExit();
+
+        MockTaskManager taskManager = new MockTaskManager();
+        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+
+        List<PropertyContainer> conditions = new ArrayList<>();
+        conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
+        conditions.add(new PropertyContainer("c2", PropertyContainerClassContext.create(HubContext.createLocal(), "cc2"), Collections.singletonMap("bar", (Object) "value")));
+        Map<String,Object> props = new HashMap<>();
+        props.put("foo", "bar");
+        TaskContext tctx = TaskContext.create(HubContext.createLocal(), "task1");
+        HobsonTask task = new HobsonTask(
+                tctx,
+                "My Task",
+                "Do something",
+                props,
+                conditions,
+                new PropertyContainerSet("actionSet1")
+        );
+        store.saveTask(task);
+
+        // close store and create new one against same file
+        store.close();
+        store = new MapDBTaskStore(dbFile, taskManager);
+        task = store.getTask(tctx);
+
+        assertNotNull(task.getProperties());
+        assertEquals("bar", task.getProperties().get("foo"));
+
+        // change the property
+        task.getProperties().put("foo", "bar2");
+        store.saveTask(task);
+
+        // close store and create new one against same file
+        store.close();
+        store = new MapDBTaskStore(dbFile, taskManager);
+        task = store.getTask(tctx);
+
+        assertNotNull(task.getProperties());
+        assertEquals(1, task.getProperties().size());
+        assertEquals("bar2", task.getProperties().get("foo"));
     }
 }

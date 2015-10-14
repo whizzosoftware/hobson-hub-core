@@ -118,7 +118,7 @@ public class MapDBTaskStore implements TaskStore {
     }
 
     @Override
-    public HobsonTask addTask(HobsonTask task) {
+    public HobsonTask saveTask(HobsonTask task) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
