@@ -7,7 +7,6 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import org.junit.Test;
 
-import java.net.NetworkInterface;
 import java.util.Collection;
 
 import static org.junit.Assert.*;
@@ -42,7 +41,7 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public boolean authenticateHub(HubContext ctx, HubCredentials credentials) {
+            public boolean authenticateHub(HubCredentials credentials) {
                 return false;
             }
 

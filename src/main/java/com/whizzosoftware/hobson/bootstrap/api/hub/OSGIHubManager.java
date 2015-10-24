@@ -105,7 +105,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public boolean authenticateHub(HubContext ctx, HubCredentials credentials) {
+    public boolean authenticateHub(HubCredentials credentials) {
         throw new UnsupportedOperationException();
     }
 
