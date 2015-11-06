@@ -42,7 +42,11 @@ public class DictionaryUtil {
                 if (v instanceof DeviceContext) {
                     v = v.toString();
                 }
-                props.put(key, v);
+                if (v != null) {
+                    props.put(key, v);
+                } else {
+                    props.remove(key);
+                }
             }
         }
 

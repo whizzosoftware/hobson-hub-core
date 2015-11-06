@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.variable;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.variable.HobsonVariable;
+import com.whizzosoftware.hobson.api.variable.VariableProxyType;
 
 /**
  * Concrete implementation of HobsonVariable.
@@ -19,11 +20,11 @@ public class HobsonVariableImpl implements HobsonVariable {
     private DeviceContext ctx;
     private String name;
     private Object value;
-    private String proxyType;
+    private VariableProxyType proxyType;
     private Mask mask;
     private Long lastUpdate;
 
-    public HobsonVariableImpl(DeviceContext ctx, String name, Object value, Mask mask, String proxyType) {
+    public HobsonVariableImpl(DeviceContext ctx, String name, Object value, Mask mask, VariableProxyType proxyType) {
         this.ctx = ctx;
         this.name = name;
         setValue(value);
@@ -42,7 +43,7 @@ public class HobsonVariableImpl implements HobsonVariable {
     }
 
     @Override
-    public String getProxyType() {
+    public VariableProxyType getProxyType() {
         return proxyType;
     }
 

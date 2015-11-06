@@ -37,7 +37,6 @@ import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
 import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
-import com.whizzosoftware.hobson.rest.v1.util.LinkProvider;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -135,7 +134,7 @@ public class Activator extends DependencyActivatorBase {
 
                     // register the REST API application
                     ApiV1Application app = new ApiV1Application();
-                    registerRestletApplication(app, LinkProvider.API_ROOT);
+                    registerRestletApplication(app, ApiV1Application.API_ROOT);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");

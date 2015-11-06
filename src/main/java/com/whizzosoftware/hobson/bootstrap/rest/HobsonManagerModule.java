@@ -22,8 +22,9 @@ import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.LocalAuthorizer;
+import com.whizzosoftware.hobson.dto.IdProvider;
 import com.whizzosoftware.hobson.rest.Authorizer;
-import com.whizzosoftware.hobson.rest.v1.util.LinkProvider;
+import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
@@ -35,7 +36,7 @@ import org.osgi.framework.ServiceReference;
  */
 public class HobsonManagerModule extends AbstractModule {
     private UserStore userStore;
-    private LinkProvider linkProvider = new LinkProvider();
+    private IdProvider idProvider = new RestResourceIdProvider();
     private Authorizer authorizer = new LocalAuthorizer();
 
     public HobsonManagerModule(UserStore userStore) {
@@ -52,8 +53,8 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
-    public LinkProvider provideLinkProvider() {
-        return linkProvider;
+    public IdProvider provideIdProvider() {
+        return idProvider;
     }
 
     @Provides

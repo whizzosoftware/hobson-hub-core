@@ -140,26 +140,6 @@ public class OSGIVariableManagerTest {
     }
 
     @Test
-    public void testGetAllVariablesWithProxy() {
-        MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin2", "device2"), "foo2", "bar2", HobsonVariable.Mask.READ_WRITE, null));
-
-        OSGIVariableManager vm = new OSGIVariableManager(vs);
-        Collection<HobsonVariable> vars = vm.getAllVariables(HubContext.createLocal(), new VariableProxyValueProvider() {
-            @Override
-            public Object getProxyValue(HobsonVariable v) {
-                return "bar3";
-            }
-        });
-        assertEquals(2, vars.size());
-
-        for (HobsonVariable v : vars) {
-            assertTrue((v.getPluginId().equals("plugin1") && v.getDeviceId().equals("device1") && v.getName().equals("foo") && v.getValue().equals("bar3")) || (v.getPluginId().equals("plugin2") && v.getDeviceId().equals("device2") && v.getName().equals("foo2") && v.getValue().equals("bar3")));
-        }
-    }
-
-    @Test
     public void testGetDeviceVariableNoProxy() {
         MockVariableStore vs = new MockVariableStore();
         vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
@@ -172,26 +152,6 @@ public class OSGIVariableManagerTest {
         assertEquals("device1", v.getDeviceId());
         assertEquals("foo", v.getName());
         assertEquals("bar", v.getValue());
-    }
-
-    @Test
-    public void testGetDeviceVariableWithProxy() {
-        MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin2", "device2"), "foo2", "bar2", HobsonVariable.Mask.READ_WRITE, null));
-
-        OSGIVariableManager vm = new OSGIVariableManager(vs);
-        HobsonVariable v = vm.getDeviceVariable(DeviceContext.createLocal("plugin1", "device1"), "foo", new VariableProxyValueProvider() {
-            @Override
-            public Object getProxyValue(HobsonVariable v) {
-                return "bar3";
-            }
-        });
-        assertNotNull(v);
-        assertEquals("plugin1", v.getPluginId());
-        assertEquals("device1", v.getDeviceId());
-        assertEquals("foo", v.getName());
-        assertEquals("bar3", v.getValue());
     }
 
     @Test
@@ -215,31 +175,6 @@ public class OSGIVariableManagerTest {
     }
 
     @Test
-    public void testGetDeviceVariablesWithProxy() {
-        MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo2", "bar2", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin2", "device1"), "foo", "bar3", HobsonVariable.Mask.READ_WRITE, null));
-
-        OSGIVariableManager vm = new OSGIVariableManager(vs);
-        HobsonVariableCollection hvc = vm.getDeviceVariables(DeviceContext.createLocal("plugin1", "device1"), new VariableProxyValueProvider() {
-            @Override
-            public Object getProxyValue(HobsonVariable v) {
-                return "bar4";
-            }
-        });
-        assertNotNull(hvc);
-        assertEquals(2, hvc.getCollection().size());
-
-        for (HobsonVariable v : hvc.getCollection()) {
-            assertEquals("plugin1", v.getPluginId());
-            assertEquals("device1", v.getDeviceId());
-            assertTrue("foo".equals(v.getName()) || "foo2".equals(v.getName()));
-            assertEquals("bar4", v.getValue());
-        }
-    }
-
-    @Test
     public void testGetGlobalVariable() {
         MockVariableStore vs = new MockVariableStore();
         vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
@@ -252,26 +187,6 @@ public class OSGIVariableManagerTest {
         assertEquals("plugin2", v.getPluginId());
         assertEquals("sunrise", v.getName());
         assertEquals("800", v.getValue());
-    }
-
-    @Test
-    public void testGetGlobalVariableWithProxy() {
-        MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo2", "bar2", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin2", OSGIVariableManager.GLOBAL_NAME), "sunrise", "800", HobsonVariable.Mask.READ_WRITE, null));
-
-        OSGIVariableManager vm = new OSGIVariableManager(vs);
-
-        HobsonVariable v = vm.getGlobalVariable(HubContext.createLocal(), "sunrise", new VariableProxyValueProvider() {
-            @Override
-            public Object getProxyValue(HobsonVariable v) {
-                return "900";
-            }
-        });
-        assertEquals("plugin2", v.getPluginId());
-        assertEquals("sunrise", v.getName());
-        assertEquals("900", v.getValue());
     }
 
     @Test
@@ -289,29 +204,6 @@ public class OSGIVariableManagerTest {
             assertTrue("plugin2".equals(v.getPluginId()) || "plugin3".equals(v.getPluginId()));
             assertTrue("sunrise".equals(v.getName()) || "sunset".equals(v.getName()));
             assertTrue("800".equals(v.getValue()) || "1800".equals(v.getValue()));
-        }
-    }
-
-    @Test
-    public void testGetGlobalVariablesWithProxy() {
-        MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo", "bar", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin1", "device1"), "foo2", "bar2", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin2", OSGIVariableManager.GLOBAL_NAME), "sunrise", "800", HobsonVariable.Mask.READ_WRITE, null));
-        vs.publishVariable(new HobsonVariableImpl(DeviceContext.createLocal("plugin3", OSGIVariableManager.GLOBAL_NAME), "sunset", "1800", HobsonVariable.Mask.READ_WRITE, null));
-
-        OSGIVariableManager vm = new OSGIVariableManager(vs);
-
-        Collection<HobsonVariable> results = vm.getGlobalVariables(HubContext.createLocal(), new VariableProxyValueProvider() {
-            @Override
-            public Object getProxyValue(HobsonVariable v) {
-                return "400";
-            }
-        });
-        for (HobsonVariable v : results) {
-            assertTrue("plugin2".equals(v.getPluginId()) || "plugin3".equals(v.getPluginId()));
-            assertTrue("sunrise".equals(v.getName()) || "sunset".equals(v.getName()));
-            assertEquals("400", v.getValue());
         }
     }
 

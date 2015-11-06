@@ -63,6 +63,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     private NetworkInfo networkInfo;
 
     public void start() {
+        // set the log level
         String logLevel = (String)getConfigurationProperty(LOG_LEVEL);
         if (logLevel != null) {
             ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel(logLevel));

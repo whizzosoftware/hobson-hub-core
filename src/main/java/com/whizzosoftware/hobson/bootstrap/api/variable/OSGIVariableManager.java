@@ -82,21 +82,7 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public Collection<HobsonVariable> getAllVariables(HubContext ctx) {
-        return getAllVariables(ctx, null);
-    }
-
-    @Override
-    public Collection<HobsonVariable> getAllVariables(HubContext ctx, VariableProxyValueProvider proxyProvider) {
-        List<HobsonVariable> vars = variableStore.getVariables(ctx, null, null);
-        if (vars != null && proxyProvider != null) {
-            List<HobsonVariable> results = new ArrayList<>();
-            for (HobsonVariable v : vars) {
-                results.add(new HobsonVariableValueOverrider(v, proxyProvider.getProxyValue(v)));
-            }
-            return results;
-        } else {
-            return vars;
-        }
+        return variableStore.getVariables(ctx, null, null);
     }
 
     @Override
@@ -106,64 +92,22 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public HobsonVariable getDeviceVariable(DeviceContext ctx, String name) {
-        return getDeviceVariable(ctx, name, null);
-    }
-
-    @Override
-    public HobsonVariable getDeviceVariable(DeviceContext ctx, String name, VariableProxyValueProvider proxyProvider) {
-        HobsonVariable v = getUniqueVariable(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId(), name, proxyProvider);
-        if (v != null && proxyProvider != null) {
-            return new HobsonVariableValueOverrider(v, proxyProvider.getProxyValue(v));
-        } else {
-            return v;
-        }
+        return getUniqueVariable(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId(), name);
     }
 
     @Override
     public HobsonVariableCollection getDeviceVariables(DeviceContext ctx) {
-        return getDeviceVariables(ctx, null);
-    }
-
-    @Override
-    public HobsonVariableCollection getDeviceVariables(DeviceContext ctx, VariableProxyValueProvider proxyProvider) {
-        HobsonVariableCollection c = new HobsonVariableCollection(variableStore.getVariables(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId()));
-        if (proxyProvider != null) {
-            c.applyProxyValueProvider(proxyProvider);
-        }
-        return c;
+        return new HobsonVariableCollection(variableStore.getVariables(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId()));
     }
 
     @Override
     public HobsonVariable getGlobalVariable(HubContext ctx, String name) {
-        return getGlobalVariable(ctx, name, null);
-    }
-
-    @Override
-    public HobsonVariable getGlobalVariable(HubContext ctx, String name, VariableProxyValueProvider proxyProvider) {
-        HobsonVariable v = getUniqueVariable(ctx, null, null, name, proxyProvider);
-        if (proxyProvider != null) {
-            v = new HobsonVariableValueOverrider(v, proxyProvider.getProxyValue(v));
-        }
-        return v;
+        return getUniqueVariable(ctx, null, null, name);
     }
 
     @Override
     public Collection<HobsonVariable> getGlobalVariables(HubContext ctx) {
-        return getGlobalVariables(ctx, null);
-    }
-
-    @Override
-    public Collection<HobsonVariable> getGlobalVariables(HubContext ctx, VariableProxyValueProvider proxyProvider) {
-        List<HobsonVariable> vars = variableStore.getVariables(ctx, null, GLOBAL_NAME);
-        if (vars != null && proxyProvider != null) {
-            List<HobsonVariable> results = new ArrayList<>();
-            for (HobsonVariable v : vars) {
-                results.add(new HobsonVariableValueOverrider(v, proxyProvider.getProxyValue(v)));
-            }
-            return results;
-        } else {
-            return vars;
-        }
+        return variableStore.getVariables(ctx, null, GLOBAL_NAME);
     }
 
     @Override
@@ -178,7 +122,7 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask, String proxyType) {
+    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableProxyType proxyType) {
         // make sure the variable name is legal
         if (name == null || name.contains(",") || name.contains(":")) {
             throw new HobsonRuntimeException("Unable to publish variable \"" + name + "\": name is either null or contains an invalid character");
@@ -202,7 +146,7 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask, String proxyType) {
+    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableProxyType proxyType) {
         publishDeviceVariable(DeviceContext.create(ctx, GLOBAL_NAME), name, value, mask, proxyType);
     }
 
@@ -270,15 +214,11 @@ public class OSGIVariableManager implements VariableManager {
         variableStore.unpublishVariable(ctx, null, name);
     }
 
-    protected HobsonVariable getUniqueVariable(HubContext ctx, String pluginId, String deviceId, String name, VariableProxyValueProvider proxyProvider) {
+    protected HobsonVariable getUniqueVariable(HubContext ctx, String pluginId, String deviceId, String name) {
         Collection<HobsonVariable> results = variableStore.getVariables(ctx, pluginId, deviceId, name);
         if (results != null && results.size() > 0) {
             if (results.size() == 1) {
-                HobsonVariable v = results.iterator().next();
-                if (v != null && v.hasProxyType() && proxyProvider != null) {
-                    v = new HobsonVariableValueOverrider(v, proxyProvider.getProxyValue(v));
-                }
-                return v;
+                return results.iterator().next();
             } else {
                 throw new HobsonRuntimeException("Found multiple variables for " + ctx + "[" + name + "]");
             }

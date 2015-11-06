@@ -77,7 +77,7 @@ public class OSGIPluginManager implements PluginManager {
             if (references != null && references.length == 1) {
                 return (HobsonPlugin)context.getService(references[0]);
             } else if (references != null && references.length > 1) {
-                throw new HobsonRuntimeException("Duplicate devices detected");
+                throw new HobsonRuntimeException("Duplicate plugins detected");
             } else {
                 throw new HobsonNotFoundException("Unable to locate plugin: " + ctx);
             }

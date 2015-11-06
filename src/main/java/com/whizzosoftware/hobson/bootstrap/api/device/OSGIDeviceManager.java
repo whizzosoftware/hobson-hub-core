@@ -240,6 +240,8 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             ci.setPropertyValue(meta.getId(), value);
         }
 
+        ci.setContainerClassContext(metas.getContext());
+
         return ci;
     }
 
@@ -402,11 +404,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
-    public void setDeviceConfiguration(DeviceContext ctx, PropertyContainer config) {
-        // TODO
-    }
-
-    @Override
     public void setDeviceConfigurationProperty(DeviceContext ctx, String name, Object value, boolean overwrite) {
         setDeviceConfigurationProperties(ctx, Collections.singletonMap(name, value), overwrite);
     }
@@ -443,11 +440,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
         } catch (IOException e) {
             throw new ConfigurationException("Error obtaining configuration", e);
         }
-    }
-
-    @Override
-    public void setDeviceName(DeviceContext ctx, String name) {
-        setDeviceConfigurationProperty(ctx, "name", name, true);
     }
 
     synchronized private void addDeviceRegistration(String pluginId, ServiceRegistration deviceRegistration) {

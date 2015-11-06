@@ -57,6 +57,11 @@ public class OSGIPresenceManager implements PresenceManager, EventListener {
     }
 
     @Override
+    public void deleteEntity(PresenceEntityContext ctx) {
+        entities.remove(ctx);
+    }
+
+    @Override
     public PresenceLocation getEntityLocation(PresenceEntityContext ctx) {
         return getLocation(entityLocations.get(ctx));
     }
@@ -94,6 +99,11 @@ public class OSGIPresenceManager implements PresenceManager, EventListener {
         }
         locations.put(ctx, pl);
         return ctx;
+    }
+
+    @Override
+    public void deleteLocation(PresenceLocationContext ctx) {
+        locations.remove(ctx);
     }
 
     @Override
