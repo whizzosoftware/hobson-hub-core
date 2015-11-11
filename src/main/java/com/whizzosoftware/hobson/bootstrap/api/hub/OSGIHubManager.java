@@ -21,7 +21,6 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
-import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
@@ -58,7 +57,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
-    volatile private PluginManager pluginManager;
 
     private NetworkInfo networkInfo;
 
@@ -68,6 +66,16 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         if (logLevel != null) {
             ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel(logLevel));
         }
+    }
+
+    @Override
+    public String getVersion(HubContext hubContext) {
+        for (Bundle b : bundleContext.getBundles()) {
+            if ("com.whizzosoftware.hobson.hub.hobson-hub-core".equals(b.getSymbolicName())) {
+                return b.getVersion().toString();
+            }
+        }
+        return null;
     }
 
     public Collection<HobsonHub> getHubs(String userId) {

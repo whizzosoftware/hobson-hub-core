@@ -16,6 +16,11 @@ public class LocalUserStoreTest {
     public void testAuthenticate() {
         HubManager hubManager = new HubManager() {
             @Override
+            public String getVersion(HubContext hubContext) {
+                return null;
+            }
+
+            @Override
             public Collection<HobsonHub> getHubs(String userId) {
                 return null;
             }
