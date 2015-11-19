@@ -9,7 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.presence.store;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
-import com.whizzosoftware.hobson.api.persist.KeyUtil;
+import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.presence.PresenceEntity;
 import com.whizzosoftware.hobson.api.presence.PresenceEntityContext;
 import com.whizzosoftware.hobson.api.presence.PresenceLocation;
@@ -34,6 +34,7 @@ public class MapDBPresenceStore implements PresenceStore {
     private static final String PRESENCE_LOCATIONS_KEY = "presenceLocations";
 
     private DB db;
+    private ContextPathIdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister();
 
     public MapDBPresenceStore(File file) {
@@ -58,7 +59,7 @@ public class MapDBPresenceStore implements PresenceStore {
 
             List<PresenceEntity> results = new ArrayList<>();
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db, PRESENCE_ENTITIES_KEY);
-            String keyPrefix = KeyUtil.createPresenceEntitiesKey(HubContext.createLocal());
+            String keyPrefix = idProvider.createPresenceEntitiesId(HubContext.createLocal());
             for (String key : pctx.getKeySet()) {
                 if (key.startsWith(keyPrefix)) {
                     Map<String,Object> peMap = pctx.getMap(key);
@@ -120,7 +121,7 @@ public class MapDBPresenceStore implements PresenceStore {
 
             List<PresenceLocation> results = new ArrayList<>();
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db, PRESENCE_LOCATIONS_KEY);
-            String keyPrefix = KeyUtil.createPresenceLocationsKey(HubContext.createLocal());
+            String keyPrefix = idProvider.createPresenceLocationsId(HubContext.createLocal());
             for (String key : pctx.getKeySet()) {
                 if (key.startsWith(keyPrefix)) {
                     Map<String,Object> peMap = pctx.getMap(key);

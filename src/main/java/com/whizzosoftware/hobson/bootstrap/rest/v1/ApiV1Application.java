@@ -22,6 +22,6 @@ public class ApiV1Application extends AbstractApiV1Application {
     }
 
     @Override
-    protected void createAdditionalResources(Router router) {
+    protected void createAdditionalResources(Router secureRouter, Router insecureRouter) {
     }
 }

@@ -9,7 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.task.store;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
-import com.whizzosoftware.hobson.api.persist.KeyUtil;
+import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
@@ -37,6 +37,7 @@ public class MapDBTaskStore implements TaskStore {
 
     private DB db;
     private TaskManager taskManager;
+    private ContextPathIdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister();
 
     public MapDBTaskStore(File file, TaskManager taskManager) {
@@ -63,7 +64,7 @@ public class MapDBTaskStore implements TaskStore {
 
             List<HobsonTask> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db, "tasks");
-            String keyPrefix = KeyUtil.createTaskMetaRootKey(HubContext.createLocal());
+            String keyPrefix = idProvider.createTaskMetaRootId(HubContext.createLocal());
             for (String key : ctx.getKeySet()) {
                 if (key.startsWith(keyPrefix)) {
                     Map<String,Object> taskMetaMap = ctx.getMap(key);
@@ -85,7 +86,7 @@ public class MapDBTaskStore implements TaskStore {
 
             List<HobsonTask> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db, "tasks");
-            String keyPrefix = KeyUtil.createTaskMetaRootKey(HubContext.createLocal());
+            String keyPrefix = idProvider.createTaskMetaRootId(HubContext.createLocal());
             for (String key : ctx.getKeySet()) {
                 if (key.startsWith(keyPrefix)) {
                     Map<String,Object> taskMetaMap = ctx.getMap(key);
