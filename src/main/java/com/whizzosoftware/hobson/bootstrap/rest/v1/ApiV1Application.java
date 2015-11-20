@@ -7,8 +7,10 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.rest.v1;
 
+import com.whizzosoftware.hobson.bootstrap.rest.LocalAuthorizer;
 import com.whizzosoftware.hobson.rest.v1.AbstractApiV1Application;
 import org.restlet.routing.Router;
+import org.restlet.security.Authorizer;
 
 /**
  * The Hobson Hub REST API v1.
@@ -19,6 +21,11 @@ public class ApiV1Application extends AbstractApiV1Application {
     @Override
     protected String getRealmName() {
         return "Hobson";
+    }
+
+    @Override
+    protected Authorizer createAuthorizer() {
+        return new LocalAuthorizer();
     }
 
     @Override

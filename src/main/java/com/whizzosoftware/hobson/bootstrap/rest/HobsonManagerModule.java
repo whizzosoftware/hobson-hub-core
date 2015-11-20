@@ -22,8 +22,6 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.bootstrap.rest.v1.LocalAuthorizer;
-import com.whizzosoftware.hobson.rest.Authorizer;
 import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -37,7 +35,6 @@ import org.osgi.framework.ServiceReference;
 public class HobsonManagerModule extends AbstractModule {
     private UserStore userStore;
     private IdProvider idProvider = new RestResourceIdProvider();
-    private Authorizer authorizer = new LocalAuthorizer();
 
     public HobsonManagerModule(UserStore userStore) {
         this.userStore = userStore;
@@ -45,11 +42,6 @@ public class HobsonManagerModule extends AbstractModule {
 
     @Override
     protected void configure() {
-    }
-
-    @Provides
-    public Authorizer providerAuthorizer() {
-        return authorizer;
     }
 
     @Provides
