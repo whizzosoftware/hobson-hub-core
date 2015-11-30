@@ -11,10 +11,7 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.device.store.DeviceBootstrapStore;
-import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
-import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
-import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
-import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.EventLoopExecutor;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
@@ -53,6 +50,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     volatile private PluginManager pluginManager;
 
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
+    private Map<DeviceContext,Long> deviceCheckIns = Collections.synchronizedMap(new HashMap<DeviceContext,Long>());
     private DeviceBootstrapStore bootstrapStore;
     private DeviceAvailabilityMonitor deviceAvailabilityMonitor;
     private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
@@ -273,6 +271,11 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
+    public Long getDeviceLastCheckIn(DeviceContext ctx) {
+        return deviceCheckIns.get(ctx);
+    }
+
+    @Override
     public boolean hasDevice(DeviceContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
@@ -336,10 +339,8 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public void checkInDevice(DeviceContext ctx, Long checkInTime) {
-        HobsonDevice device = getDevice(ctx);
-        if (device != null && device.getRuntime() != null) {
-            device.getRuntime().checkInDevice(checkInTime);
-        }
+        deviceCheckIns.put(ctx, checkInTime);
+        eventManager.postEvent(ctx.getHubContext(), new DeviceCheckInEvent(ctx, System.currentTimeMillis()));
     }
 
     @Override
@@ -358,7 +359,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
                             @Override
                             public void run() {
                                 device.getRuntime().onShutdown();
-                                eventManager.postEvent(ctx.getPluginContext().getHubContext(), new DeviceStoppedEvent(now, reg.getDevice()));
+                                eventManager.postEvent(ctx.getHubContext(), new DeviceStoppedEvent(now, reg.getDevice()));
                             }
                         });
                         break;

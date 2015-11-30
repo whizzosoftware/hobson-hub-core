@@ -27,6 +27,7 @@ public class DeviceAvailabilityMonitorTest {
         // create some devices
         long now = System.currentTimeMillis();
         MockHobsonPlugin plugin = new MockHobsonPlugin("plugin");
+        plugin.setDeviceManager(dm);
         MockHobsonDevice device1  = new MockHobsonDevice(plugin, "device1");
         device1.checkInDevice(now);
         dm.publishDevice(device1);

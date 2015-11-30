@@ -41,7 +41,8 @@ public class DeviceAvailabilityMonitor implements Runnable {
     public void run(long now) {
         for (HobsonDevice device : deviceManager.getAllDevices(hubContext)) {
             Long lastNotificationTime = lastNotificationTimeMap.get(device.getContext());
-            if (device.getLastCheckIn() != null && now - device.getLastCheckIn() >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < device.getLastCheckIn())) {
+            Long lastCheckIn = deviceManager.getDeviceLastCheckIn(device.getContext());
+            if (lastCheckIn != null && now - lastCheckIn >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
                 eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, device.getContext()));
                 lastNotificationTimeMap.put(device.getContext(), now);
             }

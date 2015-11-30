@@ -1,5 +1,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.util;
 
+import com.whizzosoftware.hobson.api.device.MockDeviceManager;
 import com.whizzosoftware.hobson.api.device.MockHobsonDevice;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStoppedEvent;
@@ -17,6 +18,7 @@ public class EventUtilTest {
     @Test
     public void testDeviceStartedToEventMapping() {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
         DeviceStartedEvent dse = new DeviceStartedEvent(System.currentTimeMillis(), device);
         Event e = EventUtil.createEventFromHobsonEvent(dse);
@@ -29,6 +31,7 @@ public class EventUtilTest {
     @Test
     public void testEventToDeviceStartedMapping() {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
         Map props = new HashMap();
@@ -47,6 +50,7 @@ public class EventUtilTest {
     @Test
     public void testDeviceStoppedEventMapping() {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
         DeviceStoppedEvent dse = new DeviceStoppedEvent(System.currentTimeMillis(), device);
@@ -60,6 +64,7 @@ public class EventUtilTest {
     @Test
     public void testEventToDeviceStoppedMapping() {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
         Map props = new HashMap();
