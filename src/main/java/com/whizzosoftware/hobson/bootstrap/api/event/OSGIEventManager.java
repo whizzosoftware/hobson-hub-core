@@ -41,6 +41,7 @@ public class OSGIEventManager implements EventManager {
     public OSGIEventManager() {
         try {
             eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
+            eventFactory.addEventClass(DeviceCheckInEvent.ID, DeviceCheckInEvent.class);
             eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
             eventFactory.addEventClass(DeviceStartedEvent.ID, DeviceStartedEvent.class);
             eventFactory.addEventClass(DeviceStoppedEvent.ID, DeviceStoppedEvent.class);
