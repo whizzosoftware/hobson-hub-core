@@ -22,6 +22,8 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
+import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
@@ -34,7 +36,6 @@ import org.osgi.framework.ServiceReference;
  */
 public class HobsonManagerModule extends AbstractModule {
     private UserStore userStore;
-    private IdProvider idProvider = new RestResourceIdProvider();
 
     public HobsonManagerModule(UserStore userStore) {
         this.userStore = userStore;
@@ -42,11 +43,9 @@ public class HobsonManagerModule extends AbstractModule {
 
     @Override
     protected void configure() {
-    }
-
-    @Provides
-    public IdProvider provideIdProvider() {
-        return idProvider;
+        bind(IdProvider.class).to(RestResourceIdProvider.class).asEagerSingleton();
+        bind(MediaProxyHandler.class).to(LocalDeviceMediaProxyHandler.class).asEagerSingleton();
+        bind(DTOBuildContextFactory.class).to(DTOBuildContextFactoryImpl.class);
     }
 
     @Provides
@@ -100,13 +99,13 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
-    public UserStore provideUserStore() {
-        return userStore;
+    public VariableManager provideVariableManager() {
+        return (VariableManager)getManager(VariableManager.class);
     }
 
     @Provides
-    public VariableManager provideVariableManager() {
-        return (VariableManager)getManager(VariableManager.class);
+    public UserStore provideUserStore() {
+        return userStore;
     }
 
     private Object getManager(Class clazz) {
