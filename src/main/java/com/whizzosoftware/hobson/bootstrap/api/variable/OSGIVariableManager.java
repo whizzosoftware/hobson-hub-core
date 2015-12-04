@@ -68,7 +68,7 @@ public class OSGIVariableManager implements VariableManager {
                 }
                 // TODO: write unit test to verify this logic
                 if ((newValue == null && oldValue != null) || (newValue != null && !newValue.equals(oldValue))) {
-                    ((HobsonVariableImpl)var).setValue(update.getValue());
+                    ((MutableHobsonVariable)var).setValue(update.getValue());
                     appliedUpdates.add(update);
                 }
             }
@@ -122,7 +122,7 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableProxyType proxyType) {
+    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
         // make sure the variable name is legal
         if (name == null || name.contains(",") || name.contains(":")) {
             throw new HobsonRuntimeException("Unable to publish variable \"" + name + "\": name is either null or contains an invalid character");
@@ -136,7 +136,7 @@ public class OSGIVariableManager implements VariableManager {
         logger.debug("Publishing device variable {}[{}] with value {}", ctx, name, value);
 
         variableStore.publishVariable(
-            new HobsonVariableImpl(ctx, name, value, mask, proxyType)
+            new MutableHobsonVariable(ctx, name, mask, value, mediaType)
         );
     }
 
@@ -146,8 +146,8 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableProxyType proxyType) {
-        publishDeviceVariable(DeviceContext.create(ctx, GLOBAL_NAME), name, value, mask, proxyType);
+    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
+        publishDeviceVariable(DeviceContext.create(ctx, GLOBAL_NAME), name, value, mask, mediaType);
     }
 
     @Override

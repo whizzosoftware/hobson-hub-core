@@ -18,8 +18,7 @@ import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.dto.ExpansionFields;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContext;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
-import com.whizzosoftware.hobson.dto.context.ManagerDTOBuildContext;
-import com.whizzosoftware.hobson.rest.v1.util.MediaVariableProxyProvider;
+import com.whizzosoftware.hobson.dto.context.MediaProxyDTOBuildContext;
 
 /**
  * An implementation of DTOBuildContextFactory that uses Hobson manager objects to obtain data.
@@ -44,14 +43,13 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
 
     @Override
     public DTOBuildContext createContext(String apiRoot, ExpansionFields expansions) {
-        return new ManagerDTOBuildContext.Builder().
+        return new MediaProxyDTOBuildContext.Builder(apiRoot).
             deviceManager(deviceManager).
             hubManager(hubManager).
             pluginManager(pluginManager).
             presenceManager(presenceManager).
             taskManager(taskManager).
             variableManager(variableManager).
-            addProxyValueProvider(new MediaVariableProxyProvider(apiRoot)).
             expansionFields(expansions).
             idProvider(idProvider).
             build();
