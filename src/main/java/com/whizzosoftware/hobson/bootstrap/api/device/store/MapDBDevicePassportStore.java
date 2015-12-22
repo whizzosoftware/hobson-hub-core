@@ -7,8 +7,8 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
-import com.whizzosoftware.hobson.api.device.DeviceBootstrap;
-import com.whizzosoftware.hobson.api.device.store.DeviceBootstrapStore;
+import com.whizzosoftware.hobson.api.device.DevicePassport;
+import com.whizzosoftware.hobson.api.device.store.DevicePassportStore;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
 import com.whizzosoftware.hobson.bootstrap.util.MapDBCollectionPersistenceContext;
@@ -27,13 +27,13 @@ import java.util.List;
  *
  * @author Dan Noguerol
  */
-public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
-    private static final Logger logger = LoggerFactory.getLogger(MapDBDeviceBootstrapStore.class);
+public class MapDBDevicePassportStore implements DevicePassportStore {
+    private static final Logger logger = LoggerFactory.getLogger(MapDBDevicePassportStore.class);
 
     private DB db;
     private CollectionPersister persister = new CollectionPersister();
 
-    public MapDBDeviceBootstrapStore(File file) {
+    public MapDBDevicePassportStore(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -48,15 +48,15 @@ public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
     }
 
     @Override
-    public Collection<DeviceBootstrap> getAllBootstraps(HubContext hctx) {
+    public Collection<DevicePassport> getAllPassports(HubContext hctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            List<DeviceBootstrap> results = new ArrayList<>();
+            List<DevicePassport> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db, "deviceBootstraps");
             for (String key : ctx.getKeySet()) {
-                DeviceBootstrap db = persister.restoreDeviceBootstrap(ctx, key);
+                DevicePassport db = persister.restoreDevicePassport(ctx, key);
                 if (db != null) {
                     results.add(db);
                 }
@@ -69,13 +69,13 @@ public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
     }
 
     @Override
-    public DeviceBootstrap getBootstrap(HubContext hctx, String id) {
+    public DevicePassport getPassport(HubContext hctx, String id) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db, "deviceBootstraps");
-            return persister.restoreDeviceBootstrap(ctx, id);
+            return persister.restoreDevicePassport(ctx, id);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -83,19 +83,19 @@ public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
     }
 
     @Override
-    public boolean hasBootstrapForDeviceId(HubContext hctx, String deviceId) {
-        return (getBoostrapForDeviceId(hctx, deviceId) != null);
+    public boolean hasPassportForDeviceId(HubContext hctx, String deviceId) {
+        return (getPassportForDeviceId(hctx, deviceId) != null);
     }
 
     @Override
-    public DeviceBootstrap getBoostrapForDeviceId(HubContext hctx, String deviceId) {
+    public DevicePassport getPassportForDeviceId(HubContext hctx, String deviceId) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db, "deviceBootstraps");
             for (String key : ctx.getKeySet()) {
-                DeviceBootstrap db = persister.restoreDeviceBootstrap(ctx, key);
+                DevicePassport db = persister.restoreDevicePassport(ctx, key);
                 if (db != null && db.getDeviceId().equals(deviceId)) {
                     return db;
                 }
@@ -108,13 +108,13 @@ public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
     }
 
     @Override
-    public DeviceBootstrap saveBootstrap(HubContext hctx, DeviceBootstrap bootstrap) {
+    public DevicePassport savePassport(HubContext hctx, DevicePassport bootstrap) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding device bootstrap: {}", bootstrap.toString());
-            persister.saveDeviceBootstrap(new MapDBCollectionPersistenceContext(db, "deviceBootstraps"), bootstrap);
+            persister.saveDevicePassport(new MapDBCollectionPersistenceContext(db, "deviceBootstraps"), bootstrap);
             return bootstrap;
 
         } finally {
@@ -123,13 +123,13 @@ public class MapDBDeviceBootstrapStore implements DeviceBootstrapStore {
     }
 
     @Override
-    public void deleteBootstrap(HubContext hctx, String id) {
+    public void deletePassport(HubContext hctx, String id) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting device bootstrap: {}", id);
-            persister.deleteDeviceBootstrap(new MapDBCollectionPersistenceContext(db, "deviceBootstraps"), id);
+            persister.deleteDevicePassport(new MapDBCollectionPersistenceContext(db, "deviceBootstraps"), id);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
