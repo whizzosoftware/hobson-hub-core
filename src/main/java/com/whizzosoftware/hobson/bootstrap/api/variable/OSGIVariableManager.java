@@ -50,7 +50,7 @@ public class OSGIVariableManager implements VariableManager {
     @Override
     public void applyVariableUpdates(HubContext ctx, List<VariableUpdate> updates) {
         HobsonVariable var;
-        List<VariableUpdate> appliedUpdates = new ArrayList<>(); // track which updates were applied
+        List<VariableUpdate> appliedUpdates = null;
 
         for (VariableUpdate update : updates) {
             if (update.isGlobal()) {
@@ -59,23 +59,24 @@ public class OSGIVariableManager implements VariableManager {
                 var = getDeviceVariable(DeviceContext.create(ctx, update.getPluginId(), update.getDeviceId()), update.getName());
             }
 
-            if (var != null && (var.getValue() == null || !var.getValue().equals(update.getValue()))) {
-                logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
-                Object oldValue = var.getValue();
-                Object newValue = update.getValue();
-                if (oldValue == null) {
-                    update.setInitial(true);
-                }
-                // TODO: write unit test to verify this logic
-                if ((newValue == null && oldValue != null) || (newValue != null && !newValue.equals(oldValue))) {
-                    ((MutableHobsonVariable)var).setValue(update.getValue());
-                    appliedUpdates.add(update);
-                }
+            logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
+            Object newValue = update.getValue();
+            if (var.getValue() == null) {
+                update.setInitial(true);
             }
+
+            // set the new value
+            ((MutableHobsonVariable)var).setValue(newValue);
+
+            // record the update that was applied for notification purposes
+            if (appliedUpdates == null) {
+                appliedUpdates = new ArrayList<>();
+            }
+            appliedUpdates.add(update);
         }
 
         // if any updates were actually applied, post update events for them
-        if (appliedUpdates.size() > 0) {
+        if (appliedUpdates != null && appliedUpdates.size() > 0) {
             eventManager.postEvent(ctx, new VariableUpdateNotificationEvent(System.currentTimeMillis(), appliedUpdates));
         }
     }

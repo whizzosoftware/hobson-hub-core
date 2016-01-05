@@ -48,11 +48,33 @@ public class OSGIVariableManagerTest {
         vm.applyVariableUpdates(ctx, Collections.singletonList(new VariableUpdate(dctx, "foo", "bar")));
         assertTrue(em.hasEvents());
         assertEquals(1, em.getEventCount());
+        List<VariableUpdate> up = (List<VariableUpdate>)em.getEvent(0).getProperties().get("updates");
+        assertEquals(1, up.size());
+        VariableUpdate u = up.get(0);
+        assertEquals("foo", u.getName());
+        assertEquals("bar", u.getValue());
+        em.clearEvents();
 
         // try to apply an update to a published device variable with same value
         vm.applyVariableUpdates(ctx, Collections.singletonList(new VariableUpdate(dctx, "foo", "bar")));
         assertTrue(em.hasEvents());
         assertEquals(1, em.getEventCount());
+        up = (List<VariableUpdate>)em.getEvent(0).getProperties().get("updates");
+        assertEquals(1, up.size());
+        u = up.get(0);
+        assertEquals("foo", u.getName());
+        assertEquals("bar", u.getValue());
+        em.clearEvents();
+
+        // try to apply an update with a new null value
+        vm.applyVariableUpdates(ctx, Collections.singletonList(new VariableUpdate(dctx, "foo", null)));
+        assertTrue(em.hasEvents());
+        assertEquals(1, em.getEventCount());
+        up = (List<VariableUpdate>)em.getEvent(0).getProperties().get("updates");
+        assertEquals(1, up.size());
+        u = up.get(0);
+        assertEquals("foo", u.getName());
+        assertNull(u.getValue());
     }
 
     @Test
