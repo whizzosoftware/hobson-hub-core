@@ -110,11 +110,23 @@ public class HobsonManagerModule extends AbstractModule {
 
     private Object getManager(Class clazz) {
         BundleContext ctx = FrameworkUtil.getBundle(getClass()).getBundleContext();
-        ServiceReference ref = ctx.getServiceReference(clazz.getName());
-        if (ref != null) {
-            return ctx.getService(ref);
-        } else {
-            return null;
+        ServiceReference ref;
+        int count = 0;
+
+        // since requests may still come in while the runtime is initializing, we re-try for up to two seconds to
+        // obtain a manager instance (returning null immediately will cause a Guice error)
+        while (count < 20) {
+            ref = ctx.getServiceReference(clazz.getName());
+            if (ref != null) {
+                return ctx.getService(ref);
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException ignored) {}
+            }
+            count++;
         }
+
+        return null;
     }
 }

@@ -53,6 +53,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private volatile VariableManager variableManager;
 
     private HobsonPlugin plugin;
+    private boolean stopped = false;
 
     /**
      * Constructor.
@@ -123,6 +124,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
 
                 // drop reference
                 plugin = null;
+
+                stopped = true;
             }
         });
 
@@ -140,34 +143,37 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
 
     @Override
     public void onHobsonEvent(final HobsonEvent event) {
-        plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+        plugin.getRuntime().submitInEventLoop(new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (plugin != null && plugin.getContext() != null && plugin.getContext().getPluginId() != null) {
-                        String pluginId = plugin.getContext().getPluginId();
-                        if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent) event).getPluginId())) {
-                            PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent) event;
-                            logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
-                            plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
-                        } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent) event).getPluginId())) {
-                            DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent) event;
-                            logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
-                            plugin.getRuntime().onDeviceConfigurationUpdate(DeviceContext.create(plugin.getContext(), dcue.getDeviceId()), dcue.getConfiguration());
-                        } else if (event instanceof VariableUpdateRequestEvent) {
-                            VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent) event;
-                            for (VariableUpdate update : dcue.getUpdates()) {
-                                if (pluginId.equals(update.getPluginId())) {
-                                    logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
-                                    plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
+                    // ignore the event if the plugin has been stopped
+                    if (!stopped) {
+                        if (plugin != null && plugin.getContext() != null && plugin.getContext().getPluginId() != null) {
+                            String pluginId = plugin.getContext().getPluginId();
+                            if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
+                                PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
+                                logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
+                                plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
+                            } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
+                                DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
+                                logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
+                                plugin.getRuntime().onDeviceConfigurationUpdate(DeviceContext.create(plugin.getContext(), dcue.getDeviceId()), dcue.getConfiguration());
+                            } else if (event instanceof VariableUpdateRequestEvent) {
+                                VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
+                                for (VariableUpdate update : dcue.getUpdates()) {
+                                    if (pluginId.equals(update.getPluginId())) {
+                                        logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
+                                        plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
+                                    }
                                 }
+                            } else {
+                                logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
+                                plugin.getRuntime().onHobsonEvent(event);
                             }
                         } else {
-                            logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
-                            plugin.getRuntime().onHobsonEvent(event);
+                            logger.error("Error processing event for plugin " + plugin + ": " + event);
                         }
-                    } else {
-                        logger.error("Error processing event for plugin " + plugin + ": " + event);
                     }
                 } catch (Throwable e) {
                     logger.error("An error occurred processing an event", e);
