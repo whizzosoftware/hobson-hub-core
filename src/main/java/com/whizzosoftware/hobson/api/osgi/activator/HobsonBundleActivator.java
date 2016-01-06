@@ -38,7 +38,7 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
     @Override
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         // get the Hobson plugin class from the OSGi bundle manifest
-        String pluginClass = getHobsonPluginClass((String)context.getBundle().getHeaders().get("Provide-Capability"));
+        String pluginClass = getHobsonPluginClass(context.getBundle().getHeaders().get("Provide-Capability"));
         if (pluginClass != null) {
             final String pluginId = context.getBundle().getSymbolicName();
 

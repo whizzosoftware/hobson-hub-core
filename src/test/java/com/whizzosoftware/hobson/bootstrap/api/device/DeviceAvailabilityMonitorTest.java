@@ -29,10 +29,10 @@ public class DeviceAvailabilityMonitorTest {
         MockHobsonPlugin plugin = new MockHobsonPlugin("plugin");
         plugin.setDeviceManager(dm);
         MockHobsonDevice device1  = new MockHobsonDevice(plugin, "device1");
-        device1.checkInDevice(now);
+        device1.setDeviceAvailability(true, now);
         dm.publishDevice(device1);
         MockHobsonDevice device2 = new MockHobsonDevice(plugin, "device2");
-        device2.checkInDevice(now);
+        device2.setDeviceAvailability(true, now);
         dm.publishDevice(device2);
 
         DeviceAvailabilityMonitor monitor = new DeviceAvailabilityMonitor(hctx, dm, em);
@@ -60,7 +60,7 @@ public class DeviceAvailabilityMonitorTest {
         assertEquals(0, em.getEventCount());
 
         // check in one device
-        device1.checkInDevice(now + HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL + 1000);
+        device1.setDeviceAvailability(true, now + HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL + 1000);
 
         // make sure no events fire after the 5 minute mark
         monitor.run(now + HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL + 900);

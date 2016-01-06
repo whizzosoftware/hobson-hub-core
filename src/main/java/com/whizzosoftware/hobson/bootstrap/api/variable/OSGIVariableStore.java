@@ -109,16 +109,12 @@ public class OSGIVariableStore implements VariableStore {
         synchronized (variableRegistrations) {
             List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
-                VariableRegistration vr = null;
-                for (VariableRegistration reg : regs) {
+                for (Iterator<VariableRegistration> iterator = regs.iterator(); iterator.hasNext();) {
+                    VariableRegistration reg = iterator.next();
                     if (reg.getPluginId().equals(ctx.getPluginId()) && (deviceId == null || reg.getDeviceId().equals(deviceId))) {
-                        vr = reg;
-                        break;
+                        reg.unregister();
+                        iterator.remove();
                     }
-                }
-                if (vr != null) {
-                    vr.unregister();
-                    regs.remove(vr);
                 }
             }
         }

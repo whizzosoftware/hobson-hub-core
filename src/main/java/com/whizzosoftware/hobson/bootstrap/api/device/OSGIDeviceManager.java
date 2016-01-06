@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.device.store.DevicePassportStore;
 import com.whizzosoftware.hobson.api.event.*;
@@ -18,18 +17,16 @@ import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.api.device.store.DeviceStore;
 import com.whizzosoftware.hobson.bootstrap.api.device.store.MapDBDevicePassportStore;
-import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
-import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
-import org.osgi.framework.*;
+import com.whizzosoftware.hobson.bootstrap.api.device.store.OSGIDeviceStore;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -38,10 +35,8 @@ import java.util.concurrent.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIDeviceManager implements DeviceManager, ServiceListener {
+public class OSGIDeviceManager implements DeviceManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
-
-    private final static String DEVICE_PID_SEPARATOR = ".";
 
     volatile private BundleContext bundleContext;
     volatile private EventManager eventManager;
@@ -49,8 +44,9 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     volatile private VariableManager variableManager;
     volatile private PluginManager pluginManager;
 
-    private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
+    private Map<DeviceContext,Boolean> deviceAvailabilityMap = Collections.synchronizedMap(new HashMap<DeviceContext,Boolean>());
     private Map<DeviceContext,Long> deviceCheckIns = Collections.synchronizedMap(new HashMap<DeviceContext,Long>());
+    private DeviceStore deviceStore;
     private DevicePassportStore bootstrapStore;
     private DeviceAvailabilityMonitor deviceAvailabilityMonitor;
     private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
@@ -62,20 +58,20 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     private ScheduledFuture deviceAvailabilityFuture;
 
     public void start() {
+        // if a device store hasn't already been injected, create a default one
+        if (deviceStore == null) {
+            deviceStore = new OSGIDeviceStore(bundleContext, configAdmin, eventManager, pluginManager);
+            deviceStore.start();
+        }
+
         // if a bootstrap store hasn't already been injected, create a default one
         if (bootstrapStore == null) {
             this.bootstrapStore = new MapDBDevicePassportStore(
                 pluginManager.getDataFile(
-                        PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
-                        "bootstraps"
+                    PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                    "bootstraps"
                 )
             );
-        }
-
-        try {
-            bundleContext.addServiceListener(this, "(objectclass=" + HobsonDevice.class.getName() + ")");
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error adding listener for device registrations");
         }
 
         // start device availability monitor
@@ -89,7 +85,8 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     public void stop() {
-        bundleContext.removeServiceListener(this);
+        // stop the device store
+        deviceStore.stop();
 
         // stop the device availability monitor
         if (deviceAvailabilityFuture != null) {
@@ -162,85 +159,34 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
     }
 
     @Override
-    public Collection<HobsonDevice> getAllDevices(HubContext ctx) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            List<HobsonDevice> results = new ArrayList<>();
-            ServiceReference[] references = context.getServiceReferences(HobsonDevice.class.getName(), null);
-            if (references != null) {
-                for (ServiceReference ref : references) {
-                    results.add((HobsonDevice)context.getService(ref));
-                }
+    public void setDeviceAvailability(DeviceContext ctx, boolean available, Long checkInTime) {
+        deviceAvailabilityMap.put(ctx, available);
+        if (checkInTime != null) {
+            deviceCheckIns.put(ctx, checkInTime);
+            if (eventManager != null) {
+                eventManager.postEvent(ctx.getHubContext(), new DeviceCheckInEvent(ctx, System.currentTimeMillis()));
             }
-            return results;
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving devices", e);
         }
+    }
+
+    @Override
+    public Collection<HobsonDevice> getAllDevices(HubContext ctx) {
+        return deviceStore.getAllDevices(ctx);
     }
 
     @Override
     public Collection<HobsonDevice> getAllDevices(PluginContext ctx) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            List<HobsonDevice> results = new ArrayList<>();
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + ctx.getPluginId() + "))");
-            if (references != null) {
-                for (ServiceReference ref : references) {
-                    results.add((HobsonDevice)context.getService(ref));
-                }
-            }
-            return results;
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving device", e);
-        }
+        return deviceStore.getAllDevices(ctx);
     }
 
     @Override
     public HobsonDevice getDevice(DeviceContext ctx) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(deviceId=" + ctx.getDeviceId() + "))");
-            if (references != null && references.length == 1) {
-                return (HobsonDevice)context.getService(references[0]);
-            } else if (references != null && references.length > 1) {
-                throw new HobsonRuntimeException("Duplicate devices detected");
-            } else {
-                throw new DeviceNotFoundException(ctx);
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving device", e);
-        }
+        return deviceStore.getDevice(ctx);
     }
 
     @Override
     public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
-        org.osgi.service.cm.Configuration config = getOSGIDeviceConfiguration(ctx);
-        Dictionary props = config.getProperties();
-
-        // build a list of PropertyContainer objects
-        HobsonDevice device = getDevice(ctx);
-        PropertyContainerClass metas = device.getConfigurationClass();
-
-        PropertyContainer ci = new PropertyContainer();
-
-        for (TypedProperty meta : metas.getSupportedProperties()) {
-
-            Object value = null;
-            if (props != null) {
-                value = props.get(meta.getId());
-            }
-
-            // if the name property is null, use the default device name
-            if ("name".equals(meta.getId()) && value == null) {
-                value = device.getName();
-            }
-
-            ci.setPropertyValue(meta.getId(), value);
-        }
-
-        ci.setContainerClassContext(metas.getContext());
-
-        return ci;
+        return deviceStore.getDeviceConfiguration(ctx);
     }
 
     @Override
@@ -250,24 +196,19 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public Object getDeviceConfigurationProperty(DeviceContext ctx, String name) {
-        try {
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
-                    if (configAdmin != null) {
-                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
-                        Dictionary dic = config.getProperties();
-                        if (dic != null) {
-                            return dic.get(name);
-                        }
-                    } else {
-                        throw new ConfigurationException("Unable to get device configuration property: ConfigurationAdmin service is not available");
-                    }
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            throw new ConfigurationException("Error obtaining configuration", e);
-        }
+        return deviceStore.getDeviceConfigurationProperty(ctx, name);
+    }
+
+    @Override
+    public boolean isDeviceAvailable(DeviceContext ctx) {
+        return isDeviceAvailable(ctx, System.currentTimeMillis());
+    }
+
+    public boolean isDeviceAvailable(DeviceContext ctx, long now) {
+        Long checkin = deviceCheckIns.get(ctx);
+        boolean stale = (checkin == null || now - checkin >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL);
+        Boolean avail = deviceAvailabilityMap.get(ctx);
+        return (!stale && avail != null && avail);
     }
 
     @Override
@@ -277,18 +218,7 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public boolean hasDevice(DeviceContext ctx) {
-        try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonDevice.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(deviceId=" + ctx.getDeviceId() + "))");
-            if (references != null && references.length == 1) {
-                return true;
-            } else if (references != null && references.length > 1) {
-                throw new HobsonRuntimeException("Duplicate devices detected");
-            }
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving device", e);
-        }
-        return false;
+        return deviceStore.hasDevice(ctx);
     }
 
     @Override
@@ -298,9 +228,10 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     synchronized public void publishDevice(HobsonDevice device, boolean republish) {
-        BundleContext context = BundleUtil.getBundleContext(getClass(), device.getContext().getPluginId());
+        publishDevice(device, republish, System.currentTimeMillis());
+    }
 
-        String pluginId = device.getContext().getPluginId();
+    public void publishDevice(HobsonDevice device, boolean republish, long now) {
         String deviceId = device.getContext().getDeviceId();
 
         // check that the device ID is legal
@@ -308,99 +239,45 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
             throw new HobsonRuntimeException("Unable to publish device \"" + deviceId + "\": the ID is either null or contains an invalid character");
         }
 
-        // check if the device already exists
-        if (hasDevice(device.getContext())) {
-            // if it does and it's an explicit re-publish, remove the current device
-            if (republish) {
-                logger.debug("Removing existing device: {}", device.getContext());
-                removeDeviceRegistration(pluginId, deviceId);
-                // if it does and it's not an explicit re-publish, throw an exception
-            } else {
-                throw new HobsonRuntimeException("Attempt to publish a duplicate device: " + device.getContext());
-            }
+        // publish the device
+        if (deviceStore != null) {
+            deviceStore.publishDevice(device, republish);
         }
 
-        if (context != null) {
-            // register device as a service
-            Dictionary<String,String> props = new Hashtable<>();
-            props.put("pluginId", pluginId);
-            props.put("deviceId", deviceId);
-
-            logger.debug("Registering new device: {}", device.getContext());
-
-            ServiceRegistration deviceReg = context.registerService(
-                    HobsonDevice.class.getName(),
-                    device,
-                    props
-            );
-            addDeviceRegistration(pluginId, deviceReg);
-        }
-    }
-
-    @Override
-    public void checkInDevice(DeviceContext ctx, Long checkInTime) {
-        deviceCheckIns.put(ctx, checkInTime);
-        eventManager.postEvent(ctx.getHubContext(), new DeviceCheckInEvent(ctx, System.currentTimeMillis()));
+        // we assume that since the device is published, it's availability is true
+        setDeviceAvailability(device.getContext(), true, now);
     }
 
     @Override
     synchronized public void unpublishDevice(final DeviceContext ctx, final EventLoopExecutor executor) {
-        List<DeviceServiceRegistration> regs = serviceRegistrations.get(ctx.getPluginId());
-        if (regs != null) {
-            DeviceServiceRegistration dsr = null;
-            try {
-                final long now = System.currentTimeMillis();
-                for (final DeviceServiceRegistration reg : regs) {
-                    final HobsonDevice device = reg.getDevice();
-                    if (device != null && device.getContext().getDeviceId().equals(ctx.getDeviceId())) {
-                        dsr = reg;
-                        // execute the device's shutdown method using its plugin event loop
-                        executor.executeInEventLoop(new Runnable() {
-                            @Override
-                            public void run() {
-                                device.getRuntime().onShutdown();
-                                eventManager.postEvent(ctx.getHubContext(), new DeviceStoppedEvent(now, reg.getDevice()));
-                            }
-                        });
-                        break;
+        unpublishDevice(getDevice(ctx), executor);
+
+    }
+
+    synchronized public void unpublishDevice(final HobsonDevice device, final EventLoopExecutor executor) {
+        if (device != null) {
+            // execute the device's shutdown method using its plugin event loop
+            executor.executeInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        device.getRuntime().onShutdown();
+                        logger.debug("Device {} has shut down", device.getContext());
+                    } catch (Throwable t) {
+                        logger.error("Error shutting down device: " + device.getContext(), t);
+                    } finally {
+                        deviceStore.unpublishDevice(device.getContext());
+                        eventManager.postEvent(device.getContext().getHubContext(), new DeviceStoppedEvent(System.currentTimeMillis(), device));
                     }
                 }
-            } catch (Exception e) {
-                logger.error("Error stopping device: " + ctx, e);
-            } finally {
-                if (dsr != null) {
-                    dsr.unregister();
-                    regs.remove(dsr);
-                }
-            }
+            });
         }
     }
 
     @Override
     synchronized public void unpublishAllDevices(final PluginContext ctx, final EventLoopExecutor executor) {
-        List<DeviceServiceRegistration> regs = serviceRegistrations.get(ctx.getPluginId());
-        if (regs != null) {
-            try {
-                final long now = System.currentTimeMillis();
-                for (DeviceServiceRegistration reg : regs) {
-                    try {
-                        final HobsonDevice device = reg.getDevice();
-                        reg.unregister();
-                        // execute the device's shutdown method using its plugin event loop
-                        executor.executeInEventLoop(new Runnable() {
-                            @Override
-                            public void run() {
-                                device.getRuntime().onShutdown();
-                                eventManager.postEvent(ctx.getHubContext(), new DeviceStoppedEvent(now, device));
-                            }
-                        });
-                    } catch (Exception e) {
-                        logger.error("Error stopping device for " + ctx, e);
-                    }
-                }
-            } finally {
-                serviceRegistrations.remove(ctx.getPluginId());
-            }
+        for (HobsonDevice device : deviceStore.getAllDevices(ctx)) {
+            unpublishDevice(device, executor);
         }
     }
 
@@ -411,123 +288,6 @@ public class OSGIDeviceManager implements DeviceManager, ServiceListener {
 
     @Override
     public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite) {
-        try {
-            if (configAdmin != null) {
-                Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-
-                if (bundle != null) {
-                    // get configuration
-                    org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
-
-                    // update configuration dictionary
-                    DictionaryUtil.updateConfigurationDictionary(config, values, overwrite);
-
-                    // send update event
-                    eventManager.postEvent(
-                        ctx.getPluginContext().getHubContext(),
-                        new DeviceConfigurationUpdateEvent(
-                            System.currentTimeMillis(),
-                            ctx.getPluginId(),
-                            ctx.getDeviceId(),
-                            getDeviceConfiguration(ctx)
-                        )
-                    );
-                } else {
-                    throw new ConfigurationException("Unable to set device configuration: no bundle found for " + ctx.getPluginId());
-                }
-            } else {
-                throw new ConfigurationException("Unable to set device configuration: ConfigurationAdmin service is not available");
-            }
-        } catch (IOException e) {
-            throw new ConfigurationException("Error obtaining configuration", e);
-        }
-    }
-
-    synchronized private void addDeviceRegistration(String pluginId, ServiceRegistration deviceRegistration) {
-        List<DeviceServiceRegistration> regs = serviceRegistrations.get(pluginId);
-        if (regs == null) {
-            regs = new ArrayList<>();
-            serviceRegistrations.put(pluginId, regs);
-        }
-        regs.add(new DeviceServiceRegistration(deviceRegistration));
-    }
-
-    synchronized private void removeDeviceRegistration(String pluginId, String deviceId) {
-        DeviceServiceRegistration dr = null;
-        List<DeviceServiceRegistration> regs = serviceRegistrations.get(pluginId);
-        if (regs != null) {
-            for (DeviceServiceRegistration r : regs) {
-                if (r.getDevice().getContext().getDeviceId().equals(deviceId)) {
-                    dr = r;
-                    break;
-                }
-            }
-            if (dr != null) {
-                dr.unregister();
-                regs.remove(dr);
-            }
-        }
-    }
-
-    private String getDevicePID(String pluginId, String deviceId) {
-        return pluginId + DEVICE_PID_SEPARATOR + deviceId;
-    }
-
-    private org.osgi.service.cm.Configuration getOSGIDeviceConfiguration(DeviceContext ctx) {
-        if (bundleContext != null) {
-            try {
-                Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-                if (bundle != null) {
-                    org.osgi.service.cm.Configuration c = configAdmin.getConfiguration(getDevicePID(ctx.getPluginId(), ctx.getDeviceId()), bundle.getLocation());
-                    if (c == null) {
-                        throw new ConfigurationException("Unable to obtain configuration for: " + ctx + " (null)");
-                    }
-                    return c;
-                }
-            } catch (IOException e) {
-                throw new ConfigurationException("Unable to obtain configuration for: " + ctx, e);
-            }
-        }
-        throw new ConfigurationException("Unable to obtain configuration for: " + ctx);
-    }
-
-    @Override
-    public void serviceChanged(ServiceEvent serviceEvent) {
-        if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
-            final HobsonDevice device = (HobsonDevice)bundleContext.getService(serviceEvent.getServiceReference());
-            final HobsonPlugin plugin = pluginManager.getLocalPlugin(device.getContext().getPluginContext());
-
-            logger.debug("Device {} registered", device.getContext().getDeviceId());
-
-            // execute the device's startup method using its plugin event loop
-            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    // invoke the device's onStartup() lifecycle callback
-                    device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
-
-                    // post a device started event
-                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device));
-                }
-            });
-        }
-    }
-
-    private class DeviceServiceRegistration {
-        private ServiceRegistration deviceRegistration;
-
-        public DeviceServiceRegistration(ServiceRegistration deviceRegistration) {
-            this.deviceRegistration = deviceRegistration;
-        }
-
-        public HobsonDevice getDevice() {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
-            ServiceReference ref = deviceRegistration.getReference();
-            return (HobsonDevice)context.getService(ref);
-        }
-
-        public void unregister() {
-            deviceRegistration.unregister();
-        }
+        deviceStore.setDeviceConfigurationProperties(ctx, values, overwrite);
     }
 }

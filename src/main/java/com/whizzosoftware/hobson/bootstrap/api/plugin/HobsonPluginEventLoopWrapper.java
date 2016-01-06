@@ -53,7 +53,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private volatile VariableManager variableManager;
 
     private HobsonPlugin plugin;
-    private boolean stopped = false;
 
     /**
      * Constructor.
@@ -73,6 +72,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      * plugin event loop started.
      */
     public void start() {
+        logger.debug("Starting plugin: {}", plugin.getContext());
+
         // inject manager dependencies
         getRuntime().setDeviceManager(deviceManager);
         getRuntime().setDiscoManager(discoManager);
@@ -96,25 +97,32 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      * Called when the OSGi service is stopped. This will stop the plugin event loop.
      */
     public void stop() {
+        logger.debug("Stopping plugin: {}", plugin.getContext());
+
         final long now = System.currentTimeMillis();
 
         // remove the service listener
         FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
 
-        // shutdown the plugin
         final HubContext ctx = HubContext.createLocal();
         final PluginContext pctx = plugin.getContext();
-        Future f = plugin.getRuntime().submitInEventLoop(new Runnable() {
+        final Object mutex = new Object();
+
+        // stop listening for all events
+        eventManager.removeListenerFromAllTopics(ctx, HobsonPluginEventLoopWrapper.this);
+
+        // unpublish all variables published by this plugin's devices
+        variableManager.unpublishAllPluginVariables(plugin.getContext());
+
+        // stop all devices
+        deviceManager.unpublishAllDevices(pctx, plugin.getRuntime().getEventLoopExecutor());
+
+        // queue a task for final cleanup
+        logger.trace("Queuing final cleanup task");
+        plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
             @Override
             public void run() {
-                // stop listening for all events
-                eventManager.removeListenerFromAllTopics(ctx, HobsonPluginEventLoopWrapper.this);
-
-                // unpublish all variables published by this plugin's devices
-                variableManager.unpublishAllPluginVariables(plugin.getContext());
-
-                // stop all devices
-                deviceManager.unpublishAllDevices(pctx, plugin.getRuntime().getEventLoopExecutor());
+                logger.trace("All devices have shut down; performing final cleanup");
 
                 // shut down the plugin
                 getRuntime().onShutdown();
@@ -122,19 +130,25 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 // post plugin stopped event
                 eventManager.postEvent(ctx, new PluginStoppedEvent(now, getContext()));
 
-                // drop reference
+                // release reference
                 plugin = null;
 
-                stopped = true;
+                // notify thread that kicked off the stop that the plugin shutdown is complete
+                synchronized (mutex) {
+                    mutex.notify();
+                }
             }
         });
 
         // wait for the async task to complete so that the OSGi framework knows that we've really stopped
-        try {
-            f.get();
-        } catch (Exception e) {
-            logger.error("Error waiting for plugin to stop", e);
+        synchronized (mutex) {
+            try {
+                logger.trace("Waiting for final cleanup");
+                mutex.wait();
+            } catch (InterruptedException ignored) {}
         }
+
+        logger.debug("Shutdown complete for plugin: {}", pctx);
     }
 
     /*
@@ -148,32 +162,30 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             public void run() {
                 try {
                     // ignore the event if the plugin has been stopped
-                    if (!stopped) {
-                        if (plugin != null && plugin.getContext() != null && plugin.getContext().getPluginId() != null) {
-                            String pluginId = plugin.getContext().getPluginId();
-                            if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
-                                PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
-                                logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
-                                plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
-                            } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
-                                DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
-                                logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
-                                plugin.getRuntime().onDeviceConfigurationUpdate(DeviceContext.create(plugin.getContext(), dcue.getDeviceId()), dcue.getConfiguration());
-                            } else if (event instanceof VariableUpdateRequestEvent) {
-                                VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
-                                for (VariableUpdate update : dcue.getUpdates()) {
-                                    if (pluginId.equals(update.getPluginId())) {
-                                        logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
-                                        plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
-                                    }
+                    if (plugin != null && plugin.getContext() != null && plugin.getContext().getPluginId() != null) {
+                        String pluginId = plugin.getContext().getPluginId();
+                        if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
+                            PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
+                            logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
+                            plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
+                        } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
+                            DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
+                            logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
+                            plugin.getRuntime().onDeviceConfigurationUpdate(DeviceContext.create(plugin.getContext(), dcue.getDeviceId()), dcue.getConfiguration());
+                        } else if (event instanceof VariableUpdateRequestEvent) {
+                            VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
+                            for (VariableUpdate update : dcue.getUpdates()) {
+                                if (pluginId.equals(update.getPluginId())) {
+                                    logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
+                                    plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
                                 }
-                            } else {
-                                logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
-                                plugin.getRuntime().onHobsonEvent(event);
                             }
                         } else {
-                            logger.error("Error processing event for plugin " + plugin + ": " + event);
+                            logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
+                            plugin.getRuntime().onHobsonEvent(event);
                         }
+                    } else {
+                        logger.error("Error processing event for plugin " + plugin + ": " + event);
                     }
                 } catch (Throwable e) {
                     logger.error("An error occurred processing an event", e);
@@ -265,6 +277,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                             }
                         }, 0, plugin.getRuntime().getRefreshInterval(), TimeUnit.SECONDS);
                     }
+
+                    logger.debug("Startup complete for plugin: {}", plugin.getContext());
                 }
             });
 
@@ -275,5 +289,9 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                 logger.error("Error waiting for plugin to start", e);
             }
         }
+    }
+
+    public HobsonPlugin getPlugin() {
+        return plugin;
     }
 }
