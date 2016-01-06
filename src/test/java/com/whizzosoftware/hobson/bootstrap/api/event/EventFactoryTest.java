@@ -13,7 +13,7 @@ import com.whizzosoftware.hobson.api.event.HobsonEvent;
 import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.variable.VariableUpdate;
+import com.whizzosoftware.hobson.api.variable.VariableChange;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -42,8 +42,8 @@ public class EventFactoryTest {
         ef.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
 
         Map<String,Object> props = new HashMap<>();
-        List<VariableUpdate> updates = new ArrayList<>();
-        updates.add(new VariableUpdate(DeviceContext.createLocalGlobal("plugin"), "name", "value"));
+        List<VariableChange> updates = new ArrayList<>();
+        updates.add(new VariableChange(DeviceContext.createLocalGlobal("plugin"), "name", null, "value"));
         props.put(HobsonEvent.PROP_EVENT_ID, VariableUpdateNotificationEvent.ID);
         props.put(VariableUpdateNotificationEvent.PROP_UPDATES, updates);
 
@@ -55,7 +55,7 @@ public class EventFactoryTest {
         assertEquals(1, vune.getUpdates().size());
         assertEquals("plugin", vune.getUpdates().get(0).getPluginId());
         assertEquals("name", vune.getUpdates().get(0).getName());
-        assertEquals("value", vune.getUpdates().get(0).getValue());
+        assertEquals("value", vune.getUpdates().get(0).getNewValue());
     }
 
     @Test

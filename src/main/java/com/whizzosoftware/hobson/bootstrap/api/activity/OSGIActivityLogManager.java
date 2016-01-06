@@ -15,8 +15,8 @@ import com.whizzosoftware.hobson.api.device.HobsonDevice;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.variable.VariableChange;
 import com.whizzosoftware.hobson.api.variable.VariableConstants;
-import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.json.JSONObject;
 import org.osgi.framework.BundleContext;
@@ -75,10 +75,10 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
             appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
         } else if (event instanceof VariableUpdateNotificationEvent) {
             VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
-            for (VariableUpdate update : vune.getUpdates()) {
-                if (!update.isInitial() && update.getValue() != null && update.getDeviceContext().hasDeviceId()) {
-                    HobsonDevice device = deviceManager.getDevice(update.getDeviceContext());
-                    String s = createVariableChangeString(device.getName(), update.getName(), update.getValue());
+            for (VariableChange change : vune.getUpdates()) {
+                if (!change.isInitial() && change.hasNewValue() && change.isChanged() && change.getDeviceContext().hasDeviceId()) {
+                    HobsonDevice device = deviceManager.getDevice(change.getDeviceContext());
+                    String s = createVariableChangeString(device.getName(), change.getName(), change.getNewValue());
                     if (s != null) {
                         appendEvent(s);
                     }

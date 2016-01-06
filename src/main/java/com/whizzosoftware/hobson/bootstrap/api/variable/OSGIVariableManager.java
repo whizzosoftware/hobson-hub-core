@@ -50,29 +50,29 @@ public class OSGIVariableManager implements VariableManager {
     @Override
     public void applyVariableUpdates(HubContext ctx, List<VariableUpdate> updates) {
         HobsonVariable var;
-        List<VariableUpdate> appliedUpdates = null;
+        List<VariableChange> appliedUpdates = null;
 
         for (VariableUpdate update : updates) {
+            DeviceContext dctx;
             if (update.isGlobal()) {
-                var = getDeviceVariable(DeviceContext.create(ctx, update.getPluginId(), GLOBAL_NAME), update.getName());
+                dctx = DeviceContext.create(ctx, update.getPluginId(), GLOBAL_NAME);
+                var = getDeviceVariable(dctx, update.getName());
             } else {
-                var = getDeviceVariable(DeviceContext.create(ctx, update.getPluginId(), update.getDeviceId()), update.getName());
+                dctx = DeviceContext.create(ctx, update.getPluginId(), update.getDeviceId());
+                var = getDeviceVariable(dctx, update.getName());
             }
 
             logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
             Object newValue = update.getValue();
-            if (var.getValue() == null) {
-                update.setInitial(true);
-            }
-
-            // set the new value
-            ((MutableHobsonVariable)var).setValue(newValue);
 
             // record the update that was applied for notification purposes
             if (appliedUpdates == null) {
                 appliedUpdates = new ArrayList<>();
             }
-            appliedUpdates.add(update);
+            appliedUpdates.add(new VariableChange(dctx, update.getName(), var.getValue(), update.getValue()));
+
+            // set the new value
+            ((MutableHobsonVariable)var).setValue(newValue);
         }
 
         // if any updates were actually applied, post update events for them
