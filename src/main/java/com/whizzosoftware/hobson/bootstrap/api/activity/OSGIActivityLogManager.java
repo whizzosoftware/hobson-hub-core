@@ -93,6 +93,12 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
 
     protected String createVariableChangeString(String deviceName, String varName, Object varValue) {
         switch (varName) {
+            case VariableConstants.ARMED:
+                if ((Boolean)varValue) {
+                    return deviceName + " was armed";
+                } else {
+                    return deviceName + " was disarmed";
+                }
             case VariableConstants.ON:
                 if ((Boolean)varValue) {
                     return deviceName + " was turned on";
