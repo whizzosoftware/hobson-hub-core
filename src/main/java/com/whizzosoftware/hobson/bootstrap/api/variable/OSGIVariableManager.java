@@ -31,8 +31,6 @@ public class OSGIVariableManager implements VariableManager {
 
     private volatile EventManager eventManager;
 
-    static final String GLOBAL_NAME = "$GLOBAL$";
-
     private VariableStore variableStore;
 
     public OSGIVariableManager() {
@@ -48,31 +46,34 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void applyVariableUpdates(HubContext ctx, List<VariableUpdate> updates) {
+    public void fireVariableUpdateNotifications(HubContext ctx, List<VariableUpdate> updates) {
         HobsonVariable var;
         List<VariableChange> appliedUpdates = null;
 
         for (VariableUpdate update : updates) {
-            DeviceContext dctx;
+            VariableContext dvctx;
             if (update.isGlobal()) {
-                dctx = DeviceContext.create(ctx, update.getPluginId(), GLOBAL_NAME);
-                var = getDeviceVariable(dctx, update.getName());
+                dvctx = VariableContext.createGlobal(ctx, update.getPluginId(), update.getName());
             } else {
-                dctx = DeviceContext.create(ctx, update.getPluginId(), update.getDeviceId());
-                var = getDeviceVariable(dctx, update.getName());
+                dvctx = VariableContext.create(ctx, update.getPluginId(), update.getDeviceId(), update.getName());
             }
+            var = getVariable(dvctx);
 
-            logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
-            Object newValue = update.getValue();
+            if (var != null) {
+                logger.debug("Applying value for {}.{}.{}: {}", update.getPluginId(), update.getDeviceId(), update.getName(), update.getValue());
+                Object newValue = update.getValue();
 
-            // record the update that was applied for notification purposes
-            if (appliedUpdates == null) {
-                appliedUpdates = new ArrayList<>();
+                // record the update that was applied for notification purposes
+                if (appliedUpdates == null) {
+                    appliedUpdates = new ArrayList<>();
+                }
+                appliedUpdates.add(new VariableChange(dvctx, var != null ? var.getValue() : null, update.getValue()));
+
+                // set the new value
+                ((MutableHobsonVariable)var).setValue(newValue);
+            } else {
+                throw new VariableNotFoundException("Attempted to update an unknown variable: " + dvctx);
             }
-            appliedUpdates.add(new VariableChange(dctx, update.getName(), var.getValue(), update.getValue()));
-
-            // set the new value
-            ((MutableHobsonVariable)var).setValue(newValue);
         }
 
         // if any updates were actually applied, post update events for them
@@ -83,7 +84,7 @@ public class OSGIVariableManager implements VariableManager {
 
     @Override
     public Collection<HobsonVariable> getAllVariables(HubContext ctx) {
-        return variableStore.getVariables(ctx, null, null);
+        return variableStore.getAllVariables(ctx);
     }
 
     @Override
@@ -92,72 +93,61 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public HobsonVariable getDeviceVariable(DeviceContext ctx, String name) {
-        return getUniqueVariable(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId(), name);
+    public HobsonVariable getVariable(VariableContext ctx) {
+        return variableStore.getVariable(ctx);
     }
 
     @Override
-    public HobsonVariableCollection getDeviceVariables(DeviceContext ctx) {
-        return new HobsonVariableCollection(variableStore.getVariables(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId()));
-    }
-
-    @Override
-    public HobsonVariable getGlobalVariable(HubContext ctx, String name) {
-        return getUniqueVariable(ctx, null, null, name);
+    public Collection<HobsonVariable> getDeviceVariables(DeviceContext ctx) {
+        return variableStore.getDeviceVariables(ctx);
     }
 
     @Override
     public Collection<HobsonVariable> getGlobalVariables(HubContext ctx) {
-        return variableStore.getVariables(ctx, null, GLOBAL_NAME);
+        return variableStore.getAllGlobalVariables(ctx);
     }
 
     @Override
-    public boolean hasDeviceVariable(DeviceContext ctx, String name) {
-        Collection<HobsonVariable> results = variableStore.getVariables(ctx.getHubContext(), ctx.getPluginId(), ctx.getDeviceId(), name);
-        return (results != null && results.size() > 0);
+    public boolean hasVariable(VariableContext ctx) {
+        return variableStore.hasVariable(ctx);
     }
 
     @Override
-    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask) {
-        publishDeviceVariable(ctx, name, value, mask, null);
+    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask) {
+        publishVariable(ctx, value, mask, null);
     }
 
     @Override
-    public void publishDeviceVariable(DeviceContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
+    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
         // make sure the variable name is legal
+        String name = ctx.getName();
         if (name == null || name.contains(",") || name.contains(":")) {
             throw new HobsonRuntimeException("Unable to publish variable \"" + name + "\": name is either null or contains an invalid character");
         }
 
         // make sure variable doesn't already exist
-        if (hasDeviceVariable(ctx, name)) {
+        if (hasVariable(ctx)) {
             throw new HobsonRuntimeException("Attempt to publish a duplicate variable: " + ctx.getPluginId() + "," + ctx.getDeviceId() + "," + name);
         }
 
         logger.debug("Publishing device variable {}[{}] with value {}", ctx, name, value);
 
         variableStore.publishVariable(
-            new MutableHobsonVariable(ctx, name, mask, value, mediaType)
+            new MutableHobsonVariable(ctx, mask, value, mediaType)
         );
     }
 
     @Override
-    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask) {
-        publishGlobalVariable(ctx, name, value, mask, null);
-    }
-
-    @Override
-    public void publishGlobalVariable(PluginContext ctx, String name, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
-        publishDeviceVariable(DeviceContext.create(ctx, GLOBAL_NAME), name, value, mask, mediaType);
-    }
-
-    @Override
-    public Long setDeviceVariable(DeviceContext ctx, String name, Object value) {
-        HobsonVariable variable = getDeviceVariable(ctx, name);
-        Long lastUpdate = variable.getLastUpdate();
-        logger.debug("Attempting to set variable {}.{}.{} to value {}", ctx.getPluginId(), ctx.getDeviceId(), name, value);
-        eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), new VariableUpdate(ctx, name, value)));
-        return lastUpdate;
+    public Long setVariable(VariableContext ctx, Object value) {
+        HobsonVariable variable = getVariable(ctx);
+        if (variable != null) {
+            Long lastUpdate = variable.getLastUpdate();
+            logger.debug("Attempting to set variable {}.{}.{} to value {}", ctx.getPluginId(), ctx.getDeviceId(), ctx.getName(), value);
+            eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), new VariableUpdate(ctx, value)));
+            return lastUpdate;
+        } else {
+            throw new VariableNotFoundException("Attempted to set an unknown variable: " + ctx);
+        }
     }
 
     @Override
@@ -165,10 +155,10 @@ public class OSGIVariableManager implements VariableManager {
         Map<String,Long> results = new HashMap<>();
         List<VariableUpdate> updates = new ArrayList<>();
         for (String name : values.keySet()) {
-            HobsonVariable variable = getDeviceVariable(ctx, name);
+            HobsonVariable variable = getVariable(VariableContext.create(ctx, name));
             if (variable != null) {
                 results.put(name, variable.getLastUpdate());
-                updates.add(new VariableUpdate(ctx, name, values.get(name)));
+                updates.add(new VariableUpdate(VariableContext.create(ctx, name), values.get(name)));
             }
         }
         eventManager.postEvent(ctx.getPluginContext().getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), updates));
@@ -176,55 +166,17 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public Long setGlobalVariable(PluginContext ctx, String name, Object value) {
-        Map<String,Long> val = setGlobalVariables(ctx, Collections.singletonMap(name, value));
-        return val.get(name);
+    public void unpublishAllVariables(PluginContext ctx) {
+        variableStore.unpublishVariables(DeviceContext.create(ctx, null));
     }
 
     @Override
-    public Map<String, Long> setGlobalVariables(PluginContext ctx, Map<String, Object> values) {
-        Map<String,Long> results = new HashMap<>();
-        List<VariableUpdate> updates = new ArrayList<>();
-        for (String name : values.keySet()) {
-            HobsonVariable variable = getGlobalVariable(ctx.getHubContext(), name);
-            if (variable != null) {
-                results.put(name, variable.getLastUpdate());
-            }
-        }
-        eventManager.postEvent(ctx.getHubContext(), new VariableUpdateRequestEvent(System.currentTimeMillis(), updates));
-        return results;
+    public void unpublishAllVariables(DeviceContext ctx) {
+        variableStore.unpublishVariables(ctx);
     }
 
     @Override
-    public void unpublishAllPluginVariables(PluginContext ctx) {
-        variableStore.unpublishVariables(ctx, null);
-    }
-
-    @Override
-    public void unpublishAllDeviceVariables(DeviceContext ctx) {
-        variableStore.unpublishVariables(ctx.getPluginContext(), ctx.getDeviceId());
-    }
-
-    @Override
-    public void unpublishDeviceVariable(DeviceContext ctx, String name) {
-        variableStore.unpublishVariable(ctx.getPluginContext(), ctx.getDeviceId(), name);
-    }
-
-    @Override
-    public void unpublishGlobalVariable(PluginContext ctx, String name) {
-        variableStore.unpublishVariable(ctx, null, name);
-    }
-
-    protected HobsonVariable getUniqueVariable(HubContext ctx, String pluginId, String deviceId, String name) {
-        Collection<HobsonVariable> results = variableStore.getVariables(ctx, pluginId, deviceId, name);
-        if (results != null && results.size() > 0) {
-            if (results.size() == 1) {
-                return results.iterator().next();
-            } else {
-                throw new HobsonRuntimeException("Found multiple variables for " + ctx + "[" + name + "]");
-            }
-        } else {
-            throw new VariableNotFoundException(ctx, pluginId, deviceId, name);
-        }
+    public void unpublishVariable(VariableContext ctx) {
+        variableStore.unpublishVariable(ctx);
     }
 }

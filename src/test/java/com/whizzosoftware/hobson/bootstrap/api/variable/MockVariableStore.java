@@ -7,80 +7,103 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.variable;
 
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.HobsonVariable;
+import com.whizzosoftware.hobson.api.variable.VariableContext;
+import com.whizzosoftware.hobson.api.variable.VariableNotFoundException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class MockVariableStore implements VariableStore {
-    private List<HobsonVariable> variables = new ArrayList<>();
+    private Map<VariableContext,HobsonVariable> variables = new HashMap<>();
 
     @Override
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId, String name) {
+    public Collection<HobsonVariable> getAllVariables(HubContext hctx) {
+        return variables.values();
+    }
+
+    @Override
+    public Collection<HobsonVariable> getDeviceVariables(DeviceContext ctx) {
         List<HobsonVariable> results = new ArrayList<>();
-        for (HobsonVariable v : variables) {
-            if (matches(v, pluginId, deviceId, name)) {
-                results.add(v);
+        for (VariableContext v : variables.keySet()) {
+            if (v.getDeviceContext().equals(ctx)) {
+                results.add(variables.get(v));
             }
         }
         return results;
+    }
+
+    @Override
+    public Collection<HobsonVariable> getAllGlobalVariables(HubContext ctx) {
+        List<HobsonVariable> results = new ArrayList<>();
+        for (VariableContext v : variables.keySet()) {
+            if (v.getHubContext().equals(ctx) && v.isGlobal()) {
+                results.add(variables.get(v));
+            }
+        }
+        return results;
+    }
+
+    @Override
+    public Collection<HobsonVariable> getPluginGlobalVariables(PluginContext ctx) {
+        List<HobsonVariable> results = new ArrayList<>();
+        for (VariableContext v : variables.keySet()) {
+            if (v.getPluginContext().equals(ctx) && v.isGlobal()) {
+                results.add(variables.get(v));
+            }
+        }
+        return results;
+    }
+
+    @Override
+    public boolean hasVariable(VariableContext ctx) {
+        return (variables.containsKey(ctx));
+    }
+
+    @Override
+    public HobsonVariable getVariable(VariableContext ctx) {
+        HobsonVariable v = variables.get(ctx);
+        if (v != null) {
+            return v;
+        } else {
+            throw new VariableNotFoundException("Variable not found: " + ctx);
+        }
     }
 
     @Override
     public Collection<String> getVariableNames() {
-        return null;
-    }
-
-    @Override
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId) {
-        List<HobsonVariable> results = new ArrayList<>();
-        for (HobsonVariable v : variables) {
-            if (matches(v, pluginId, deviceId, null)) {
-                results.add(v);
-            }
+        List<String> names = new ArrayList<>();
+        for (HobsonVariable v : variables.values()) {
+            names.add(v.getContext().getName());
         }
-        return results;
+        return names;
     }
 
     @Override
     public void publishVariable(HobsonVariable variable) {
-        variables.add(variable);
+        variables.put(variable.getContext(), variable);
     }
 
     @Override
-    public void unpublishVariable(PluginContext ctx, String deviceId, String name) {
-        List<HobsonVariable> removals = new ArrayList<>();
-
-        for (HobsonVariable v : variables) {
-            if (matches(v, ctx.getPluginId(), deviceId, name)) {
-                removals.add(v);
+    public void unpublishVariable(VariableContext ctx) {
+        for (Iterator<VariableContext> it = variables.keySet().iterator(); it.hasNext(); ) {
+            VariableContext v = it.next();
+            if (v.equals(ctx)) {
+                it.remove();
+                break;
             }
-        }
-
-        for (HobsonVariable v : removals) {
-            variables.remove(v);
         }
     }
 
     @Override
-    public void unpublishVariables(PluginContext ctx, String deviceId) {
-        List<HobsonVariable> removals = new ArrayList<>();
-
-        for (HobsonVariable v : variables) {
-            if (matches(v, ctx.getPluginId(), deviceId, null)) {
-                removals.add(v);
+    public void unpublishVariables(DeviceContext ctx) {
+        for (Iterator<VariableContext> it = variables.keySet().iterator(); it.hasNext(); ) {
+            VariableContext v = it.next();
+            if (v.getDeviceContext().equals(ctx)) {
+                it.remove();
             }
         }
-
-        for (HobsonVariable v : removals) {
-            variables.remove(v);
-        }
-    }
-
-    private boolean matches(HobsonVariable v, String pluginId, String deviceId, String name) {
-        return ((pluginId == null || v.getPluginId().equals(pluginId)) && (deviceId == null || v.getDeviceId().equals(deviceId)) && (name == null || v.getName().equals(name)));
     }
 }

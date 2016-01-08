@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.variable;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.variable.*;
@@ -25,18 +26,52 @@ public class OSGIVariableStore implements VariableStore {
     private final Map<String,List<VariableRegistration>> variableRegistrations = new HashMap<>();
 
     @Override
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId) {
-        return getVariables(ctx, pluginId, deviceId, null);
+    public Collection<HobsonVariable> getAllVariables(HubContext hctx) {
+        return getVariables(VariableContext.create(hctx, null, null, null));
     }
 
     @Override
-    public List<HobsonVariable> getVariables(HubContext ctx, String pluginId, String deviceId, String name) {
+    public Collection<HobsonVariable> getDeviceVariables(DeviceContext ctx) {
+        return getVariables(VariableContext.create(ctx, null));
+    }
+
+    @Override
+    public Collection<HobsonVariable> getAllGlobalVariables(HubContext ctx) {
+        return getVariables(VariableContext.createGlobal(PluginContext.create(ctx, null), null));
+    }
+
+    @Override
+    public Collection<HobsonVariable> getPluginGlobalVariables(PluginContext ctx) {
+        return getVariables(VariableContext.createGlobal(ctx, null));
+    }
+
+    @Override
+    public boolean hasVariable(VariableContext ctx) {
+        Collection<HobsonVariable> results = getVariables(ctx);
+        return (results != null && results.size() > 0);
+    }
+
+    @Override
+    public HobsonVariable getVariable(VariableContext ctx) {
+        Collection<HobsonVariable> results = getVariables(ctx);
+        if (results != null && results.size() > 0) {
+            if (results.size() == 1) {
+                return results.iterator().next();
+            } else {
+                throw new HobsonRuntimeException("Found multiple variables for " + ctx);
+            }
+        } else {
+            throw new VariableNotFoundException(ctx.getDeviceContext(), ctx.getName());
+        }
+    }
+
+    private List<HobsonVariable> getVariables(VariableContext ctx) {
         List<HobsonVariable> results = new ArrayList<>();
         BundleContext bundleContext = getBundleContext();
         try {
             ServiceReference[] references = bundleContext.getServiceReferences(
                 (String)null,
-                createFilter(HobsonVariable.class.getName(), pluginId, deviceId, name)
+                createFilter(HobsonVariable.class.getName(), ctx)
             );
             if (references != null && references.length > 0) {
                 for (ServiceReference ref : references) {
@@ -85,13 +120,13 @@ public class OSGIVariableStore implements VariableStore {
     }
 
     @Override
-    public void unpublishVariable(PluginContext ctx, String deviceId, String name) {
+    public void unpublishVariable(VariableContext ctx) {
         synchronized (variableRegistrations) {
             List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 VariableRegistration vr = null;
                 for (VariableRegistration reg : regs) {
-                    if (reg.getPluginId().equals(ctx.getPluginId()) && (deviceId == null || reg.getDeviceId().equals(deviceId)) && reg.getName().equals(name)) {
+                    if (reg.getPluginId().equals(ctx.getPluginId()) && (!ctx.hasDeviceId() || reg.getDeviceId().equals(ctx.getDeviceId())) && reg.getName().equals(ctx.getName())) {
                         vr = reg;
                         break;
                     }
@@ -105,13 +140,13 @@ public class OSGIVariableStore implements VariableStore {
     }
 
     @Override
-    public void unpublishVariables(PluginContext ctx, String deviceId) {
+    public void unpublishVariables(DeviceContext ctx) {
         synchronized (variableRegistrations) {
             List<VariableRegistration> regs = variableRegistrations.get(ctx.getPluginId());
             if (regs != null) {
                 for (Iterator<VariableRegistration> iterator = regs.iterator(); iterator.hasNext();) {
                     VariableRegistration reg = iterator.next();
-                    if (reg.getPluginId().equals(ctx.getPluginId()) && (deviceId == null || reg.getDeviceId().equals(deviceId))) {
+                    if (reg.getPluginId().equals(ctx.getPluginId()) && (!ctx.hasDeviceId() || reg.getDeviceId().equals(ctx.getDeviceId()))) {
                         reg.unregister();
                         iterator.remove();
                     }
@@ -140,16 +175,16 @@ public class OSGIVariableStore implements VariableStore {
         }
     }
 
-    protected String createFilter(String objectClass, String pluginId, String deviceId, String name) {
+    protected String createFilter(String objectClass, VariableContext ctx) {
         StringBuilder sb = new StringBuilder("(&(objectClass=").append(objectClass).append(")");
-        if (pluginId != null) {
-            sb.append("(pluginId=").append(pluginId).append(")");
+        if (ctx.hasPluginId()) {
+            sb.append("(pluginId=").append(ctx.getPluginId()).append(")");
         }
-        if (deviceId != null) {
-            sb.append("(deviceId=").append(deviceId).append(")");
+        if (ctx.hasDeviceId()) {
+            sb.append("(deviceId=").append(ctx.getDeviceId()).append(")");
         }
-        if (name != null) {
-            sb.append("(name=").append(name).append(")");
+        if (ctx.hasName()) {
+            sb.append("(name=").append(ctx.getName()).append(")");
         }
         sb.append(")");
         return sb.toString();
