@@ -56,7 +56,6 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
             c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
-            c.add(createServiceDependency().setService(TelemetryManager.class).setRequired(true));
             c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
             manager.add(c);
         } else {

@@ -19,6 +19,7 @@ import com.whizzosoftware.hobson.api.persist.IdProvider;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.telemetry.StubTelemetryManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
@@ -95,7 +96,8 @@ public class HobsonManagerModule extends AbstractModule {
 
     @Provides
     public TelemetryManager provideTelemetryManager() {
-        return (TelemetryManager)getManager(TelemetryManager.class);
+        TelemetryManager tm = (TelemetryManager)getManager(TelemetryManager.class);
+        return tm != null ? tm : new StubTelemetryManager();
     }
 
     @Provides
@@ -120,6 +122,9 @@ public class HobsonManagerModule extends AbstractModule {
             if (ref != null) {
                 return ctx.getService(ref);
             } else {
+                if (clazz.equals(TelemetryManager.class)) {
+                    break;
+                }
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException ignored) {}

@@ -38,8 +38,6 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
     @Inject
     TaskManager taskManager;
     @Inject
-    TelemetryManager telemetryManager;
-    @Inject
     VariableManager variableManager;
     @Inject
     IdProvider idProvider;
@@ -52,7 +50,6 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
             pluginManager(pluginManager).
             presenceManager(presenceManager).
             taskManager(taskManager).
-            telemetryManager(telemetryManager).
             variableManager(variableManager).
             expansionFields(expansions).
             idProvider(idProvider).

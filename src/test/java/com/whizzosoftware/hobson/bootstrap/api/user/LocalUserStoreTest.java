@@ -4,6 +4,7 @@ import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import org.junit.Test;
 
@@ -21,7 +22,12 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public Collection<HobsonHub> getHubs(String userId) {
+            public Collection<HubContext> getAllHubs() {
+                return null;
+            }
+
+            @Override
+            public Collection<HubContext> getHubs(String userId) {
                 return null;
             }
 
@@ -31,18 +37,12 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public HobsonHub addHub(String userId, String name) {
+            public String getUserIdForHubId(String hubId) {
                 return null;
             }
 
             @Override
             public void deleteConfiguration(HubContext ctx) {
-
-            }
-
-            @Override
-            public void removeHub(HubContext ctx) {
-
             }
 
             @Override
@@ -95,6 +95,11 @@ public class LocalUserStoreTest {
 
                     @Override
                     public void removeLogAppender(Object aAppender) {
+
+                    }
+
+                    @Override
+                    public void addTelemetryManager(TelemetryManager manager) {
 
                     }
                 };

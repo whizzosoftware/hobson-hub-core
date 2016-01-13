@@ -19,7 +19,6 @@ import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
@@ -30,7 +29,6 @@ import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
-import com.whizzosoftware.hobson.bootstrap.api.telemetry.OSGITelemetryManager;
 import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
@@ -329,14 +327,6 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
-        manager.add(c);
-        registeredComponents.add(c);
-
-        // register telemetry manager
-        c = manager.createComponent();
-        c.setInterface(TelemetryManager.class.getName(), null);
-        c.setImplementation(OSGITelemetryManager.class);
-        c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

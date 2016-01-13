@@ -17,7 +17,6 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.api.variable.VariableUpdate;
 import io.netty.util.concurrent.Future;
@@ -49,7 +48,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private volatile HubManager hubManager;
     private volatile PluginManager pluginManager;
     private volatile TaskManager taskManager;
-    private volatile TelemetryManager telemetryManager;
     private volatile VariableManager variableManager;
 
     private HobsonPlugin plugin;
@@ -81,7 +79,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         getRuntime().setHubManager(hubManager);
         getRuntime().setPluginManager(pluginManager);
         getRuntime().setTaskManager(taskManager);
-        getRuntime().setTelemetryManager(telemetryManager);
         getRuntime().setVariableManager(variableManager);
 
         // wait for service to become registered before performing final initialization

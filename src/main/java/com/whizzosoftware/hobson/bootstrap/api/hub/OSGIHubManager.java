@@ -24,6 +24,7 @@ import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
+import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
@@ -78,8 +79,13 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return null;
     }
 
-    public Collection<HobsonHub> getHubs(String userId) {
-        return Arrays.asList(createLocalHubDetails());
+    @Override
+    public Collection<HubContext> getAllHubs() {
+        return Collections.singletonList(HubContext.createLocal());
+    }
+
+    public Collection<HubContext> getHubs(String userId) {
+        return getAllHubs();
     }
 
     @Override
@@ -92,8 +98,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public HobsonHub addHub(String userId, String name) {
-        throw new UnsupportedOperationException();
+    public String getUserIdForHubId(String hubId) {
+        return HubContext.DEFAULT_USER;
     }
 
     @Override
@@ -106,11 +112,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error clearing hub details", e);
         }
-    }
-
-    @Override
-    public void removeHub(HubContext ctx) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -256,6 +257,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         } catch (IOException e) {
             throw new HobsonRuntimeException("Error setting hub configuration", e);
         }
+    }
+
+    @Override
+    public void addTelemetryManager(TelemetryManager telemetryManager) {
+        // register telemetry manager
+        bundleContext.registerService(TelemetryManager.class.getName(), telemetryManager, null);
     }
 
     protected void sendEmail(PropertyContainer config, String recipientAddress, String subject, String body) {
