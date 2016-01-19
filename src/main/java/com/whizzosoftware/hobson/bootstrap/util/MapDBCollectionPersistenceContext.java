@@ -19,47 +19,76 @@ import java.util.*;
  */
 public class MapDBCollectionPersistenceContext implements CollectionPersistenceContext {
     private DB db;
-    private Map<String,Object> map;
 
-    public MapDBCollectionPersistenceContext(DB db, String mapName) {
+    public MapDBCollectionPersistenceContext(DB db) {
         this.db = db;
-        this.map = db.getHashMap(mapName);
+    }
+
+    @Override
+    public void addSetValue(String key, Object value) {
+        Set<Object> s = getSet(key);
+        s.add(value);
     }
 
     @Override
     public Map<String, Object> getMap(String key) {
-        Map<String,Object> m = (Map<String,Object>)map.get(key);
-        if (m == null) {
-            m = new HashMap<>();
-            map.put(key, m);
-        }
-        return m;
+        return db.createHashMap(key).makeOrGet();
     }
 
     @Override
-    public List<Map<String, Object>> getMapsWithPrefix(String keyPrefix) {
-        List<Map<String,Object>> results = new ArrayList<>();
-        for (String key : map.keySet()) {
-            if (key.startsWith(keyPrefix)) {
-                results.add((Map<String,Object>)map.get(key));
-            }
-        }
-        return results;
+    public Object getMapValue(String key, String name) {
+        Map map = getMap(key);
+        return map.get(name);
+    }
+
+    @Override
+    public Set<Object> getSet(String key) {
+        return db.createHashSet(key).makeOrGet();
+    }
+
+    @Override
+    public boolean hasMap(String key) {
+        return db.exists(key);
+    }
+
+    @Override
+    public boolean hasSet(String key) {
+        return db.exists(key);
     }
 
     @Override
     public void setMap(String key, Map<String,Object> map) {
-        this.map.put(key, map);
+        Map<String,Object> m = db.createHashMap(key).makeOrGet();
+        m.clear();
+        for (String k : map.keySet()) {
+            m.put(k, map.get(k));
+        }
     }
 
     @Override
-    public void removeMap(String key) {
-        this.map.remove(key);
+    public void setMapValue(String key, String name, Object value) {
+        Map<String,Object> map = getMap(key);
+        map.put(name, value);
     }
 
     @Override
-    public Set<String> getKeySet() {
-        return map.keySet();
+    public void setSet(String key, Set<Object> set) {
+        Set<Object> s = getSet(key);
+        s.clear();
+        for (Object v : set) {
+            s.add(v);
+        }
+    }
+
+    @Override
+    public void remove(String key) {
+        db.delete(key);
+    }
+
+    @Override
+    public void removeFromSet(String key, Object value) {
+        Set<Object> set = getSet(key);
+        set.remove(value);
     }
 
     @Override

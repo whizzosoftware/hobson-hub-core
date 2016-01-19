@@ -16,7 +16,7 @@ public class MockTaskStore implements TaskStore {
     private Map<TaskContext,HobsonTask> tasks = new HashMap<>();
 
     @Override
-    public Collection<HobsonTask> getAllTasks() {
+    public Collection<HobsonTask> getAllTasks(HubContext hctx) {
         return null;
     }
 
@@ -61,7 +61,7 @@ public class MockTaskStore implements TaskStore {
     }
 
     @Override
-    public PropertyContainerSet addActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
+    public PropertyContainerSet saveActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
         return null;
     }
 

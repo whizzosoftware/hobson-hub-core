@@ -43,7 +43,7 @@ public class MapDBTaskStoreTest {
                 Collections.singletonMap("foo", (Object) "bar")
             )
         );
-        String actionSetId = store.addActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
+        String actionSetId = store.saveActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
@@ -154,7 +154,7 @@ public class MapDBTaskStoreTest {
                         Collections.singletonMap("foo", (Object) "bar")
                 )
         );
-        store.addActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
+        store.saveActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
 
         // add a task
         List<PropertyContainer> conditions = new ArrayList<>();
@@ -175,7 +175,7 @@ public class MapDBTaskStoreTest {
         store = new MapDBTaskStore(dbFile, taskManager);
 
         // make sure only 1 task comes back
-        Collection<HobsonTask> tasks = store.getAllTasks();
+        Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
         assertEquals(1, tasks.size());
     }
 

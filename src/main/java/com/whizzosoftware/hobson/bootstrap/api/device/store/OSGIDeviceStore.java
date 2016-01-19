@@ -71,7 +71,7 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
                     device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
 
                     // post a device started event
-                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device));
+                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
                 }
             });
         }

@@ -53,10 +53,10 @@ public class OSGIVariableStore implements VariableStore {
 
     @Override
     public HobsonVariable getVariable(VariableContext ctx) {
-        Collection<HobsonVariable> results = getVariables(ctx);
+        List<HobsonVariable> results = getVariables(ctx);
         if (results != null && results.size() > 0) {
             if (results.size() == 1) {
-                return results.iterator().next();
+                return results.get(0);
             } else {
                 throw new HobsonRuntimeException("Found multiple variables for " + ctx);
             }
@@ -66,7 +66,7 @@ public class OSGIVariableStore implements VariableStore {
     }
 
     private List<HobsonVariable> getVariables(VariableContext ctx) {
-        List<HobsonVariable> results = new ArrayList<>();
+        List<HobsonVariable> results = null;
         BundleContext bundleContext = getBundleContext();
         try {
             ServiceReference[] references = bundleContext.getServiceReferences(
@@ -74,6 +74,7 @@ public class OSGIVariableStore implements VariableStore {
                 createFilter(HobsonVariable.class.getName(), ctx)
             );
             if (references != null && references.length > 0) {
+                results = new ArrayList<>();
                 for (ServiceReference ref : references) {
                     results.add((HobsonVariable)bundleContext.getService(ref));
                 }

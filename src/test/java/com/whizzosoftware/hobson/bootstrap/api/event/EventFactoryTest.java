@@ -14,6 +14,7 @@ import com.whizzosoftware.hobson.api.event.VariableUpdateNotificationEvent;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
+import com.whizzosoftware.hobson.api.variable.HobsonVariable;
 import com.whizzosoftware.hobson.api.variable.VariableChange;
 import com.whizzosoftware.hobson.api.variable.VariableContext;
 import org.junit.Test;
@@ -45,7 +46,7 @@ public class EventFactoryTest {
 
         Map<String,Object> props = new HashMap<>();
         List<VariableChange> updates = new ArrayList<>();
-        updates.add(new VariableChange(VariableContext.createGlobal(PluginContext.createLocal("plugin"), "name"), null, "value"));
+        updates.add(new VariableChange(VariableContext.createGlobal(PluginContext.createLocal("plugin"), "name"), HobsonVariable.Mask.READ_ONLY, null, "value"));
         props.put(HobsonEvent.PROP_EVENT_ID, VariableUpdateNotificationEvent.ID);
         props.put(VariableUpdateNotificationEvent.PROP_UPDATES, updates);
 

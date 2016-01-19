@@ -30,12 +30,9 @@ import java.util.Map;
 public class MapDBPresenceStore implements PresenceStore {
     private static final Logger logger = LoggerFactory.getLogger(MapDBPresenceStore.class);
 
-    private static final String PRESENCE_ENTITIES_KEY = "presenceEntities";
-    private static final String PRESENCE_LOCATIONS_KEY = "presenceLocations";
-
     private DB db;
     private ContextPathIdProvider idProvider = new ContextPathIdProvider();
-    private CollectionPersister persister = new CollectionPersister();
+    private CollectionPersister persister = new CollectionPersister(new ContextPathIdProvider());
 
     public MapDBPresenceStore(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
@@ -58,13 +55,10 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             List<PresenceEntity> results = new ArrayList<>();
-            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db, PRESENCE_ENTITIES_KEY);
-            String keyPrefix = idProvider.createPresenceEntitiesId(HubContext.createLocal());
-            for (String key : pctx.getKeySet()) {
-                if (key.startsWith(keyPrefix)) {
-                    Map<String,Object> peMap = pctx.getMap(key);
-                    results.add(persister.restorePresenceEntity(pctx, PresenceEntityContext.create((String)peMap.get("context"))));
-                }
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            for (Object o : pctx.getSet(idProvider.createPresenceEntitiesId(ctx))) {
+                PresenceEntityContext pectx = PresenceEntityContext.create(ctx, (String)o);
+                results.add(persister.restorePresenceEntity(pctx, pectx));
             }
             return results;
 
@@ -79,7 +73,7 @@ public class MapDBPresenceStore implements PresenceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            return persister.restorePresenceEntity(new MapDBCollectionPersistenceContext(db, PRESENCE_ENTITIES_KEY), ctx);
+            return persister.restorePresenceEntity(new MapDBCollectionPersistenceContext(db), ctx);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -93,7 +87,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence entity: {}", pe.getContext().toString());
-            persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db, PRESENCE_ENTITIES_KEY), pe);
+            persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db), pe);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -107,7 +101,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting presence entity: {}", ctx.toString());
-            persister.deletePresenceEntity(new MapDBCollectionPersistenceContext(db, PRESENCE_ENTITIES_KEY), ctx);
+            persister.deletePresenceEntity(new MapDBCollectionPersistenceContext(db), ctx);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -120,13 +114,10 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             List<PresenceLocation> results = new ArrayList<>();
-            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db, PRESENCE_LOCATIONS_KEY);
-            String keyPrefix = idProvider.createPresenceLocationsId(HubContext.createLocal());
-            for (String key : pctx.getKeySet()) {
-                if (key.startsWith(keyPrefix)) {
-                    Map<String,Object> peMap = pctx.getMap(key);
-                    results.add(persister.restorePresenceLocation(pctx, PresenceLocationContext.create((String) peMap.get("context"))));
-                }
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            for (Object o : pctx.getSet(idProvider.createPresenceLocationsId(ctx))) {
+                PresenceLocationContext plctx = PresenceLocationContext.create(ctx, (String)o);
+                results.add(persister.restorePresenceLocation(pctx, plctx));
             }
             return results;
 
@@ -141,7 +132,7 @@ public class MapDBPresenceStore implements PresenceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            return persister.restorePresenceLocation(new MapDBCollectionPersistenceContext(db, PRESENCE_LOCATIONS_KEY), ctx);
+            return persister.restorePresenceLocation(new MapDBCollectionPersistenceContext(db), ctx);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -155,7 +146,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence location: {}", pel.getContext().toString());
-            persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db, PRESENCE_LOCATIONS_KEY), pel);
+            persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db), pel);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -169,7 +160,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting presence location: {}", ctx.toString());
-            persister.deletePresenceLocation(new MapDBCollectionPersistenceContext(db, PRESENCE_LOCATIONS_KEY), ctx);
+            persister.deletePresenceLocation(new MapDBCollectionPersistenceContext(db), ctx);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

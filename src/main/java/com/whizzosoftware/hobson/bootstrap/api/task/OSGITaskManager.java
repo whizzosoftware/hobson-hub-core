@@ -180,7 +180,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public Collection<HobsonTask> getAllTasks(HubContext ctx) {
-        return new ArrayList<>(taskStore.getAllTasks());
+        return new ArrayList<>(taskStore.getAllTasks(ctx));
     }
 
     @Override
@@ -243,7 +243,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
-        return taskStore.addActionSet(ctx, name, actions);
+        return taskStore.saveActionSet(ctx, name, actions);
     }
 
     @Override

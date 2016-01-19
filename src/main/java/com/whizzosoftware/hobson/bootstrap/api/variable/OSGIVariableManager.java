@@ -67,7 +67,7 @@ public class OSGIVariableManager implements VariableManager {
                 if (appliedUpdates == null) {
                     appliedUpdates = new ArrayList<>();
                 }
-                appliedUpdates.add(new VariableChange(dvctx, var != null ? var.getValue() : null, update.getValue()));
+                appliedUpdates.add(new VariableChange(dvctx, var.getMask(), var.getValue() != null ? var.getValue() : null, update.getValue()));
 
                 // set the new value
                 ((MutableHobsonVariable)var).setValue(newValue);
@@ -113,12 +113,13 @@ public class OSGIVariableManager implements VariableManager {
     }
 
     @Override
-    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask) {
-        publishVariable(ctx, value, mask, null);
+    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask, Long lastUpdate) {
+        publishVariable(ctx, value, mask, lastUpdate, null);
+
     }
 
     @Override
-    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask, VariableMediaType mediaType) {
+    public void publishVariable(VariableContext ctx, Object value, HobsonVariable.Mask mask, Long lastUpdate, VariableMediaType mediaType) {
         // make sure the variable name is legal
         String name = ctx.getName();
         if (name == null || name.contains(",") || name.contains(":")) {
@@ -133,7 +134,7 @@ public class OSGIVariableManager implements VariableManager {
         logger.debug("Publishing device variable {}[{}] with value {}", ctx, name, value);
 
         variableStore.publishVariable(
-            new MutableHobsonVariable(ctx, mask, value, mediaType)
+            new MutableHobsonVariable(ctx, mask, value, lastUpdate, mediaType)
         );
     }
 

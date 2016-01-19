@@ -115,6 +115,7 @@ public class MapDBPresenceStoreTest {
         store.close();
         store = new MapDBPresenceStore(dbFile);
 
+        // check that the presence location has been deleted
         locations = store.getAllPresenceLocations(HubContext.createLocal());
         assertEquals(0, locations.size());
         pl2 = store.getPresenceLocation(plctx);

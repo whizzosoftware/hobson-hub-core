@@ -20,12 +20,12 @@ public class EventUtilTest {
         MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
         plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
-        DeviceStartedEvent dse = new DeviceStartedEvent(System.currentTimeMillis(), device);
+        DeviceStartedEvent dse = new DeviceStartedEvent(System.currentTimeMillis(), device.getContext());
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
         assertEquals(dse.getTopic(), e.getTopic());
         assertEquals(dse.getEventId(), e.getProperty("eventId"));
-        assertEquals(dse.getDevice(), e.getProperty(DeviceStartedEvent.PROP_DEVICE));
+        assertEquals(dse.getDeviceContext(), e.getProperty(DeviceStartedEvent.PROP_DEVICE_CONTEXT));
     }
 
     @Test
@@ -36,15 +36,15 @@ public class EventUtilTest {
 
         Map props = new HashMap();
         props.put(DeviceStartedEvent.PROP_EVENT_ID, DeviceStartedEvent.ID);
-        props.put(DeviceStartedEvent.PROP_DEVICE, device);
+        props.put(DeviceStartedEvent.PROP_DEVICE_CONTEXT, device.getContext());
         Event e = new Event(EventTopics.STATE_TOPIC, props);
 
         DeviceStartedEvent dse = new DeviceStartedEvent(EventUtil.createMapFromEvent(e));
 
-        assertEquals("pid", dse.getDevice().getContext().getPluginId());
+        assertEquals("pid", dse.getDeviceContext().getPluginId());
         assertEquals(DeviceStartedEvent.ID, dse.getEventId());
         assertEquals(EventTopics.STATE_TOPIC, dse.getTopic());
-        assertEquals(device, dse.getDevice());
+        assertEquals(device.getContext(), dse.getDeviceContext());
     }
 
     @Test
@@ -53,12 +53,12 @@ public class EventUtilTest {
         plugin.setDeviceManager(new MockDeviceManager());
         MockHobsonDevice device = new MockHobsonDevice(plugin, "did");
 
-        DeviceStoppedEvent dse = new DeviceStoppedEvent(System.currentTimeMillis(), device);
+        DeviceStoppedEvent dse = new DeviceStoppedEvent(System.currentTimeMillis(), device.getContext());
         Event e = EventUtil.createEventFromHobsonEvent(dse);
 
         assertEquals(dse.getTopic(), e.getTopic());
         assertEquals(dse.getEventId(), e.getProperty("eventId"));
-        assertEquals(dse.getDevice(), e.getProperty(DeviceStoppedEvent.PROP_DEVICE));
+        assertEquals(dse.getDeviceContext(), e.getProperty(DeviceStoppedEvent.PROP_DEVICE_CONTEXT));
     }
 
     @Test
@@ -69,14 +69,14 @@ public class EventUtilTest {
 
         Map props = new HashMap();
         props.put(DeviceStoppedEvent.PROP_EVENT_ID, DeviceStoppedEvent.ID);
-        props.put(DeviceStoppedEvent.PROP_DEVICE, device);
+        props.put(DeviceStoppedEvent.PROP_DEVICE_CONTEXT, device.getContext());
         Event e = new Event(EventTopics.STATE_TOPIC, props);
 
         DeviceStoppedEvent dse = new DeviceStoppedEvent(EventUtil.createMapFromEvent(e));
 
-        assertEquals("pid", dse.getDevice().getContext().getPluginId());
+        assertEquals("pid", dse.getDeviceContext().getPluginId());
         assertEquals(DeviceStoppedEvent.ID, dse.getEventId());
         assertEquals(EventTopics.STATE_TOPIC, dse.getTopic());
-        assertEquals(device, dse.getDevice());
+        assertEquals(device.getContext(), dse.getDeviceContext());
     }
 }

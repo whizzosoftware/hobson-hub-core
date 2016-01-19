@@ -43,7 +43,7 @@ public class OSGIVariableManagerTest {
 
         // try to apply an update to a published device variable with no value
         assertFalse(em.hasEvents());
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(dctx, "foo"), HobsonVariable.Mask.READ_WRITE, null, null));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(dctx, "foo"), HobsonVariable.Mask.READ_WRITE, null));
         assertFalse(em.hasEvents());
         vm.fireVariableUpdateNotifications(ctx, Collections.singletonList(new VariableUpdate(VariableContext.create(dctx, "foo"), "bar")));
         assertTrue(em.hasEvents());
@@ -84,7 +84,7 @@ public class OSGIVariableManagerTest {
 
         DeviceContext ctx = DeviceContext.createLocal("plugin", "device");
 
-        vm.publishVariable(VariableContext.create(ctx, "foo"), "bar", HobsonVariable.Mask.READ_WRITE);
+        vm.publishVariable(VariableContext.create(ctx, "foo"), "bar", HobsonVariable.Mask.READ_WRITE, null);
 
         Collection<HobsonVariable> r = vs.getDeviceVariables(ctx);
         assertEquals(1, r.size());
@@ -103,12 +103,12 @@ public class OSGIVariableManagerTest {
         OSGIVariableManager vm = new OSGIVariableManager(vs);
 
         try {
-            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo,f"), "bar", HobsonVariable.Mask.READ_WRITE);
+            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo,f"), "bar", HobsonVariable.Mask.READ_WRITE, null);
             fail("Should have thrown exception");
         } catch (HobsonRuntimeException ignored) {}
 
         try {
-            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo:f"), "bar", HobsonVariable.Mask.READ_WRITE);
+            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo:f"), "bar", HobsonVariable.Mask.READ_WRITE, null);
             fail("Should have thrown exception");
         } catch (HobsonRuntimeException ignored) {}
     }
@@ -118,10 +118,10 @@ public class OSGIVariableManagerTest {
         MockVariableStore vs = new MockVariableStore();
         OSGIVariableManager vm = new OSGIVariableManager(vs);
 
-        vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo"), "bar", HobsonVariable.Mask.READ_WRITE);
+        vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo"), "bar", HobsonVariable.Mask.READ_WRITE, null);
 
         try {
-            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo"), "bar", HobsonVariable.Mask.READ_WRITE);
+            vm.publishVariable(VariableContext.createLocal("plugin", "device", "foo"), "bar", HobsonVariable.Mask.READ_WRITE, null);
             fail("Should have thrown exception");
         } catch (HobsonRuntimeException ignored) {}
     }
@@ -133,7 +133,7 @@ public class OSGIVariableManagerTest {
 
         PluginContext ctx = PluginContext.createLocal("plugin");
 
-        vm.publishVariable(VariableContext.createGlobal(ctx, "foo"), "bar", HobsonVariable.Mask.READ_WRITE);
+        vm.publishVariable(VariableContext.createGlobal(ctx, "foo"), "bar", HobsonVariable.Mask.READ_WRITE, null);
 
         Collection<HobsonVariable> r = vs.getAllGlobalVariables(ctx.getHubContext());
         assertEquals(1, r.size());
@@ -152,8 +152,8 @@ public class OSGIVariableManagerTest {
         VariableContext v2 = VariableContext.create(DeviceContext.createLocal("plugin2", "device2"), "foo2");
 
         MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new MutableHobsonVariable(v1, HobsonVariable.Mask.READ_WRITE, "bar", null));
-        vs.publishVariable(new MutableHobsonVariable(v2, HobsonVariable.Mask.READ_WRITE, "bar2", null));
+        vs.publishVariable(new MutableHobsonVariable(v1, HobsonVariable.Mask.READ_WRITE, "bar"));
+        vs.publishVariable(new MutableHobsonVariable(v2, HobsonVariable.Mask.READ_WRITE, "bar2"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
         Collection<HobsonVariable> vars = vm.getAllVariables(HubContext.createLocal());
@@ -170,8 +170,8 @@ public class OSGIVariableManagerTest {
         VariableContext v2 = VariableContext.create(DeviceContext.createLocal("plugin2", "device2"), "foo");
 
         MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new MutableHobsonVariable(v1, HobsonVariable.Mask.READ_WRITE, "bar", null));
-        vs.publishVariable(new MutableHobsonVariable(v2, HobsonVariable.Mask.READ_WRITE, "bar2", null));
+        vs.publishVariable(new MutableHobsonVariable(v1, HobsonVariable.Mask.READ_WRITE, "bar"));
+        vs.publishVariable(new MutableHobsonVariable(v2, HobsonVariable.Mask.READ_WRITE, "bar2"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
         HobsonVariable v = vm.getVariable(VariableContext.createLocal("plugin1", "device1", "foo"));
@@ -185,9 +185,9 @@ public class OSGIVariableManagerTest {
     @Test
     public void testGetDeviceVariablesNoProxy() {
         MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin2", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar3", null));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin2", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar3"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
         Collection<HobsonVariable> hvc = vm.getDeviceVariables(DeviceContext.createLocal("plugin1", "device1"));
@@ -207,9 +207,9 @@ public class OSGIVariableManagerTest {
         PluginContext pctx = PluginContext.createLocal("plugin2");
 
         MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createGlobal(pctx), "sunrise"), HobsonVariable.Mask.READ_WRITE, "800", null));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createGlobal(pctx), "sunrise"), HobsonVariable.Mask.READ_WRITE, "800"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
 
@@ -222,10 +222,10 @@ public class OSGIVariableManagerTest {
     @Test
     public void testGetGlobalVariables() {
         MockVariableStore vs = new MockVariableStore();
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.createGlobal(PluginContext.createLocal("plugin2"), "sunrise"), HobsonVariable.Mask.READ_WRITE, "800", null));
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.createGlobal(PluginContext.createLocal("plugin3"), "sunset"), HobsonVariable.Mask.READ_WRITE, "1800", null));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo"), HobsonVariable.Mask.READ_WRITE, "bar"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(DeviceContext.createLocal("plugin1", "device1"), "foo2"), HobsonVariable.Mask.READ_WRITE, "bar2"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.createGlobal(PluginContext.createLocal("plugin2"), "sunrise"), HobsonVariable.Mask.READ_WRITE, "800"));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.createGlobal(PluginContext.createLocal("plugin3"), "sunset"), HobsonVariable.Mask.READ_WRITE, "1800"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
 
@@ -242,7 +242,7 @@ public class OSGIVariableManagerTest {
         MockEventManager em = new MockEventManager();
         MockVariableStore vs = new MockVariableStore();
         DeviceContext dctx = DeviceContext.createLocal("plugin1", "device1");
-        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(dctx, "foo"), HobsonVariable.Mask.READ_WRITE, "bar", null));
+        vs.publishVariable(new MutableHobsonVariable(VariableContext.create(dctx, "foo"), HobsonVariable.Mask.READ_WRITE, "bar"));
 
         OSGIVariableManager vm = new OSGIVariableManager(vs);
         vm.setEventManager(em);

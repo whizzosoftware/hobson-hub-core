@@ -267,7 +267,7 @@ public class OSGIDeviceManager implements DeviceManager {
                         logger.error("Error shutting down device: " + device.getContext(), t);
                     } finally {
                         deviceStore.unpublishDevice(device.getContext());
-                        eventManager.postEvent(device.getContext().getHubContext(), new DeviceStoppedEvent(System.currentTimeMillis(), device));
+                        eventManager.postEvent(device.getContext().getHubContext(), new DeviceStoppedEvent(System.currentTimeMillis(), device.getContext()));
                     }
                 }
             });
