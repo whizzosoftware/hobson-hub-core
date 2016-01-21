@@ -57,6 +57,12 @@ public class MapDBCollectionPersistenceContext implements CollectionPersistenceC
     }
 
     @Override
+    public boolean hasSetValue(String key, Object value) {
+        Set<Object> s = getSet(key);
+        return (s != null && s.contains(value));
+    }
+
+    @Override
     public void setMap(String key, Map<String,Object> map) {
         Map<String,Object> m = db.createHashMap(key).makeOrGet();
         m.clear();

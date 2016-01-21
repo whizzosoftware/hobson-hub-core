@@ -51,8 +51,8 @@ public class LocalUserStore implements UserStore {
 
     protected HobsonUser createLocalUser() {
         return new HobsonUser.Builder("local")
-            .firstName("Local")
-            .lastName("User")
+            .givenName("Local")
+            .familyName("User")
             .build();
     }
 }
