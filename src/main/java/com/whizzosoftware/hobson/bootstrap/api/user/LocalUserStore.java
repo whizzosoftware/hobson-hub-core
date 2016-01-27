@@ -14,6 +14,9 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.user.UserStore;
 
+import java.util.Collection;
+import java.util.Collections;
+
 public class LocalUserStore implements UserStore {
     private HubManager hubManager;
 
@@ -47,6 +50,11 @@ public class LocalUserStore implements UserStore {
         } else {
             throw new HobsonAuthorizationException("You are not authorized to retrieve that information");
         }
+    }
+
+    @Override
+    public Collection<String> getUserIds() {
+        return Collections.singletonList("local");
     }
 
     protected HobsonUser createLocalUser() {
