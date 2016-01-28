@@ -102,7 +102,7 @@ public class OSGIDeviceManager implements DeviceManager {
         }
 
         // create the device bootstrap
-        DevicePassport db = new DevicePassport(UUID.randomUUID().toString(), deviceId, System.currentTimeMillis());
+        DevicePassport db = new DevicePassport(hubContext, UUID.randomUUID().toString(), deviceId, System.currentTimeMillis());
         db.setSecret(UUID.randomUUID().toString());
         bootstrapStore.savePassport(hubContext, db);
         return db;

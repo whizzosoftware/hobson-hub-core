@@ -60,7 +60,7 @@ public class MapDBDevicePassportStore implements DevicePassportStore {
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
             for (Object o : ctx.getSet(idProvider.createDevicePassportsId(hctx))) {
                 String key = (String)o;
-                DevicePassport db = persister.restoreDevicePassport(ctx, key);
+                DevicePassport db = persister.restoreDevicePassport(ctx, hctx, key);
                 if (db != null) {
                     results.add(db);
                 }
@@ -79,7 +79,7 @@ public class MapDBDevicePassportStore implements DevicePassportStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            return persister.restoreDevicePassport(ctx, id);
+            return persister.restoreDevicePassport(ctx, hctx, id);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -101,7 +101,7 @@ public class MapDBDevicePassportStore implements DevicePassportStore {
             // TODO: optimize
             for (Object o : ctx.getSet(idProvider.createDevicePassportsId(hctx))) {
                 String key = (String)o;
-                DevicePassport db = persister.restoreDevicePassport(ctx, key);
+                DevicePassport db = persister.restoreDevicePassport(ctx, hctx, key);
                 if (db != null && db.getDeviceId().equals(deviceId)) {
                     return db;
                 }
