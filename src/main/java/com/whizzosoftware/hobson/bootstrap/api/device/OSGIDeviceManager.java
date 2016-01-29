@@ -47,7 +47,7 @@ public class OSGIDeviceManager implements DeviceManager {
     private Map<DeviceContext,Boolean> deviceAvailabilityMap = Collections.synchronizedMap(new HashMap<DeviceContext,Boolean>());
     private Map<DeviceContext,Long> deviceCheckIns = Collections.synchronizedMap(new HashMap<DeviceContext,Long>());
     private DeviceStore deviceStore;
-    private DevicePassportStore bootstrapStore;
+    private DevicePassportStore passportStore;
     private DeviceAvailabilityMonitor deviceAvailabilityMonitor;
     private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
         @Override
@@ -65,8 +65,8 @@ public class OSGIDeviceManager implements DeviceManager {
         }
 
         // if a bootstrap store hasn't already been injected, create a default one
-        if (bootstrapStore == null) {
-            this.bootstrapStore = new MapDBDevicePassportStore(
+        if (passportStore == null) {
+            this.passportStore = new MapDBDevicePassportStore(
                 pluginManager.getDataFile(
                     PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
                     "bootstraps"
@@ -97,21 +97,21 @@ public class OSGIDeviceManager implements DeviceManager {
     @Override
     public DevicePassport createDevicePassport(HubContext hubContext, String deviceId) {
         // make sure a bootstrap hasn't already been created for this device ID
-        if (bootstrapStore.hasPassportForDeviceId(hubContext, deviceId)) {
+        if (passportStore.hasPassportForDeviceId(hubContext, deviceId)) {
             return null;
         }
 
         // create the device bootstrap
         DevicePassport db = new DevicePassport(hubContext, UUID.randomUUID().toString(), deviceId, System.currentTimeMillis());
         db.setSecret(UUID.randomUUID().toString());
-        bootstrapStore.savePassport(hubContext, db);
+        passportStore.savePassport(hubContext, db);
         return db;
     }
 
     @Override
     public Collection<DevicePassport> getDevicePassports(HubContext hubContext) {
         List<DevicePassport> results = new ArrayList<>();
-        for (DevicePassport db : bootstrapStore.getAllPassports(hubContext)) {
+        for (DevicePassport db : passportStore.getAllPassports(hubContext)) {
             results.add(db);
         }
         return results;
@@ -119,16 +119,16 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public DevicePassport getDevicePassport(HubContext hubContext, String id) {
-        return bootstrapStore.getPassport(hubContext, id);
+        return passportStore.getPassport(hubContext, id);
     }
 
     @Override
     public DevicePassport activateDevicePassport(HubContext hubContext, String deviceId) {
-        DevicePassport bootstrap = bootstrapStore.getPassportForDeviceId(hubContext, deviceId);
+        DevicePassport bootstrap = passportStore.getPassportForDeviceId(hubContext, deviceId);
         if (bootstrap != null) {
             if (bootstrap.getActivationTime() == null) {
                 bootstrap.setActivationTime(System.currentTimeMillis());
-                bootstrapStore.savePassport(hubContext, bootstrap);
+                passportStore.savePassport(hubContext, bootstrap);
                 return bootstrap;
             } else {
                 throw new DevicePassportAlreadyActivatedException(bootstrap.getId());
@@ -140,21 +140,21 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void deleteDevicePassport(HubContext hubContext, String id) {
-        bootstrapStore.deletePassport(hubContext, id);
+        passportStore.deletePassport(hubContext, id);
     }
 
     @Override
     public boolean verifyDevicePassport(HubContext hubContext, String id, String secret) {
-        DevicePassport db = bootstrapStore.getPassport(hubContext, id);
+        DevicePassport db = passportStore.getPassport(hubContext, id);
         return (db != null && secret.equals(db.getSecret()));
     }
 
     @Override
     public void resetDevicePassport(HubContext hubContext, String id) {
-        DevicePassport db = bootstrapStore.getPassport(hubContext, id);
+        DevicePassport db = passportStore.getPassport(hubContext, id);
         if (db != null) {
             db.setActivationTime(null);
-            bootstrapStore.savePassport(hubContext, db);
+            passportStore.savePassport(hubContext, db);
         }
     }
 

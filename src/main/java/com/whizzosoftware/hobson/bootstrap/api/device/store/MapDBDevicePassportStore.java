@@ -135,7 +135,7 @@ public class MapDBDevicePassportStore implements DevicePassportStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting device bootstrap: {}", id);
-            persister.deleteDevicePassport(new MapDBCollectionPersistenceContext(db), id);
+            persister.deleteDevicePassport(new MapDBCollectionPersistenceContext(db), hctx, id);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
