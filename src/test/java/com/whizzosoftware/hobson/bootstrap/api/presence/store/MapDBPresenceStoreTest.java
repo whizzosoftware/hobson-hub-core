@@ -67,14 +67,39 @@ public class MapDBPresenceStoreTest {
     }
 
     @Test
-    public void testAddAndDeletePresenceLocation()  throws Exception {
+    public void testAddPresenceEntityWithNullLastUpdate() throws Exception {
+        File dbFile = File.createTempFile("test", ".mapdb");
+        dbFile.deleteOnExit();
+
+        MapDBPresenceStore store = new MapDBPresenceStore(dbFile);
+
+        PresenceEntityContext pectx = PresenceEntityContext.createLocal("entity1");
+        PresenceEntity pe = new PresenceEntity(pectx, "John Doe", null);
+
+        store.savePresenceEntity(pe);
+
+        // close and re-open the store to make sure we're starting from scratch
+        store.close();
+        store = new MapDBPresenceStore(dbFile);
+
+        // check that we can get the entity directly
+        PresenceEntity pe2 = store.getPresenceEntity(pectx);
+        assertEquals("local", pe2.getContext().getUserId());
+        assertEquals("local", pe2.getContext().getHubId());
+        assertEquals("entity1", pe2.getContext().getEntityId());
+        assertEquals("John Doe", pe2.getName());
+        assertNull(pe2.getLastUpdate());
+    }
+
+    @Test
+    public void testAddAndDeleteMapPresenceLocation()  throws Exception {
         File dbFile = File.createTempFile("test", ".mapdb");
         dbFile.deleteOnExit();
 
         MapDBPresenceStore store = new MapDBPresenceStore(dbFile);
 
         PresenceLocationContext plctx = PresenceLocationContext.createLocal("loc1");
-        PresenceLocation pl = new PresenceLocation(plctx, "Home", 1.0, 2.0, 3.0, 4, 5);
+        PresenceLocation pl = new PresenceLocation(plctx, "Home", 1.0, 2.0, 3.0);
 
         store.savePresenceLocation(pl);
 
@@ -93,8 +118,8 @@ public class MapDBPresenceStoreTest {
         assertEquals(1.0, pl2.getLatitude(), 0.0);
         assertEquals(2.0, pl2.getLongitude(), 0.0);
         assertEquals(3.0, pl2.getRadius(), 0.0);
-        assertEquals(4, (int)pl2.getBeaconMajor());
-        assertEquals(5, (int)pl2.getBeaconMinor());
+        assertNull(pl2.getBeaconMajor());
+        assertNull(pl2.getBeaconMinor());
 
         // check that we can get the entity directly
         pl2 = store.getPresenceLocation(plctx);
@@ -105,8 +130,8 @@ public class MapDBPresenceStoreTest {
         assertEquals(1.0, pl2.getLatitude(), 0.0);
         assertEquals(2.0, pl2.getLongitude(), 0.0);
         assertEquals(3.0, pl2.getRadius(), 0.0);
-        assertEquals(4, (int)pl2.getBeaconMajor());
-        assertEquals(5, (int)pl2.getBeaconMinor());
+        assertNull(pl2.getBeaconMajor());
+        assertNull(pl2.getBeaconMinor());
 
         // delete the entity
         store.deletePresenceLocation(plctx);
@@ -120,5 +145,33 @@ public class MapDBPresenceStoreTest {
         assertEquals(0, locations.size());
         pl2 = store.getPresenceLocation(plctx);
         assertNull(pl2);
+    }
+
+    @Test
+    public void testAddAndDeleteBeaconPresenceLocation()  throws Exception {
+        File dbFile = File.createTempFile("test", ".mapdb");
+        dbFile.deleteOnExit();
+
+        MapDBPresenceStore store = new MapDBPresenceStore(dbFile);
+
+        PresenceLocationContext plctx = PresenceLocationContext.createLocal("loc1");
+        PresenceLocation pl = new PresenceLocation(plctx, "Home", 4, 5);
+
+        store.savePresenceLocation(pl);
+
+        // close and re-open the store to make sure we're starting from scratch
+        store.close();
+        store = new MapDBPresenceStore(dbFile);
+
+        PresenceLocation pl2 = store.getPresenceLocation(plctx);
+        assertEquals("local", pl2.getContext().getUserId());
+        assertEquals("local", pl2.getContext().getHubId());
+        assertEquals("loc1", pl2.getContext().getLocationId());
+        assertEquals("Home", pl2.getName());
+        assertNull(pl2.getLatitude());
+        assertNull(pl2.getLongitude());
+        assertNull(pl2.getRadius());
+        assertEquals(4, (int)pl2.getBeaconMajor());
+        assertEquals(5, (int)pl2.getBeaconMinor());
     }
 }
