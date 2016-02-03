@@ -37,13 +37,10 @@ public class MapDBTaskStore implements TaskStore {
     private static final Logger logger = LoggerFactory.getLogger(MapDBTaskStore.class);
 
     private DB db;
-    private TaskManager taskManager;
     private IdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister(idProvider);
 
-    public MapDBTaskStore(File file, TaskManager taskManager) {
-        this.taskManager = taskManager;
-
+    public MapDBTaskStore(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -156,7 +153,6 @@ public class MapDBTaskStore implements TaskStore {
                     results.add(persister.restoreActionSet(
                             ctx,
                             mctx,
-                            taskManager,
                             actionSetId
                     ));
                 }
@@ -177,7 +173,6 @@ public class MapDBTaskStore implements TaskStore {
             return persister.restoreActionSet(
                     ctx,
                     new MapDBCollectionPersistenceContext(db),
-                    taskManager,
                     actionSetId
             );
 

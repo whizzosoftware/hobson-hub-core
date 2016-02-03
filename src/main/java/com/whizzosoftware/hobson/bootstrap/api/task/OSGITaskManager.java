@@ -104,8 +104,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                         pluginManager.getDataFile(
                             PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
                             "tasks"
-                        ),
-                        this
+                        )
                     );
                 }
 
@@ -217,21 +216,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 props.put("type", "actionClass");
                 props.put("classId", actionClass.getContext().getContainerClassId());
 
-                synchronized (serviceRegistrationMap) {
-                    List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
-                    if (srl == null) {
-                        srl = new ArrayList<>();
-                        serviceRegistrationMap.put(pluginId, srl);
-                    }
-                    srl.add(
-                        ctx.registerService(
-                            PropertyContainerClass.class,
-                            actionClass,
-                            props
-                        )
-                    );
-                }
-
+                registerPropertyContainerClass(ctx, pluginId, actionClass, props);
                 queueTaskRegistration();
 
                 logger.debug("Action class {} published", actionClass.getContext());
@@ -262,21 +247,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     props.put("type", "conditionClass");
                     props.put("classId", conditionClass.getContext().getContainerClassId());
 
-                    synchronized (serviceRegistrationMap) {
-                        List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
-                        if (srl == null) {
-                            srl = new ArrayList<>();
-                            serviceRegistrationMap.put(pluginId, srl);
-                        }
-                        srl.add(
-                            context.registerService(
-                                PropertyContainerClass.class,
-                                conditionClass,
-                                props
-                            )
-                        );
-                    }
-
+                    registerPropertyContainerClass(context, pluginId, conditionClass, props);
                     queueTaskRegistration();
 
                     logger.debug("Condition class {} published", conditionClass.getContext());
@@ -423,11 +394,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             // make sure task has a trigger condition
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
-                // convert explicit action set to action set ID
-                if (!actionSet.hasId()) {
-                    actionSet = publishActionSet(ctx, null, actionSet.getProperties());
-                }
-
                 // create task and add to task store
                 final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
                 taskStore.saveTask(task);
@@ -552,5 +518,22 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             return pluginManager.getLocalPlugin(pc.getContainerClassContext().getPluginContext());
         }
         return null;
+    }
+
+    private void registerPropertyContainerClass(BundleContext context, String pluginId, PropertyContainerClass containerClass, Dictionary<String,String> props) {
+        synchronized (serviceRegistrationMap) {
+            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
+            if (srl == null) {
+                srl = new ArrayList<>();
+                serviceRegistrationMap.put(pluginId, srl);
+            }
+            srl.add(
+                    context.registerService(
+                        PropertyContainerClass.class,
+                        containerClass,
+                        props
+                    )
+            );
+        }
     }
 }

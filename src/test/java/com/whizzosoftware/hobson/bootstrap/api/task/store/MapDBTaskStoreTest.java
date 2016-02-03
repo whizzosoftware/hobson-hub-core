@@ -34,7 +34,7 @@ public class MapDBTaskStoreTest {
 
         MockTaskManager taskManager = new MockTaskManager();
 
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> actions = new ArrayList<>();
         actions.add(
@@ -47,7 +47,7 @@ public class MapDBTaskStoreTest {
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
 
         PropertyContainerSet pcs = store.getActionSet(HubContext.createLocal(), actionSetId);
         assertEquals(actionSetId, pcs.getId());
@@ -65,7 +65,7 @@ public class MapDBTaskStoreTest {
         dbFile.deleteOnExit();
 
         MockTaskManager taskManager = new MockTaskManager();
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();
         conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
@@ -85,7 +85,7 @@ public class MapDBTaskStoreTest {
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
 
         HobsonTask t = store.getTask(tctx);
         assertNotNull(t);
@@ -105,7 +105,7 @@ public class MapDBTaskStoreTest {
         dbFile.deleteOnExit();
 
         MockTaskManager taskManager = new MockTaskManager();
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();
         conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "turnOn"), Collections.singletonMap("devices", (Object)Collections.singletonList(DeviceContext.createLocal("plugin1", "device1")))));
@@ -122,7 +122,7 @@ public class MapDBTaskStoreTest {
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
 
         HobsonTask t = store.getTask(tctx);
         assertNotNull(t);
@@ -144,7 +144,7 @@ public class MapDBTaskStoreTest {
         dbFile.deleteOnExit();
 
         MockTaskManager taskManager = new MockTaskManager();
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         // add an action set
         List<PropertyContainer> actions = new ArrayList<>();
@@ -172,7 +172,7 @@ public class MapDBTaskStoreTest {
 
         // close and re-open the store to make sure we're starting from scratch
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
 
         // make sure only 1 task comes back
         Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
@@ -185,7 +185,7 @@ public class MapDBTaskStoreTest {
         dbFile.deleteOnExit();
 
         MockTaskManager taskManager = new MockTaskManager();
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         PropertyContainerClassContext pccc1 = PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1");
         PropertyContainerClassContext pccc2 = PropertyContainerClassContext.create(PluginContext.createLocal("plugin2"), "cc2");
@@ -256,7 +256,7 @@ public class MapDBTaskStoreTest {
 
         // close store and create new one against same file
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
 
         // make sure we can still retrieve tasks
         tasks = store.getAllTasks(taskManager, PluginContext.createLocal("plugin1"));
@@ -272,7 +272,7 @@ public class MapDBTaskStoreTest {
         dbFile.deleteOnExit();
 
         MockTaskManager taskManager = new MockTaskManager();
-        MapDBTaskStore store = new MapDBTaskStore(dbFile, taskManager);
+        MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();
         conditions.add(new PropertyContainer("c1", PropertyContainerClassContext.create(HubContext.createLocal(), "cc1"), Collections.singletonMap("foo", (Object) "value")));
@@ -292,7 +292,7 @@ public class MapDBTaskStoreTest {
 
         // close store and create new one against same file
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
         task = store.getTask(tctx);
 
         assertNotNull(task.getProperties());
@@ -304,7 +304,7 @@ public class MapDBTaskStoreTest {
 
         // close store and create new one against same file
         store.close();
-        store = new MapDBTaskStore(dbFile, taskManager);
+        store = new MapDBTaskStore(dbFile);
         task = store.getTask(tctx);
 
         assertNotNull(task.getProperties());
