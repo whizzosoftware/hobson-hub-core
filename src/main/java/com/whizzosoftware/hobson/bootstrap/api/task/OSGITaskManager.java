@@ -53,7 +53,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private EventListener pluginStartListener;
     /**
      * This executor is responsible for registering any unregistered tasks with the plugins that handle
-     * their trigger condition.
+     * their trigger condition. This has do be done asynchronously and monitored continuously because a
+     * task can be registered for a plugin that has not yet been started by the runtime (e.g. at system
+     * startup).
      */
     private final ScheduledThreadPoolExecutor taskRegistrationPool = new ScheduledThreadPoolExecutor(1);
     /**
@@ -358,6 +360,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                                 provider.onUpdateTask(task);
                             }
                         });
+
+                        // fire an update event
+                        eventManager.postEvent(ctx.getHubContext(), new TaskUpdatedEvent(System.currentTimeMillis(), ctx));
                     } else {
                         throw new HobsonInvalidRequestException("No task found to update: " + ctx);
                     }
@@ -398,7 +403,11 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
                 taskStore.saveTask(task);
 
+                // queue the task registration
                 queueTaskRegistration();
+
+                // fire an update event
+                eventManager.postEvent(ctx, new TaskUpdatedEvent(System.currentTimeMillis(), task.getContext()));
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
@@ -425,6 +434,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
                                 // remove it from the task store
                                 taskStore.deleteTask(task.getContext());
+
+                                // post the deleted event
+                                eventManager.postEvent(ctx.getHubContext(), new TaskDeletedEvent(System.currentTimeMillis(), ctx));
                             } catch (Throwable t) {
                                 logger.error("Error deleting task", t);
                             }
