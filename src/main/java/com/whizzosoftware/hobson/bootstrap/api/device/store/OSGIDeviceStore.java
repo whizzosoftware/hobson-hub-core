@@ -67,11 +67,15 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
             plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
-                    // invoke the device's onStartup() lifecycle callback
-                    device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
+                    try {
+                        // invoke the device's onStartup() lifecycle callback
+                        device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
 
-                    // post a device started event
-                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
+                        // post a device started event
+                        eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
+                    } catch (Throwable t) {
+                        logger.error("An uncaught exception occurred", t);
+                    }
                 }
             });
         }
