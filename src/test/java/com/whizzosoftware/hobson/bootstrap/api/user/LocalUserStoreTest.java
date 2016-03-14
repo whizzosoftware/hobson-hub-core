@@ -106,6 +106,11 @@ public class LocalUserStoreTest {
             }
 
             @Override
+            public Collection<String> getSerialPorts(HubContext hctx) {
+                return null;
+            }
+
+            @Override
             public void sendTestEmail(HubContext ctx, PropertyContainer config) {
 
             }

@@ -25,6 +25,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
@@ -351,6 +352,19 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public LocalHubManager getLocalManager() {
         return this;
+    }
+
+    @Override
+    public Collection<String> getSerialPorts(HubContext hctx) {
+        List<String> results = new ArrayList<>();
+        Enumeration<CommPortIdentifier> ports = CommPortIdentifier.getPortIdentifiers();
+        while (ports.hasMoreElements()) {
+            CommPortIdentifier cpi = ports.nextElement();
+            if (cpi.getPortType() == CommPortIdentifier.PORT_SERIAL) {
+                results.add(cpi.getName());
+            }
+        }
+        return results;
     }
 
     @Override
