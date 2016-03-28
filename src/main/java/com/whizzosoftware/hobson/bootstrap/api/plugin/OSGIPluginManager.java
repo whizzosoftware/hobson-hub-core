@@ -9,20 +9,17 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.ConfigurationException;
-import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
+import com.whizzosoftware.hobson.bootstrap.api.plugin.store.MapDBPluginConfigurationStore;
+import com.whizzosoftware.hobson.bootstrap.api.plugin.store.PluginConfigurationStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
-import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
 import org.apache.felix.bundlerepository.Repository;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
 import org.apache.felix.bundlerepository.Resolver;
@@ -53,9 +50,22 @@ public class OSGIPluginManager implements PluginManager {
     volatile private BundleContext bundleContext;
     volatile private ConfigurationAdmin configAdmin;
     volatile private EventManager eventManager;
+    private PluginConfigurationStore pluginConfigStore;
 
     private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<>();
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
+
+    public void start() {
+        if (pluginConfigStore == null) {
+            pluginConfigStore = new MapDBPluginConfigurationStore(getDataFile(null, "pluginConfig"));
+        }
+    }
+
+    public void stop() {
+        if (pluginConfigStore != null) {
+            pluginConfigStore.close();
+        }
+    }
 
     @Override
     public Collection<String> getRemoteRepositories() {
@@ -112,45 +122,7 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public PropertyContainer getLocalPluginConfiguration(PluginContext ctx) {
-        return getLocalPluginConfiguration(getLocalPlugin(ctx));
-    }
-
-    protected PropertyContainer getLocalPluginConfiguration(HobsonPlugin plugin) {
-        org.osgi.service.cm.Configuration config = getOSGIConfiguration(plugin.getContext().getPluginId());
-        Dictionary props = config.getProperties();
-
-        // build a list of PropertyContainer objects
-        PropertyContainerClass metas = plugin.getConfigurationClass();
-
-        PropertyContainer ci = new PropertyContainer();
-
-        if (metas != null && metas.hasSupportedProperties()) {
-            for (TypedProperty meta : metas.getSupportedProperties()) {
-                Object value = null;
-                if (props != null) {
-                    if (meta.getType() == TypedProperty.Type.DEVICE) {
-                        value = DeviceContext.create((String)props.get(meta.getId()));
-                    } else {
-                        value = props.get(meta.getId());
-                    }
-                    props.remove(meta.getId());
-                }
-                ci.setPropertyValue(meta.getId(), value);
-            }
-        }
-
-        // On first run, the plugin will not have had its onStartup() method called and so may not have registered
-        // configuration meta data yet. If there are configuration properties set for the plugin that don't have
-        // corresponding meta data, create some "raw" meta data for it and add it to the returned configuration
-        if (props != null && props.size() > 0) {
-            Enumeration e = props.keys();
-            while (e.hasMoreElements()) {
-                String key = (String)e.nextElement();
-                ci.setPropertyValue(key, props.get(key));
-            }
-        }
-
-        return ci;
+        return pluginConfigStore.getLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass());
     }
 
     @Override
@@ -182,34 +154,14 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public void setLocalPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
-        // get the current configuration
-        org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
-
-        try {
-            // update the new configuration properties
-            DictionaryUtil.updateConfigurationDictionary(config, newConfig.getPropertyValues(), true);
-
-            // save the new configuration
-            postPluginConfigurationUpdateEvent(ctx);
-        } catch (IOException e) {
-            throw new ConfigurationException("Error updating plugin configuration", e);
-        }
+        pluginConfigStore.setLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass(), newConfig);
+        postPluginConfigurationUpdateEvent(ctx);
     }
 
     @Override
     public void setLocalPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
-        // get the current configuration
-        org.osgi.service.cm.Configuration config = getOSGIConfiguration(ctx.getPluginId());
-
-        try {
-            // update the new configuration property
-            DictionaryUtil.updateConfigurationDictionary(config, Collections.singletonMap(name, value), true);
-
-            // save the new configuration
-            postPluginConfigurationUpdateEvent(ctx);
-        } catch (IOException e) {
-            throw new ConfigurationException("Error updating plugin configuration", e);
-        }
+        pluginConfigStore.setLocalPluginConfigurationProperty(ctx, getLocalPlugin(ctx).getConfigurationClass(), name, value);
+        postPluginConfigurationUpdateEvent(ctx);
     }
 
     @Override
@@ -290,42 +242,18 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public File getDataDirectory(PluginContext ctx) {
-        Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-        if (bundle != null) {
-            BundleContext context = bundle.getBundleContext();
-            return context.getDataFile("tmp").getParentFile();
-        } else {
-            throw new ConfigurationException("Error obtaining data file");
+        File f = new File("data");
+        if (!f.exists()) {
+            if (!f.mkdir()) {
+                logger.error("Error creating data directory");
+            }
         }
+        return f;
     }
 
     @Override
     public File getDataFile(PluginContext ctx, String filename) {
-        Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-        if (bundle != null) {
-            BundleContext context = bundle.getBundleContext();
-            return context.getDataFile(filename);
-        } else {
-            throw new ConfigurationException("Error obtaining data file");
-        }
-    }
-
-    private org.osgi.service.cm.Configuration getOSGIConfiguration(String pluginId) {
-        if (bundleContext != null) {
-            try {
-                Bundle bundle = BundleUtil.getBundleForSymbolicName(pluginId);
-                if (bundle != null) {
-                    org.osgi.service.cm.Configuration c = configAdmin.getConfiguration(pluginId, bundle.getLocation());
-                    if (c == null) {
-                        throw new ConfigurationException("Unable to obtain configuration for " + pluginId + " (null)");
-                    }
-                    return c;
-                }
-            } catch (IOException e) {
-                throw new ConfigurationException("Unable to obtain configuration for " + pluginId, e);
-            }
-        }
-        throw new ConfigurationException("Unable to obtain configuration for " + pluginId);
+        return new File(getDataDirectory(ctx), (ctx != null ? (ctx.getPluginId() + "$") : "") + filename);
     }
 
     private void postPluginConfigurationUpdateEvent(PluginContext ctx) {

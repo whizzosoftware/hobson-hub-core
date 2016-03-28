@@ -18,9 +18,7 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
-import com.whizzosoftware.hobson.bootstrap.api.device.store.DeviceStore;
-import com.whizzosoftware.hobson.bootstrap.api.device.store.MapDBDevicePassportStore;
-import com.whizzosoftware.hobson.bootstrap.api.device.store.OSGIDeviceStore;
+import com.whizzosoftware.hobson.bootstrap.api.device.store.*;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.service.cm.ConfigurationAdmin;
@@ -60,7 +58,7 @@ public class OSGIDeviceManager implements DeviceManager {
     public void start() {
         // if a device store hasn't already been injected, create a default one
         if (deviceStore == null) {
-            deviceStore = new OSGIDeviceStore(bundleContext, configAdmin, eventManager, pluginManager);
+            deviceStore = new OSGIDeviceStore(bundleContext, new MapDBDeviceConfigurationStore(pluginManager.getDataFile(null, "deviceConfig")), eventManager, pluginManager);
             deviceStore.start();
         }
 

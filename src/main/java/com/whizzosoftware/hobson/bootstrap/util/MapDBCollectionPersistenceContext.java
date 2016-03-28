@@ -101,4 +101,11 @@ public class MapDBCollectionPersistenceContext implements CollectionPersistenceC
     public void commit() {
         db.commit();
     }
+
+    @Override
+    public void close() {
+        if (!db.isClosed()) {
+            db.close();
+        }
+    }
 }

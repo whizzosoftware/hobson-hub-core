@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.config.ConfigurationException;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceNotFoundException;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
@@ -21,15 +20,11 @@ import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
-import com.whizzosoftware.hobson.bootstrap.util.DictionaryUtil;
 import org.osgi.framework.*;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.*;
 
 /**
@@ -40,17 +35,16 @@ import java.util.*;
 public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private final static String DEVICE_PID_SEPARATOR = ".";
 
     private BundleContext bundleContext;
-    private ConfigurationAdmin configAdmin;
+    private DeviceConfigurationStore deviceConfigStore;
     private EventManager eventManager;
     private PluginManager pluginManager;
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
 
-    public OSGIDeviceStore(BundleContext bundleContext, ConfigurationAdmin configAdmin, EventManager eventManager, PluginManager pluginManager) {
+    public OSGIDeviceStore(BundleContext bundleContext, DeviceConfigurationStore deviceConfigStore, EventManager eventManager, PluginManager pluginManager) {
         this.bundleContext = bundleContext;
-        this.configAdmin = configAdmin;
+        this.deviceConfigStore = deviceConfigStore;
         this.eventManager = eventManager;
         this.pluginManager = pluginManager;
     }
@@ -94,6 +88,7 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     @Override
     public void stop() {
         logger.trace("Store is stopping");
+        deviceConfigStore.close();
         bundleContext.removeServiceListener(this);
     }
 
@@ -166,54 +161,13 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
 
     @Override
     public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
-        org.osgi.service.cm.Configuration config = getOSGIDeviceConfiguration(ctx);
-        Dictionary props = config.getProperties();
-
-        // build a list of PropertyContainer objects
         HobsonDevice device = getDevice(ctx);
-        PropertyContainerClass metas = device.getConfigurationClass();
-
-        PropertyContainer ci = new PropertyContainer();
-
-        for (TypedProperty meta : metas.getSupportedProperties()) {
-            Object value = null;
-            if (props != null) {
-                value = props.get(meta.getId());
-            }
-
-            // if the name property is null, use the default device name
-            if ("name".equals(meta.getId()) && value == null) {
-                value = device.getName();
-            }
-
-            ci.setPropertyValue(meta.getId(), value);
-        }
-
-        ci.setContainerClassContext(metas.getContext());
-
-        return ci;
+        return deviceConfigStore.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName());
     }
 
     @Override
     public Object getDeviceConfigurationProperty(DeviceContext ctx, String name) {
-        try {
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
-                    if (configAdmin != null) {
-                        org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
-                        Dictionary dic = config.getProperties();
-                        if (dic != null) {
-                            return dic.get(name);
-                        }
-                    } else {
-                        throw new ConfigurationException("Unable to get device configuration property: ConfigurationAdmin service is not available");
-                    }
-                }
-            }
-            return null;
-        } catch (IOException e) {
-            throw new ConfigurationException("Error obtaining configuration", e);
-        }
+        return deviceConfigStore.getDeviceConfigurationProperty(ctx, name);
     }
 
     @Override
@@ -254,36 +208,22 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
 
     @Override
     public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String, Object> values, boolean overwrite) {
-        try {
-            if (configAdmin != null) {
-                Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
+        HobsonDevice device = getDevice(ctx);
+        PropertyContainerClass configurationClass = device.getConfigurationClass();
+        String deviceName = device.getName();
 
-                if (bundle != null) {
-                    // get configuration
-                    org.osgi.service.cm.Configuration config = configAdmin.getConfiguration(ctx.getPluginId() + "." + ctx.getDeviceId(), bundle.getLocation());
+        deviceConfigStore.setDeviceConfigurationProperties(ctx, configurationClass, device.getName(), values, overwrite);
 
-                    // update configuration dictionary
-                    DictionaryUtil.updateConfigurationDictionary(config, values, overwrite);
-
-                    // send update event
-                    eventManager.postEvent(
-                            ctx.getPluginContext().getHubContext(),
-                            new DeviceConfigurationUpdateEvent(
-                                    System.currentTimeMillis(),
-                                    ctx.getPluginId(),
-                                    ctx.getDeviceId(),
-                                    getDeviceConfiguration(ctx)
-                            )
-                    );
-                } else {
-                    throw new ConfigurationException("Unable to set device configuration: no bundle found for " + ctx.getPluginId());
-                }
-            } else {
-                throw new ConfigurationException("Unable to set device configuration: ConfigurationAdmin service is not available");
-            }
-        } catch (IOException e) {
-            throw new ConfigurationException("Error obtaining configuration", e);
-        }
+        // send update event
+        eventManager.postEvent(
+            ctx.getPluginContext().getHubContext(),
+            new DeviceConfigurationUpdateEvent(
+                System.currentTimeMillis(),
+                ctx.getPluginId(),
+                ctx.getDeviceId(),
+                deviceConfigStore.getDeviceConfiguration(ctx, configurationClass, deviceName)
+            )
+        );
     }
 
     @Override
@@ -326,28 +266,6 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
                 }
             }
         }
-    }
-
-    private String getDevicePID(String pluginId, String deviceId) {
-        return pluginId + DEVICE_PID_SEPARATOR + deviceId;
-    }
-
-    private org.osgi.service.cm.Configuration getOSGIDeviceConfiguration(DeviceContext ctx) {
-        if (bundleContext != null) {
-            try {
-                Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
-                if (bundle != null) {
-                    org.osgi.service.cm.Configuration c = configAdmin.getConfiguration(getDevicePID(ctx.getPluginId(), ctx.getDeviceId()), bundle.getLocation());
-                    if (c == null) {
-                        throw new ConfigurationException("Unable to obtain configuration for: " + ctx + " (null)");
-                    }
-                    return c;
-                }
-            } catch (IOException e) {
-                throw new ConfigurationException("Unable to obtain configuration for: " + ctx, e);
-            }
-        }
-        throw new ConfigurationException("Unable to obtain configuration for: " + ctx);
     }
 
     private class DeviceServiceRegistration {
