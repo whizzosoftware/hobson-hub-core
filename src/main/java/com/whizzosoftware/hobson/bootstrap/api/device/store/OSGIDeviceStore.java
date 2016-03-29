@@ -8,18 +8,16 @@
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceNotFoundException;
 import com.whizzosoftware.hobson.api.device.HobsonDevice;
-import com.whizzosoftware.hobson.api.event.DeviceConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -35,16 +33,15 @@ import java.util.*;
 public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-
     private BundleContext bundleContext;
-    private DeviceConfigurationStore deviceConfigStore;
+    private ConfigurationManager configManager;
     private EventManager eventManager;
     private PluginManager pluginManager;
     private final Map<String,List<DeviceServiceRegistration>> serviceRegistrations = new HashMap<>();
 
-    public OSGIDeviceStore(BundleContext bundleContext, DeviceConfigurationStore deviceConfigStore, EventManager eventManager, PluginManager pluginManager) {
+    public OSGIDeviceStore(BundleContext bundleContext, ConfigurationManager configManager, EventManager eventManager, PluginManager pluginManager) {
         this.bundleContext = bundleContext;
-        this.deviceConfigStore = deviceConfigStore;
+        this.configManager = configManager;
         this.eventManager = eventManager;
         this.pluginManager = pluginManager;
     }
@@ -63,7 +60,7 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
                 public void run() {
                     try {
                         // invoke the device's onStartup() lifecycle callback
-                        device.getRuntime().onStartup(getDeviceConfiguration(device.getContext()));
+                        device.getRuntime().onStartup(configManager.getDeviceConfiguration(device.getContext(), device.getConfigurationClass(), device.getName()));
 
                         // post a device started event
                         eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
@@ -88,7 +85,6 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     @Override
     public void stop() {
         logger.trace("Store is stopping");
-        deviceConfigStore.close();
         bundleContext.removeServiceListener(this);
     }
 
@@ -160,17 +156,6 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     }
 
     @Override
-    public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
-        HobsonDevice device = getDevice(ctx);
-        return deviceConfigStore.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName());
-    }
-
-    @Override
-    public Object getDeviceConfigurationProperty(DeviceContext ctx, String name) {
-        return deviceConfigStore.getDeviceConfigurationProperty(ctx, name);
-    }
-
-    @Override
     synchronized public void publishDevice(HobsonDevice device, boolean republish) {
         logger.trace("Attempting to publish device: {}", device.getContext());
 
@@ -204,26 +189,6 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
         }
 
         logger.debug("Device published: {}", device.getContext());
-    }
-
-    @Override
-    public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String, Object> values, boolean overwrite) {
-        HobsonDevice device = getDevice(ctx);
-        PropertyContainerClass configurationClass = device.getConfigurationClass();
-        String deviceName = device.getName();
-
-        deviceConfigStore.setDeviceConfigurationProperties(ctx, configurationClass, device.getName(), values, overwrite);
-
-        // send update event
-        eventManager.postEvent(
-            ctx.getPluginContext().getHubContext(),
-            new DeviceConfigurationUpdateEvent(
-                System.currentTimeMillis(),
-                ctx.getPluginId(),
-                ctx.getDeviceId(),
-                deviceConfigStore.getDeviceConfiguration(ctx, configurationClass, deviceName)
-            )
-        );
     }
 
     @Override
@@ -271,7 +236,7 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
     private class DeviceServiceRegistration {
         private ServiceRegistration deviceRegistration;
 
-        public DeviceServiceRegistration(ServiceRegistration deviceRegistration) {
+        DeviceServiceRegistration(ServiceRegistration deviceRegistration) {
             this.deviceRegistration = deviceRegistration;
         }
 
@@ -281,7 +246,7 @@ public class OSGIDeviceStore implements DeviceStore, ServiceListener {
             return (HobsonDevice)context.getService(ref);
         }
 
-        public void unregister() {
+        void unregister() {
             deviceRegistration.unregister();
         }
     }

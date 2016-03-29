@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -16,8 +17,6 @@ import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
-import com.whizzosoftware.hobson.bootstrap.api.plugin.store.MapDBPluginConfigurationStore;
-import com.whizzosoftware.hobson.bootstrap.api.plugin.store.PluginConfigurationStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import com.whizzosoftware.hobson.api.plugin.*;
 import org.apache.felix.bundlerepository.Repository;
@@ -25,7 +24,6 @@ import org.apache.felix.bundlerepository.RepositoryAdmin;
 import org.apache.felix.bundlerepository.Resolver;
 import org.apache.felix.bundlerepository.Resource;
 import org.osgi.framework.*;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,24 +46,11 @@ public class OSGIPluginManager implements PluginManager {
     private static final Logger logger = LoggerFactory.getLogger(OSGIPluginManager.class);
 
     volatile private BundleContext bundleContext;
-    volatile private ConfigurationAdmin configAdmin;
+    volatile private ConfigurationManager configManager;
     volatile private EventManager eventManager;
-    private PluginConfigurationStore pluginConfigStore;
 
     private final ArrayDeque<PluginRef> queuedResources = new ArrayDeque<>();
     static ThreadPoolExecutor executor = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(1));
-
-    public void start() {
-        if (pluginConfigStore == null) {
-            pluginConfigStore = new MapDBPluginConfigurationStore(getDataFile(null, "pluginConfig"));
-        }
-    }
-
-    public void stop() {
-        if (pluginConfigStore != null) {
-            pluginConfigStore.close();
-        }
-    }
 
     @Override
     public Collection<String> getRemoteRepositories() {
@@ -122,7 +107,7 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public PropertyContainer getLocalPluginConfiguration(PluginContext ctx) {
-        return pluginConfigStore.getLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass());
+        return configManager.getLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass());
     }
 
     @Override
@@ -154,13 +139,13 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public void setLocalPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
-        pluginConfigStore.setLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass(), newConfig);
+        configManager.setLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass(), newConfig);
         postPluginConfigurationUpdateEvent(ctx);
     }
 
     @Override
     public void setLocalPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
-        pluginConfigStore.setLocalPluginConfigurationProperty(ctx, getLocalPlugin(ctx).getConfigurationClass(), name, value);
+        configManager.setLocalPluginConfigurationProperty(ctx, getLocalPlugin(ctx).getConfigurationClass(), name, value);
         postPluginConfigurationUpdateEvent(ctx);
     }
 

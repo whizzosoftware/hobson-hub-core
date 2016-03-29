@@ -18,6 +18,7 @@ import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
@@ -29,8 +30,6 @@ import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
-import org.osgi.service.cm.Configuration;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.LoggerFactory;
 
 import javax.mail.Message;
@@ -52,19 +51,19 @@ import java.util.*;
 public class OSGIHubManager implements HubManager, LocalHubManager {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
 
-    public static final String ADMIN_PASSWORD = "adminPassword";
-    public static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
-    public static final String LOG_LEVEL = "logLevel";
+    private static final String ADMIN_PASSWORD = "adminPassword";
+    private static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
+    private static final String LOG_LEVEL = "logLevel";
 
     volatile private BundleContext bundleContext;
-    volatile private ConfigurationAdmin configAdmin;
+    volatile private ConfigurationManager configManager;
     volatile private EventManager eventManager;
 
     private NetworkInfo networkInfo;
 
     public void start() {
         // set the log level
-        String logLevel = (String)getConfigurationProperty(LOG_LEVEL);
+        String logLevel = (String)configManager.getHubConfigurationProperty(HubContext.createLocal(), LOG_LEVEL);
         if (logLevel != null) {
             ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel(logLevel));
         }
@@ -105,14 +104,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public void deleteConfiguration(HubContext ctx) {
-        Configuration config = getConfiguration();
-        Dictionary props = new Hashtable();
-        try {
-            updateConfiguration(ctx, config, props);
-            ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.INFO);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error clearing hub details", e);
-        }
+        configManager.deleteHubConfiguration(ctx);
     }
 
     @Override
@@ -122,10 +114,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public PropertyContainer getConfiguration(HubContext ctx) {
-        PropertyContainer pc = new PropertyContainer(
-            PropertyContainerClassContext.create(ctx, "hubConfiguration"),
-            getConfigurationPropertyMap(getConfiguration())
-        );
+        PropertyContainer pc = configManager.getHubConfiguration(ctx);
         pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
 
         return pc;
@@ -151,38 +140,32 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
-    protected String getHubName(HubContext ctx) {
-        Configuration config = getConfiguration();
-        Dictionary props = getConfigurationProperties(config);
-        String name = (String)props.get("name");
+    private String getHubName(HubContext ctx) {
+        PropertyContainer props = configManager.getHubConfiguration(ctx);
+        String name = (String)props.getPropertyValue("name");
         return (name == null) ? "Unnamed" : name;
     }
 
     @Override
     public void setLocalPassword(HubContext ctx, PasswordChange change) {
-        try {
-            Configuration config = getConfiguration();
-            Dictionary props = getConfigurationProperties(config);
+        PropertyContainer props = configManager.getHubConfiguration(ctx);
 
-            // verify the old password
-            String shaOld = DigestUtils.sha256Hex(change.getCurrentPassword());
-            String hubPassword = (String)props.get(ADMIN_PASSWORD);
-            if (hubPassword != null && !hubPassword.equals(shaOld)) {
-                throw new HobsonRuntimeException("The current hub password is invalid");
-            }
-
-            // verify the password meets complexity requirements
-            if (!change.isValid()) {
-                throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
-            }
-
-            // set the new password
-            props.put(ADMIN_PASSWORD, DigestUtils.sha256Hex(change.getNewPassword()));
-
-            updateConfiguration(ctx, config, props);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting hub password", e);
+        // verify the old password
+        String shaOld = DigestUtils.sha256Hex(change.getCurrentPassword());
+        String hubPassword = (String)props.getPropertyValue(ADMIN_PASSWORD);
+        if (hubPassword != null && !hubPassword.equals(shaOld)) {
+            throw new HobsonRuntimeException("The current hub password is invalid");
         }
+
+        // verify the password meets complexity requirements
+        if (!change.isValid()) {
+            throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
+        }
+
+        // set the new password
+        props.setPropertyValue(ADMIN_PASSWORD, DigestUtils.sha256Hex(change.getNewPassword()));
+
+        updateConfiguration(ctx, props);
     }
 
     @Override
@@ -208,14 +191,11 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public boolean authenticateLocal(HubContext ctx, String password) {
         String adminPassword = null;
-        Configuration config = getConfiguration();
+        PropertyContainer config = configManager.getHubConfiguration(ctx);
 
         // if there's configuration available, try to obtain the encrypted admin password
         if (config != null) {
-            Dictionary d = config.getProperties();
-            if (d != null) {
-                adminPassword = (String)d.get(ADMIN_PASSWORD);
-            }
+            adminPassword = (String)config.getPropertyValue(ADMIN_PASSWORD);
         }
 
         // if it hasn't been set, default to the "admin" password
@@ -226,10 +206,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return (adminPassword.equals(DigestUtils.sha256Hex(password)));
     }
 
-    protected PropertyContainer getHubEmailConfiguration(HubContext ctx) {
-        return new PropertyContainer(null, getConfigurationPropertyMap(getConfiguration()));
-    }
-
     @Override
     public void sendTestEmail(HubContext ctx, PropertyContainer config) {
         sendEmail(config, config.getStringPropertyValue(HubConfigurationClass.EMAIL_SENDER), "Hobson Test Message", "This is a test message from Hobson. If you're reading this, your e-mail configuration is working!");
@@ -237,27 +213,26 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public void sendEmail(HubContext ctx, String recipientAddress, String subject, String body) {
-        sendEmail(getHubEmailConfiguration(ctx), recipientAddress, subject, body);
+        sendEmail(getConfiguration(ctx), recipientAddress, subject, body);
     }
 
     @Override
     public void setConfiguration(HubContext ctx, PropertyContainer configuration) {
-        Configuration config = getConfiguration();
-        Dictionary props = getConfigurationProperties(config);
+        PropertyContainer pc = getConfiguration(ctx);
 
-        // set properties
-        for (String name : configuration.getPropertyValues().keySet()) {
-            props.put(name, configuration.getPropertyValue(name));
-            if (name.equals(LOG_LEVEL)) {
-                ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel((String)configuration.getPropertyValue(name)));
+        // add existing configuration values if necessary
+        for (String key : pc.getPropertyValues().keySet()) {
+            if (!configuration.hasPropertyValue(key)) {
+                configuration.setPropertyValue(key, pc.getPropertyValue(key));
             }
         }
 
-        try {
-            updateConfiguration(ctx, config, props);
-        } catch (IOException e) {
-            throw new HobsonRuntimeException("Error setting hub configuration", e);
+        // set log level if specified
+        if (configuration.hasPropertyValue(LOG_LEVEL)) {
+            ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel((String)configuration.getPropertyValue(LOG_LEVEL)));
         }
+
+        updateConfiguration(ctx, configuration);
     }
 
     @Override
@@ -266,7 +241,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         bundleContext.registerService(TelemetryManager.class.getName(), telemetryManager, null);
     }
 
-    protected void sendEmail(PropertyContainer config, String recipientAddress, String subject, String body) {
+    private void sendEmail(PropertyContainer config, String recipientAddress, String subject, String body) {
         String mailHost = config.getStringPropertyValue(HubConfigurationClass.EMAIL_SERVER);
         Boolean mailSecure = config.getBooleanPropertyValue(HubConfigurationClass.EMAIL_SECURE);
         String mailUser = config.getStringPropertyValue(HubConfigurationClass.EMAIL_USER);
@@ -305,13 +280,13 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
-    protected HobsonHub createLocalHubDetails() {
+    private HobsonHub createLocalHubDetails() {
         String version = FrameworkUtil.getBundle(getClass()).getVersion().toString();
         HubContext ctx = HubContext.createLocal();
         return new HobsonHub.Builder(ctx).
             name(getHubName(ctx)).
             version(version).
-            configuration(getConfigurationPropertyMap(getConfiguration())).
+            configuration(getConfiguration(HubContext.createLocal()).getPropertyValues()).
             build();
     }
 
@@ -392,7 +367,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         logger.detachAppender(appender);
     }
 
-    protected String getLogFilePath() {
+    private String getLogFilePath() {
         LoggerContext context = (LoggerContext)LoggerFactory.getILoggerFactory();
         for (Logger logger : context.getLoggerList()) {
             for (Iterator<Appender<ILoggingEvent>> index = logger.iteratorForAppenders(); index.hasNext();) {
@@ -405,52 +380,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return null;
     }
 
-    private Configuration getConfiguration() {
-        if (configAdmin != null) {
-            try {
-                return configAdmin.getConfiguration("com.whizzosoftware.hobson.hub");
-            } catch (IOException e) {
-                throw new HobsonRuntimeException("Unable to retrieve hub configuration", e);
-            }
-        } else {
-            return null;
-        }
-    }
-
-    private Object getConfigurationProperty(String name) {
-        Configuration config = getConfiguration();
-        if (config != null) {
-            Dictionary d = config.getProperties();
-            if (d != null) {
-                return d.get(name);
-            }
-        }
-        return null;
-    }
-
-    private Dictionary getConfigurationProperties(Configuration config) {
-        Dictionary p = config.getProperties();
-        if (p == null) {
-            p = new Properties();
-        }
-        return p;
-    }
-
-    private Map<String,Object> getConfigurationPropertyMap(Configuration config) {
-        Dictionary p = config.getProperties();
-        Map<String,Object> pm = new HashMap<>();
-        if (p != null) {
-            Enumeration e = p.keys();
-            while (e.hasMoreElements()) {
-                Object k = e.nextElement();
-                pm.put(k.toString(), p.get(k));
-            }
-        }
-        return pm;
-    }
-
-    private void updateConfiguration(HubContext ctx, Configuration config, Dictionary props) throws IOException {
-        config.update(props);
+    private void updateConfiguration(HubContext ctx, PropertyContainer config) {
+        configManager.setHubConfiguration(ctx, config);
         eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
     }
 
@@ -467,7 +398,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
      *
      * @since hobson-hub-api 0.1.6
      */
-    protected Message createMessage(Session session, PropertyContainer config, String recipientAddress, String subject, String message) {
+    Message createMessage(Session session, PropertyContainer config, String recipientAddress, String subject, String message) {
         if (!config.hasPropertyValue(HubConfigurationClass.EMAIL_SENDER)) {
             throw new HobsonInvalidRequestException("No sender address specified; unable to execute e-mail action");
         } else if (recipientAddress == null) {

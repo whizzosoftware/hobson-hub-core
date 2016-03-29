@@ -69,40 +69,12 @@ public interface DeviceStore {
     HobsonDevice getDevice(DeviceContext ctx);
 
     /**
-     * Retrieves a specific device's configuration.
-     *
-     * @param ctx the device context
-     *
-     * @return a PropertyContainer instance containing the configuration
-     */
-    PropertyContainer getDeviceConfiguration(DeviceContext ctx);
-
-    /**
-     * Retrieves a specific device's configuration property.
-     *
-     * @param ctx the device context
-     * @param name the property name
-     *
-     * @return the property value
-     */
-    Object getDeviceConfigurationProperty(DeviceContext ctx, String name);
-
-    /**
      * Publishes a new device.
      *
      * @param device the device to publish
      * @param republish indicates whether a re-publish should occur if the device has already been published (will fail otherwise)
      */
     void publishDevice(HobsonDevice device, boolean republish);
-
-    /**
-     * Sets a specific device's configuration.
-     *
-     * @param ctx the device context
-     * @param values the configuration property values
-     * @param overwrite indicates whether an existing configuration property can be overwritten
-     */
-    void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite);
 
     /**
      * Unpublishes a specific device.

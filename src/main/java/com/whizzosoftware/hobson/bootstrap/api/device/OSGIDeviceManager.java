@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.device.store.DevicePassportStore;
 import com.whizzosoftware.hobson.api.event.*;
@@ -21,7 +22,6 @@ import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.store.*;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,7 @@ public class OSGIDeviceManager implements DeviceManager {
 
     volatile private BundleContext bundleContext;
     volatile private EventManager eventManager;
-    volatile private ConfigurationAdmin configAdmin;
+    volatile private ConfigurationManager configManager;
     volatile private VariableManager variableManager;
     volatile private PluginManager pluginManager;
 
@@ -46,7 +46,6 @@ public class OSGIDeviceManager implements DeviceManager {
     private Map<DeviceContext,Long> deviceCheckIns = Collections.synchronizedMap(new HashMap<DeviceContext,Long>());
     private DeviceStore deviceStore;
     private DevicePassportStore passportStore;
-    private DeviceAvailabilityMonitor deviceAvailabilityMonitor;
     private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
@@ -58,7 +57,7 @@ public class OSGIDeviceManager implements DeviceManager {
     public void start() {
         // if a device store hasn't already been injected, create a default one
         if (deviceStore == null) {
-            deviceStore = new OSGIDeviceStore(bundleContext, new MapDBDeviceConfigurationStore(pluginManager.getDataFile(null, "deviceConfig")), eventManager, pluginManager);
+            deviceStore = new OSGIDeviceStore(bundleContext, configManager, eventManager, pluginManager);
             deviceStore.start();
         }
 
@@ -73,9 +72,9 @@ public class OSGIDeviceManager implements DeviceManager {
         }
 
         // start device availability monitor
-        deviceAvailabilityMonitor = new DeviceAvailabilityMonitor(HubContext.createLocal(), this, eventManager);
+        DeviceAvailabilityMonitor deviceAvailabilityMonitor = new DeviceAvailabilityMonitor(HubContext.createLocal(), this, eventManager);
         deviceAvailabilityFuture = deviceAvailabilityExecutor.scheduleAtFixedRate(
-            deviceAvailabilityMonitor,
+                deviceAvailabilityMonitor,
             Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
             Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
             TimeUnit.SECONDS
@@ -184,7 +183,8 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
-        return deviceStore.getDeviceConfiguration(ctx);
+        HobsonDevice device = getDevice(ctx);
+        return configManager.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName());
     }
 
     @Override
@@ -194,7 +194,7 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public Object getDeviceConfigurationProperty(DeviceContext ctx, String name) {
-        return deviceStore.getDeviceConfigurationProperty(ctx, name);
+        return configManager.getDeviceConfigurationProperty(ctx, name);
     }
 
     @Override
@@ -202,7 +202,7 @@ public class OSGIDeviceManager implements DeviceManager {
         return isDeviceAvailable(ctx, System.currentTimeMillis());
     }
 
-    public boolean isDeviceAvailable(DeviceContext ctx, long now) {
+    boolean isDeviceAvailable(DeviceContext ctx, long now) {
         Long checkin = deviceCheckIns.get(ctx);
         boolean stale = (checkin == null || now - checkin >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL);
         Boolean avail = deviceAvailabilityMap.get(ctx);
@@ -229,7 +229,7 @@ public class OSGIDeviceManager implements DeviceManager {
         publishDevice(device, republish, System.currentTimeMillis());
     }
 
-    public void publishDevice(HobsonDevice device, boolean republish, long now) {
+    void publishDevice(HobsonDevice device, boolean republish, long now) {
         String deviceId = device.getContext().getDeviceId();
 
         // check that the device ID is legal
@@ -252,7 +252,7 @@ public class OSGIDeviceManager implements DeviceManager {
 
     }
 
-    synchronized public void unpublishDevice(final HobsonDevice device, final EventLoopExecutor executor) {
+    synchronized private void unpublishDevice(final HobsonDevice device, final EventLoopExecutor executor) {
         if (device != null) {
             // execute the device's shutdown method using its plugin event loop
             executor.executeInEventLoop(new Runnable() {
@@ -286,6 +286,18 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite) {
-        deviceStore.setDeviceConfigurationProperties(ctx, values, overwrite);
+        HobsonDevice device = getDevice(ctx);
+        configManager.setDeviceConfigurationProperties(ctx, device.getConfigurationClass(), device.getName(), values, overwrite);
+
+        // send update event
+        eventManager.postEvent(
+            ctx.getPluginContext().getHubContext(),
+            new DeviceConfigurationUpdateEvent(
+                System.currentTimeMillis(),
+                ctx.getPluginId(),
+                ctx.getDeviceId(),
+                configManager.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName())
+            )
+        );
     }
 }
