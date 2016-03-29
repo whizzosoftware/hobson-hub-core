@@ -52,7 +52,9 @@ public class OSGIEventManager implements EventManager {
             eventFactory.addEventClass(PluginStoppedEvent.ID, PluginStoppedEvent.class);
             eventFactory.addEventClass(PresenceUpdateNotificationEvent.ID, PresenceUpdateNotificationEvent.class);
             eventFactory.addEventClass(PresenceUpdateRequestEvent.ID, PresenceUpdateRequestEvent.class);
+            eventFactory.addEventClass(TaskDeletedEvent.ID, TaskDeletedEvent.class);
             eventFactory.addEventClass(TaskExecutionEvent.ID, TaskExecutionEvent.class);
+            eventFactory.addEventClass(TaskUpdatedEvent.ID, TaskUpdatedEvent.class);
             eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
             eventFactory.addEventClass(VariableUpdateRequestEvent.ID, VariableUpdateRequestEvent.class);
         } catch (NoSuchMethodException e) {

@@ -67,7 +67,12 @@ public class MapDBCollectionPersistenceContext implements CollectionPersistenceC
         Map<String,Object> m = db.createHashMap(key).makeOrGet();
         m.clear();
         for (String k : map.keySet()) {
-            m.put(k, map.get(k));
+            Object v = map.get(k);
+            if (v != null) {
+                m.put(k, v);
+            } else {
+                m.remove(k);
+            }
         }
     }
 

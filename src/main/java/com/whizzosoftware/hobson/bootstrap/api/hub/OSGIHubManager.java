@@ -105,6 +105,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public void deleteConfiguration(HubContext ctx) {
         configManager.deleteHubConfiguration(ctx);
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
     }
 
     @Override
