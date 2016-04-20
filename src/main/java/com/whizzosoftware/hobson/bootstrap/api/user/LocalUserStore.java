@@ -8,20 +8,23 @@
 package com.whizzosoftware.hobson.bootstrap.api.user;
 
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
-import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
+import com.whizzosoftware.hobson.api.user.UserAuthentication;
 import com.whizzosoftware.hobson.api.user.UserStore;
+import com.whizzosoftware.hobson.rest.HobsonRole;
+import com.whizzosoftware.hobson.rest.TokenHelper;
 
-import java.util.Collection;
 import java.util.Collections;
 
 public class LocalUserStore implements UserStore {
     private HubManager hubManager;
+    private TokenHelper tokenHelper;
 
     public LocalUserStore(HubManager hubManager) {
         this.hubManager = hubManager;
+        this.tokenHelper = new TokenHelper();
     }
 
     @Override
@@ -35,29 +38,16 @@ public class LocalUserStore implements UserStore {
     }
 
     @Override
-    public HobsonUser authenticate(String username, String password) {
+    public UserAuthentication authenticate(String username, String password) {
         if (hubManager.getLocalManager() != null && hubManager.getLocalManager().authenticateLocal(HubContext.createLocal(), password)) {
-            return createLocalUser();
+            HobsonUser user = createLocalUser();
+            return new UserAuthentication(user, tokenHelper.createToken(user.getId(), HobsonRole.USER.value(), Collections.singletonList(HubContext.DEFAULT_HUB)));
         } else {
             throw new HobsonAuthenticationException("The authentication credentials are invalid");
         }
     }
 
-    @Override
-    public HobsonUser getUser(String username) {
-        if (username.equals("local")) {
-            return createLocalUser();
-        } else {
-            throw new HobsonAuthorizationException("You are not authorized to retrieve that information");
-        }
-    }
-
-    @Override
-    public Collection<String> getUserIds() {
-        return Collections.singletonList("local");
-    }
-
-    protected HobsonUser createLocalUser() {
+    HobsonUser createLocalUser() {
         return new HobsonUser.Builder("local")
             .givenName("Local")
             .familyName("User")

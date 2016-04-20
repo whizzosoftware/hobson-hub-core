@@ -29,7 +29,7 @@ public class LocalAuthorizer extends Authorizer implements HobsonAuthorizer {
         request.getAttributes().put(HUB_CONTEXT, ctx);
         return (
             clientInfo.getRoles().contains(HobsonRole.ADMIN.value()) ||
-            (clientInfo.getUser().getIdentifier().equals(ctx.getUserId()) && (ctx.getHubId() == null || "local".equals(ctx.getHubId())) && clientInfo.getRoles().contains(HobsonRole.USER.value()))
+            ((ctx.getUserId() == null || clientInfo.getUser().getIdentifier().equals(ctx.getUserId())) && (ctx.getHubId() == null || "local".equals(ctx.getHubId())) && clientInfo.getRoles().contains(HobsonRole.USER.value()))
         );
     }
 }

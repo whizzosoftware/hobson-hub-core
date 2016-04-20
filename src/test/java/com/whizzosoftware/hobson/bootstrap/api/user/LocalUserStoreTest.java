@@ -127,7 +127,7 @@ public class LocalUserStoreTest {
         };
 
         LocalUserStore mgr = new LocalUserStore(hubManager);
-        HobsonUser user = mgr.authenticate("local", "local");
+        HobsonUser user = mgr.authenticate("local", "local").getUser();
         assertNotNull(user);
 
         assertEquals("local", user.getId());
