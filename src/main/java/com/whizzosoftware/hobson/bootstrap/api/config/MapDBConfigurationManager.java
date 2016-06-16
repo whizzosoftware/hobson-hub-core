@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -68,9 +69,10 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            Map<String,Object> m = persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID));
             return new PropertyContainer(
                 PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID),
-                persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID))
+                new HashMap<>(m) // make sure this is a copy so the DB's map isn't modified
             );
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -115,9 +117,10 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            Map<String,Object> m = persister.restoreLocalPluginConfiguration(cpctx, ctx);
             return new PropertyContainer(
-                    PropertyContainerClassContext.create(ctx, configurationClass.getContext().getContainerClassId()),
-                    persister.restoreLocalPluginConfiguration(cpctx, ctx)
+                PropertyContainerClassContext.create(ctx, configurationClass.getContext().getContainerClassId()),
+                new HashMap<>(m) // make sure this is a copy so the DB's map isn't modified
             );
         } finally {
             Thread.currentThread().setContextClassLoader(old);
