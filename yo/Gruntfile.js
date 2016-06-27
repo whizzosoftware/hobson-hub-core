@@ -65,6 +65,18 @@ module.exports = function (grunt) {
                 port: 8182,
                 https: false,
                 changeOrigin: false
+            }, {
+                context: '/.well-known',
+                host: 'localhost',
+                port: 8182,
+                https: false,
+                changeOrigin: false
+            }, {
+                context: '/token',
+                host: 'localhost',
+                port: 8182,
+                https: false,
+                changeOrigin: false
             }],
             livereload: {
                 options: {

@@ -5,7 +5,7 @@ define([
 	var HubService = {
 
 		sendTestEmail: function(userId, hubId, model) {
-			var url = '/api/v1/users/' + userId + '/hubs/' + hubId + '/configuration/sendTestEmail';
+			var url = '/api/v1/hubs/' + hubId + '/configuration/sendTestEmail';
 			var json = {values: model.toJSON()};
 			return $.ajax(url, {
 				type: 'POST',
@@ -16,7 +16,7 @@ define([
 		},
 
 		setPassword: function(ctx, userId, hubId, password) {
-			var url = '/api/v1/users/' + userId + '/hubs/' + hubId + '/password';
+			var url = '/api/v1/hubs/' + hubId + '/password';
 			var data = {currentPassword: 'local', newPassword: password};
 			return $.ajax(url, {
 				context: ctx,

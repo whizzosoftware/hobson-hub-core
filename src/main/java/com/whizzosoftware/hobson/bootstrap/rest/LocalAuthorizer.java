@@ -24,8 +24,8 @@ public class LocalAuthorizer extends Authorizer implements HobsonAuthorizer {
     @Override
     protected boolean authorize(Request request, Response response) {
         String path = request.getResourceRef().getPath();
-        HobsonRestContext ctx = HobsonRestContext.createContext(getApplication(), path);
         ClientInfo clientInfo = request.getClientInfo();
+        HobsonRestContext ctx = HobsonRestContext.createContext(getApplication(), clientInfo, path);
         request.getAttributes().put(HUB_CONTEXT, ctx);
         return (
             clientInfo.getRoles().contains(HobsonRole.ADMIN.value()) ||

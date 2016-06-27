@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.user;
 
+import com.google.inject.Inject;
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
@@ -15,17 +16,19 @@ import com.whizzosoftware.hobson.api.user.UserAuthentication;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.rest.HobsonRole;
 import com.whizzosoftware.hobson.rest.TokenHelper;
+import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 
 public class LocalUserStore implements UserStore {
-    private HubManager hubManager;
-    private TokenHelper tokenHelper;
+    private Logger logger = LoggerFactory.getLogger(LocalUserStore.class);
 
-    public LocalUserStore(HubManager hubManager) {
-        this.hubManager = hubManager;
-        this.tokenHelper = new TokenHelper();
-    }
+    @Inject
+    HubManager hubManager;
+    @Inject
+    OIDCConfigProvider oidcConfigProvider;
 
     @Override
     public boolean hasDefaultUser() {
@@ -41,7 +44,7 @@ public class LocalUserStore implements UserStore {
     public UserAuthentication authenticate(String username, String password) {
         if (hubManager.getLocalManager() != null && hubManager.getLocalManager().authenticateLocal(HubContext.createLocal(), password)) {
             HobsonUser user = createLocalUser();
-            return new UserAuthentication(user, tokenHelper.createToken(user.getId(), HobsonRole.USER.value(), Collections.singletonList(HubContext.DEFAULT_HUB)));
+            return new UserAuthentication(user, TokenHelper.createToken(oidcConfigProvider, user, HobsonRole.USER.value(), Collections.singletonList(HubContext.DEFAULT_HUB)));
         } else {
             throw new HobsonAuthenticationException("The authentication credentials are invalid");
         }

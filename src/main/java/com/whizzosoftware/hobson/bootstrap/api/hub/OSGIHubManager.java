@@ -30,6 +30,7 @@ import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
+import org.restlet.Application;
 import org.slf4j.LoggerFactory;
 
 import javax.mail.Message;
@@ -60,6 +61,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private EventManager eventManager;
 
     private NetworkInfo networkInfo;
+    private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
 
     public void start() {
         // set the log level
@@ -128,16 +130,20 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public PropertyContainerClass getContainerClass(PropertyContainerClassContext ctx) {
-        try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");
-            ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
-            if (refs != null && refs.length == 1) {
-                return (PropertyContainerClass)bundleContext.getService(refs[0]);
-            } else {
-                throw new HobsonRuntimeException("Unable to find container class: " + ctx);
+        if (ctx != null) {
+            try {
+                Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");
+                ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
+                if (refs != null && refs.length == 1) {
+                    return (PropertyContainerClass)bundleContext.getService(refs[0]);
+                } else {
+                    throw new HobsonRuntimeException("Unable to find container class: " + ctx);
+                }
+            } catch (InvalidSyntaxException e) {
+                throw new HobsonRuntimeException("Error retrieving container class: " + ctx, e);
             }
-        } catch (InvalidSyntaxException e) {
-            throw new HobsonRuntimeException("Error retrieving container class: " + ctx, e);
+        } else {
+            throw new HobsonRuntimeException("Unable to obtain property container class for null context");
         }
     }
 
@@ -240,6 +246,20 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     public void addTelemetryManager(TelemetryManager telemetryManager) {
         // register telemetry manager
         bundleContext.registerService(TelemetryManager.class.getName(), telemetryManager, null);
+    }
+
+    @Override
+    public void publishWebApplication(HubWebApplication app) {
+        webAppMap.put(app.getPath(), bundleContext.registerService(HubWebApplication.class.getName(), app, null));
+    }
+
+    @Override
+    public void unpublishWebApplication(String path) {
+        ServiceRegistration sr = webAppMap.get(path);
+        if (sr != null) {
+            sr.unregister();
+            webAppMap.remove(path);
+        }
     }
 
     private void sendEmail(PropertyContainer config, String recipientAddress, String subject, String body) {

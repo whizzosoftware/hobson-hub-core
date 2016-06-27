@@ -72,6 +72,6 @@ public class EventFactoryTest {
 
         HobsonEvent event = ef.createEvent(props);
         assertTrue(event instanceof DeviceUnavailableEvent);
-        assertEquals("local:local:plugin:device", ((DeviceUnavailableEvent)event).getDeviceContext().toString());
+        assertEquals("local:plugin:device", ((DeviceUnavailableEvent)event).getDeviceContext().toString());
     }
 }

@@ -4,7 +4,7 @@ define([
 ], function(Backbone) {
 	var HubModel = Backbone.Model.extend({
 		id: 'local',
-		url: '/api/v1/users/local/hubs/local',
+		url: '/api/v1/hubs/local',
 		getEmailServerType: function() {
 			var type = 'none';
 			var email = this.get('email');

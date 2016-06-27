@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap;
 
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
@@ -16,6 +17,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.hub.HubWebApplication;
 import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
@@ -31,10 +33,9 @@ import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
-import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
 import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
-import com.whizzosoftware.hobson.bootstrap.rest.RootApplication;
+import com.whizzosoftware.hobson.bootstrap.rest.root.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -63,7 +64,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -79,7 +80,9 @@ public class Activator extends DependencyActivatorBase {
     private ServiceTracker presenceTracker;
     private ServiceTracker applicationTracker;
     private ServiceTracker hubManagerTracker;
+    private Injector injector;
     private final Component component = new Component();
+    private Map<String,Application> appMap = Collections.synchronizedMap(new HashMap<String,Application>());
 
     public Activator() {
         super();
@@ -107,7 +110,7 @@ public class Activator extends DependencyActivatorBase {
                 HubManager hubManager = (HubManager)context.getService(ref);
 
                 // create the dependency injector for all REST resources
-                Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(new LocalUserStore(hubManager)));
+                injector = Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(hubManager));
 
                 // Create the Restlet server
                 Engine engine = Engine.getInstance();
@@ -137,17 +140,34 @@ public class Activator extends DependencyActivatorBase {
 
                 try {
                     // register the root application
-                    registerRestletApplication(new RootApplication(), "");
+                    registerRestletApplication(injector.getInstance(RootApplication.class), "");
 
                     // register the REST API application
-                    ApiV1Application app = new ApiV1Application();
-                    registerRestletApplication(app, ApiV1Application.API_ROOT);
+                    registerRestletApplication(injector.getInstance(ApiV1Application.class), ApiV1Application.API_ROOT);
 
                     // register the setup wizard
                     registerRestletApplication(new SetupApplication(), "/setup");
 
-                    // check for any existing registered Restlet applications
-                    ServiceReference[] refs = context.getServiceReferences(Application.class.getName(), null);
+                    // start listening for new Restlet applications
+                    applicationTracker = new ServiceTracker(context, HubWebApplication.class.getName(), null) {
+                        @Override
+                        public Object addingService(ServiceReference ref) {
+                            logger.debug("Detected addition of Restlet service: {}", ref);
+                            registerRestletApplication(ref);
+                            return super.addingService(ref);
+                        }
+
+                        @Override
+                        public void removedService(ServiceReference ref, Object service) {
+                            logger.debug("Detected removal of Restlet service: {}", service);
+                            unregisterRestletApplication(ref);
+                            super.removedService(ref, service);
+                        }
+                    };
+                    applicationTracker.open();
+
+                    // check for any previously registered web applications
+                    ServiceReference[] refs = context.getServiceReferences(HubWebApplication.class.getName(), null);
                     if (refs != null) {
                         for (ServiceReference ref2 : refs) {
                             registerRestletApplication(ref2);
@@ -188,28 +208,6 @@ public class Activator extends DependencyActivatorBase {
             }
         };
         hubManagerTracker.open();
-
-        // start listening for new Restlet applications
-        applicationTracker = new ServiceTracker(context, Application.class.getName(), null) {
-            @Override
-            public Object addingService(ServiceReference ref) {
-                logger.debug("Detected addition of Restlet service: {}", ref);
-                registerRestletApplication(ref);
-                return super.addingService(ref);
-            }
-
-            @Override
-            public void removedService(ServiceReference ref, Object service) {
-                logger.debug("Detected removal of Restlet service: {}", service);
-                if (service instanceof Application) {
-                    unregisterRestletApplication((Application)service);
-                } else {
-                    logger.debug("Unknown Restlet service unregistered: {}", service);
-                }
-                super.removedService(ref, service);
-            }
-        };
-        applicationTracker.open();
 
         // wait for ConfigurationAdmin to become available to start advertising presence
         presenceTracker = new ServiceTracker(context, ConfigurationManager.class.getName(), null) {
@@ -356,10 +354,27 @@ public class Activator extends DependencyActivatorBase {
     private void registerRestletApplication(ServiceReference ref) {
         if (ref != null) {
             Object o = getContext().getService(ref);
-            if (o instanceof Application) {
-                registerRestletApplication((Application)o, (String)ref.getProperty("path"));
+            if (o instanceof HubWebApplication) {
+                Application a = (Application)injector.getInstance(((HubWebApplication)o).getClazz());
+                String path = ((HubWebApplication)o).getPath();
+                appMap.put(path, a);
+                registerRestletApplication(a, path);
             } else {
                 logger.debug("Ignoring unknown published Restlet service: {}", o);
+            }
+        }
+    }
+
+    private void unregisterRestletApplication(ServiceReference ref) {
+        if (ref != null) {
+            Object o = getContext().getService(ref);
+            if (o instanceof HubWebApplication) {
+                String path = ((HubWebApplication)o).getPath();
+                Application a = appMap.get(path);
+                if (a != null) {
+                    unregisterRestletApplication(a);
+                    appMap.remove(path);
+                }
             }
         }
     }

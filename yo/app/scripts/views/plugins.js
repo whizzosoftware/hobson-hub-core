@@ -38,7 +38,7 @@ define([
 
         render: function() {
             var plugins = new ItemList({
-                url: '/api/v1/users/local/hubs/local/plugins/remote?expand=item'
+                url: '/api/v1/hubs/local/plugins/remote?expand=item'
             });
 
             this.$el.append(this.loadingTemplate({strings: strings}));

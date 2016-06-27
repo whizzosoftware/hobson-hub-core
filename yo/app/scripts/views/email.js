@@ -122,9 +122,9 @@ define([
 
                     // create a new hub model object
                     var hub = new HubConfiguration({
-                        id: '/api/v1/users/local/hubs/local/configuration',
+                        id: '/api/v1/hubs/local/configuration',
                         cclass: {
-                            "@id": '/api/v1/users/local/hubs/local/configurationClass'
+                            "@id": '/api/v1/hubs/local/configurationClass'
                         },
                         values: this.createEmailConfiguration().toJSON()
                     });

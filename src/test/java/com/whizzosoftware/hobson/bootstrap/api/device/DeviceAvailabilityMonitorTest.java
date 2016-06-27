@@ -48,9 +48,9 @@ public class DeviceAvailabilityMonitorTest {
         monitor.run(now + HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL);
         assertEquals(2, em.getEventCount());
         assertTrue(em.getEvent(0) instanceof DeviceUnavailableEvent);
-        assertTrue("local:local:plugin:device1".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()) || "local:local:plugin:device2".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()));
+        assertTrue("local:plugin:device1".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()) || "local:plugin:device2".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()));
         assertTrue(em.getEvent(1) instanceof DeviceUnavailableEvent);
-        assertTrue("local:local:plugin:device1".equals(em.getEvent(1).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()) || "local:local:plugin:device2".equals(em.getEvent(1).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()));
+        assertTrue("local:plugin:device1".equals(em.getEvent(1).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()) || "local:plugin:device2".equals(em.getEvent(1).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()));
         em.clearEvents();
 
         // make sure no events fire after the 5 minute mark

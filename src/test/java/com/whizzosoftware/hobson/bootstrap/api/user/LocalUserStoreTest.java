@@ -6,6 +6,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
+import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import org.junit.Test;
 
 import java.util.Collection;
@@ -102,6 +103,16 @@ public class LocalUserStoreTest {
                     public void addTelemetryManager(TelemetryManager manager) {
 
                     }
+
+                    @Override
+                    public void publishWebApplication(HubWebApplication app) {
+
+                    }
+
+                    @Override
+                    public void unpublishWebApplication(String path) {
+
+                    }
                 };
             }
 
@@ -126,7 +137,9 @@ public class LocalUserStoreTest {
             }
         };
 
-        LocalUserStore mgr = new LocalUserStore(hubManager);
+        LocalUserStore mgr = new LocalUserStore();
+        mgr.hubManager = hubManager;
+        mgr.oidcConfigProvider = new LocalOIDCConfigProvider();
         HobsonUser user = mgr.authenticate("local", "local").getUser();
         assertNotNull(user);
 

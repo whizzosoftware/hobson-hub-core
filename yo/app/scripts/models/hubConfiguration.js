@@ -3,7 +3,7 @@ define([
 	'backbone'
 ], function(Backbone) {
 	return Backbone.Model.extend({
-		id: '/api/v1/users/local/hubs/local/configuration',
-		url: '/api/v1/users/local/hubs/local/configuration'
+		id: '/api/v1/hubs/local/configuration',
+		url: '/api/v1/hubs/local/configuration'
 	});
 });

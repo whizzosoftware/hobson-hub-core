@@ -39,7 +39,6 @@ public class MapDBPresenceStoreTest {
         Collection<PresenceEntity> entities = store.getAllPresenceEntities(HubContext.createLocal());
         assertEquals(1, entities.size());
         PresenceEntity pe2 = entities.iterator().next();
-        assertEquals("local", pe2.getContext().getUserId());
         assertEquals("local", pe2.getContext().getHubId());
         assertEquals("entity1", pe2.getContext().getEntityId());
         assertEquals("John Doe", pe2.getName());
@@ -47,7 +46,6 @@ public class MapDBPresenceStoreTest {
 
         // check that we can get the entity directly
         pe2 = store.getPresenceEntity(pectx);
-        assertEquals("local", pe2.getContext().getUserId());
         assertEquals("local", pe2.getContext().getHubId());
         assertEquals("entity1", pe2.getContext().getEntityId());
         assertEquals("John Doe", pe2.getName());
@@ -84,7 +82,6 @@ public class MapDBPresenceStoreTest {
 
         // check that we can get the entity directly
         PresenceEntity pe2 = store.getPresenceEntity(pectx);
-        assertEquals("local", pe2.getContext().getUserId());
         assertEquals("local", pe2.getContext().getHubId());
         assertEquals("entity1", pe2.getContext().getEntityId());
         assertEquals("John Doe", pe2.getName());
@@ -111,7 +108,6 @@ public class MapDBPresenceStoreTest {
         Collection<PresenceLocation> locations = store.getAllPresenceLocations(HubContext.createLocal());
         assertEquals(1, locations.size());
         PresenceLocation pl2 = locations.iterator().next();
-        assertEquals("local", pl2.getContext().getUserId());
         assertEquals("local", pl2.getContext().getHubId());
         assertEquals("loc1", pl2.getContext().getLocationId());
         assertEquals("Home", pl2.getName());
@@ -123,7 +119,6 @@ public class MapDBPresenceStoreTest {
 
         // check that we can get the entity directly
         pl2 = store.getPresenceLocation(plctx);
-        assertEquals("local", pl2.getContext().getUserId());
         assertEquals("local", pl2.getContext().getHubId());
         assertEquals("loc1", pl2.getContext().getLocationId());
         assertEquals("Home", pl2.getName());
@@ -164,7 +159,6 @@ public class MapDBPresenceStoreTest {
         store = new MapDBPresenceStore(dbFile);
 
         PresenceLocation pl2 = store.getPresenceLocation(plctx);
-        assertEquals("local", pl2.getContext().getUserId());
         assertEquals("local", pl2.getContext().getHubId());
         assertEquals("loc1", pl2.getContext().getLocationId());
         assertEquals("Home", pl2.getName());

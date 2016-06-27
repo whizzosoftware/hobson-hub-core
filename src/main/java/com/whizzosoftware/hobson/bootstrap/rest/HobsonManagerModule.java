@@ -23,12 +23,16 @@ import com.whizzosoftware.hobson.api.telemetry.StubTelemetryManager;
 import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
+import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
+import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
 import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.ServiceReference;
+import org.restlet.security.Authorizer;
 
 /**
  * A Guice module for injecting Hobson manager instances.
@@ -36,17 +40,20 @@ import org.osgi.framework.ServiceReference;
  * @author Dan Noguerol
  */
 public class HobsonManagerModule extends AbstractModule {
-    private UserStore userStore;
+    private HubManager hubManager;
 
-    public HobsonManagerModule(UserStore userStore) {
-        this.userStore = userStore;
+    public HobsonManagerModule(HubManager hubManager) {
+        this.hubManager = hubManager;
     }
 
     @Override
     protected void configure() {
+        bind(Authorizer.class).to(LocalAuthorizer.class).asEagerSingleton();
+        bind(OIDCConfigProvider.class).to(LocalOIDCConfigProvider.class).asEagerSingleton();
         bind(IdProvider.class).to(RestResourceIdProvider.class).asEagerSingleton();
         bind(MediaProxyHandler.class).to(LocalDeviceMediaProxyHandler.class).asEagerSingleton();
         bind(DTOBuildContextFactory.class).to(DTOBuildContextFactoryImpl.class);
+        bind(UserStore.class).to(LocalUserStore.class).asEagerSingleton();
     }
 
     @Provides
@@ -75,8 +82,8 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
-    public HubManager provideSetupManager() {
-        return (HubManager)getManager(HubManager.class);
+    public HubManager provideHubManager() {
+        return hubManager;
     }
 
     @Provides
@@ -103,11 +110,6 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public VariableManager provideVariableManager() {
         return (VariableManager)getManager(VariableManager.class);
-    }
-
-    @Provides
-    public UserStore provideUserStore() {
-        return userStore;
     }
 
     private Object getManager(Class clazz) {
