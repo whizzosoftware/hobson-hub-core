@@ -46,7 +46,7 @@ public class LocalUserStore implements UserStore {
             HobsonUser user = createLocalUser();
             return new UserAuthentication(user, TokenHelper.createToken(oidcConfigProvider, user, HobsonRole.USER.value(), Collections.singletonList(HubContext.DEFAULT_HUB)));
         } else {
-            throw new HobsonAuthenticationException("The authentication credentials are invalid");
+            throw new HobsonAuthenticationException("Invalid username and/or password.");
         }
     }
 

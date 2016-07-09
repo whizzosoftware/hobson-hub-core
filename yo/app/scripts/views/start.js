@@ -53,7 +53,7 @@ define([
                             // set the bearer token for all subsequent AJAX requests
                             $.ajaxSetup({
                                 headers: {
-                                    'Authorization': 'Bearer ' + data.id_token
+                                    'Authorization': 'Bearer ' + data.access_token
                                 }
                             });
 

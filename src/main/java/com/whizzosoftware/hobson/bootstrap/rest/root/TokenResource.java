@@ -45,6 +45,7 @@ public class TokenResource extends SelfInjectingServerResource {
                 if ("password".equals(grantType)) {
                     JSONObject json = new JSONObject();
                     json.put("id_token", ua.getToken());
+                    json.put("access_token", ua.getToken());
                     return new JsonRepresentation(json);
                 } else {
                     return new EmptyRepresentation();
