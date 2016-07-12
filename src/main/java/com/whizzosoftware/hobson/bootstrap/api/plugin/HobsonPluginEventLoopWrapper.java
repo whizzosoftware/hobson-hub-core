@@ -141,7 +141,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         synchronized (mutex) {
             try {
                 logger.trace("Waiting for final cleanup");
-                mutex.wait();
+                long start = System.currentTimeMillis();
+                mutex.wait(5000);
+                if (System.currentTimeMillis() - start >= 5000) {
+                    logger.error("Plugin " + getName() + " failed to stop gracefully");
+                }
             } catch (InterruptedException ignored) {}
         }
 
