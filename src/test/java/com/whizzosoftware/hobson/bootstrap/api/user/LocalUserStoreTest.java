@@ -100,6 +100,11 @@ public class LocalUserStoreTest {
                     }
 
                     @Override
+                    public void setWebSocketUri(String uri) {
+
+                    }
+
+                    @Override
                     public void addTelemetryManager(TelemetryManager manager) {
 
                     }

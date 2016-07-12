@@ -30,7 +30,6 @@ import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
-import org.restlet.Application;
 import org.slf4j.LoggerFactory;
 
 import javax.mail.Message;
@@ -62,6 +61,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     private NetworkInfo networkInfo;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
+    private String webSocketUri;
 
     public void start() {
         // set the log level
@@ -308,6 +308,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             name(getHubName(ctx)).
             version(version).
             configuration(getConfiguration(HubContext.createLocal()).getPropertyValues()).
+            webSocketUri(webSocketUri).
             build();
     }
 
@@ -386,6 +387,11 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         Appender appender = (Appender)aAppender;
         Logger logger = (Logger)LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
         logger.detachAppender(appender);
+    }
+
+    @Override
+    public void setWebSocketUri(String uri) {
+        this.webSocketUri = uri;
     }
 
     private String getLogFilePath() {
