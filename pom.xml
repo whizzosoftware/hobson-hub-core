@@ -125,7 +125,7 @@
         <dependency>
             <groupId>com.whizzosoftware.osgi</groupId>
             <artifactId>rxtx-osgi</artifactId>
-            <version>2.1.7</version>
+            <version>2.2pre2.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

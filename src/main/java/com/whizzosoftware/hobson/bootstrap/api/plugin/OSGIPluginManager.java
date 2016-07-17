@@ -227,7 +227,7 @@ public class OSGIPluginManager implements PluginManager {
 
     @Override
     public File getDataDirectory(PluginContext ctx) {
-        File f = new File("data");
+        File f = new File(System.getProperty(ConfigurationManager.HOBSON_HOME, "."), "data");
         if (!f.exists()) {
             if (!f.mkdir()) {
                 logger.error("Error creating data directory");
