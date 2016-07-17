@@ -27,6 +27,8 @@ import org.osgi.framework.ServiceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -94,62 +96,66 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      * Called when the OSGi service is stopped. This will stop the plugin event loop.
      */
     public void stop() {
-        logger.debug("Stopping plugin: {}", plugin.getContext());
+        try {
+            logger.debug("Stopping plugin: {}", plugin.getContext());
 
-        final long now = System.currentTimeMillis();
+            final long now = System.currentTimeMillis();
 
-        // remove the service listener
-        FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
+            // remove the service listener
+            FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
 
-        final HubContext ctx = HubContext.createLocal();
-        final PluginContext pctx = plugin.getContext();
-        final Object mutex = new Object();
+            final HubContext ctx = HubContext.createLocal();
+            final PluginContext pctx = plugin.getContext();
+            final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
 
-        // stop listening for all events
-        eventManager.removeListenerFromAllTopics(ctx, HobsonPluginEventLoopWrapper.this);
+            // stop listening for all events
+            eventManager.removeListenerFromAllTopics(ctx, HobsonPluginEventLoopWrapper.this);
 
-        // unpublish all variables published by this plugin's devices
-        variableManager.unpublishAllVariables(plugin.getContext());
+            // unpublish all variables published by this plugin's devices
+            variableManager.unpublishAllVariables(pctx);
 
-        // stop all devices
-        deviceManager.unpublishAllDevices(pctx, plugin.getRuntime().getEventLoopExecutor());
+            // stop all devices
+            deviceManager.unpublishAllDevices(pctx, plugin.getRuntime().getEventLoopExecutor());
 
-        // queue a task for final cleanup
-        logger.trace("Queuing final cleanup task");
-        plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
-            @Override
-            public void run() {
-                logger.trace("All devices have shut down; performing final cleanup");
+            // queue a task for final cleanup
+            logger.trace("Queuing final cleanup task for plugin {}", pctx);
 
-                // shut down the plugin
-                getRuntime().onShutdown();
+            // wait for the async task to complete so that the OSGi framework knows that we've really stopped
+            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        logger.trace("Invoking plugin {} shutdown method", pctx);
 
-                // post plugin stopped event
-                eventManager.postEvent(ctx, new PluginStoppedEvent(now, getContext()));
+                        // shut down the plugin
+                        getRuntime().onShutdown();
 
-                // release reference
-                plugin = null;
+                        logger.trace("Plugin {} shutdown method returned", pctx);
 
-                // notify thread that kicked off the stop that the plugin shutdown is complete
-                synchronized (mutex) {
-                    mutex.notify();
+                        // post plugin stopped event
+                        eventManager.postEvent(ctx, new PluginStoppedEvent(now, pctx));
+                    } catch (Throwable t) {
+                        logger.error("Error shutting down plugin \"" + pctx + "\"", t);
+                    }
+
+                    // notify thread that kicked off the stop that the plugin shutdown is complete
+                    logger.trace("Sending plugin {} shutdown notify", pctx);
+                    blockingQueue.add(new Object());
                 }
-            }
-        });
+            });
 
-        // wait for the async task to complete so that the OSGi framework knows that we've really stopped
-        synchronized (mutex) {
             try {
-                logger.trace("Waiting for final cleanup");
-                long start = System.currentTimeMillis();
-                mutex.wait(5000);
-                if (System.currentTimeMillis() - start >= 5000) {
-                    logger.error("Plugin " + getName() + " failed to stop gracefully");
+                logger.trace("Waiting for final cleanup for plugin {}", pctx);
+                Object o = blockingQueue.poll(5, TimeUnit.SECONDS);
+                if (o == null) {
+                    logger.error("Plugin " + pctx + " failed to stop in the allotted time");
+                } else {
+                    logger.debug("Shutdown complete for plugin: {}", pctx);
                 }
             } catch (InterruptedException ignored) {}
+        } catch (Throwable t) {
+            logger.error("Error stopping plugin", t);
         }
-
-        logger.debug("Shutdown complete for plugin: {}", pctx);
     }
 
     /*
