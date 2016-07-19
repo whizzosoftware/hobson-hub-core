@@ -25,7 +25,7 @@ import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import com.whizzosoftware.hobson.api.data.TelemetryManager;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;

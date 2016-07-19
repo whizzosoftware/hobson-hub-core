@@ -4,7 +4,7 @@ import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import com.whizzosoftware.hobson.api.data.TelemetryManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import org.junit.Test;

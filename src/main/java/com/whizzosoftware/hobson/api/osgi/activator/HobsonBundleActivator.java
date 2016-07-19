@@ -14,7 +14,7 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.telemetry.TelemetryManager;
+import com.whizzosoftware.hobson.api.data.TelemetryManager;
 import com.whizzosoftware.hobson.api.variable.VariableManager;
 import org.apache.felix.dm.Component;
 import org.apache.felix.dm.DependencyActivatorBase;
