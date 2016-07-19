@@ -234,6 +234,9 @@ public class Activator extends DependencyActivatorBase {
     public void destroy(BundleContext context, DependencyManager manager) throws Exception {
         logger.info("Hobson core is shutting down");
 
+        unregisterRestletApplication(ApiV1Application.API_ROOT);
+        unregisterRestletApplication("");
+
         for (org.apache.felix.dm.Component c : registeredComponents) {
             manager.remove(c);
         }
@@ -369,13 +372,16 @@ public class Activator extends DependencyActivatorBase {
         if (ref != null) {
             Object o = getContext().getService(ref);
             if (o instanceof HubWebApplication) {
-                String path = ((HubWebApplication)o).getPath();
-                Application a = appMap.get(path);
-                if (a != null) {
-                    unregisterRestletApplication(a);
-                    appMap.remove(path);
-                }
+                unregisterRestletApplication(((HubWebApplication)o).getPath());
             }
+        }
+    }
+
+    private void unregisterRestletApplication(String path) {
+        Application a = appMap.get(path);
+        if (a != null) {
+            unregisterRestletApplication(a);
+            appMap.remove(path);
         }
     }
 

@@ -55,6 +55,8 @@ public class OSGIDeviceManager implements DeviceManager {
     private ScheduledFuture deviceAvailabilityFuture;
 
     public void start() {
+        logger.debug("Device manager is starting");
+
         // if a device store hasn't already been injected, create a default one
         if (deviceStore == null) {
             deviceStore = new OSGIDeviceStore(bundleContext, configManager, eventManager, pluginManager);
@@ -82,6 +84,8 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     public void stop() {
+        logger.debug("Device manager is stopping");
+
         // stop the device store
         deviceStore.stop();
 
@@ -215,6 +219,11 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
+    public Set<String> getDeviceTags(DeviceContext deviceContext) {
+        return null;
+    }
+
+    @Override
     public boolean hasDevice(DeviceContext ctx) {
         return deviceStore.hasDevice(ctx);
     }
@@ -299,5 +308,10 @@ public class OSGIDeviceManager implements DeviceManager {
                 configManager.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName())
             )
         );
+    }
+
+    @Override
+    public void setDeviceTags(DeviceContext deviceContext, Set<String> set) {
+        throw new UnsupportedOperationException();
     }
 }

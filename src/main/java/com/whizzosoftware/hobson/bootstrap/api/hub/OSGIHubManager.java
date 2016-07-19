@@ -25,7 +25,7 @@ import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.data.TelemetryManager;
+import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
@@ -243,9 +243,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void addTelemetryManager(TelemetryManager telemetryManager) {
-        // register telemetry manager
-        bundleContext.registerService(TelemetryManager.class.getName(), telemetryManager, null);
+    public void addDataStreamManager(DataStreamManager dataStreamManager) {
+        // register data stream manager
+        bundleContext.registerService(DataStreamManager.class.getName(), dataStreamManager, null);
     }
 
     @Override
