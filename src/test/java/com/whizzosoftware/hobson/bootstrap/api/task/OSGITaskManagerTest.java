@@ -91,7 +91,6 @@ public class OSGITaskManagerTest {
             public TaskConditionClass getConditionClass(PropertyContainerClassContext ctx) {
                 final List<TypedProperty> props = new ArrayList<>();
                 props.add(new TypedProperty.Builder("id1", "name1", "desc1", TypedProperty.Type.STRING).build());
-                props.add(new TypedProperty.Builder("id2", "name2", "desc2", TypedProperty.Type.CURRENT_TASK).build());
                 return new MockTaskConditionClass(pctx, ConditionClassType.trigger) {
                     public List<TypedProperty> createProperties() {
                         return props;
@@ -131,6 +130,5 @@ public class OSGITaskManagerTest {
         assertEquals(1, pcs.size());
         PropertyContainer pc = pcs.get(0);
         assertEquals("bar", pc.getStringPropertyValue("id1"));
-        assertEquals(task.getContext().toString(), pc.getStringPropertyValue("id2"));
     }
 }

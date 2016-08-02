@@ -413,16 +413,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             // make sure task has a trigger condition
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
-                // insert new task ID if necessary
-                PropertyContainerClass pcc = getConditionClass(triggerCondition.getContainerClassContext());
-                if (pcc.hasSupportedProperties()) {
-                    for (TypedProperty tp : pcc.getSupportedProperties()) {
-                        if (tp.getType().equals(TypedProperty.Type.CURRENT_TASK)) {
-                            triggerCondition.setPropertyValue(tp.getId(), tctx);
-                        }
-                    }
-                }
-
                 // create task and add to task store
                 final HobsonTask task = new HobsonTask(tctx, name, description, null, conditions, actionSet);
                 taskStore.saveTask(task);
@@ -483,7 +473,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public void executeTask(TaskContext taskContext) {
-        eventManager.postEvent(taskContext.getHubContext(), new ExecuteTaskEvent(System.currentTimeMillis(), taskContext));
+        HobsonTask task = getTask(taskContext);
+        executeActionSet(taskContext.getHubContext(), task.getActionSet().getId());
     }
 
     @Override
