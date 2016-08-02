@@ -46,6 +46,7 @@ public class OSGIEventManager implements EventManager {
             eventFactory.addEventClass(DeviceStartedEvent.ID, DeviceStartedEvent.class);
             eventFactory.addEventClass(DeviceStoppedEvent.ID, DeviceStoppedEvent.class);
             eventFactory.addEventClass(DeviceUnavailableEvent.ID, DeviceUnavailableEvent.class);
+            eventFactory.addEventClass(ExecuteTaskEvent.ID, ExecuteTaskEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginStartedEvent.ID, PluginStartedEvent.class);

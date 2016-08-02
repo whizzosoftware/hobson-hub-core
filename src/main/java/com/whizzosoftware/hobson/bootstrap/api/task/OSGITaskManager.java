@@ -137,10 +137,22 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         this.taskRegistrationContext = taskRegistrationContext;
     }
 
+    public void setTaskRegistrationExecutor(TaskRegistrationExecutor taskRegistrationExecutor) {
+        this.taskRegistrationExecutor = taskRegistrationExecutor;
+    }
+
+    public void setTaskConditionClassProvider(TaskConditionClassProvider taskConditionClassProvider) {
+        this.taskConditionClassProvider = taskConditionClassProvider;
+    }
+
     protected void queueTaskRegistration() {
         synchronized (taskRegistrationPool) {
-            if (taskRegistrationPool.getQueue().size() < 2) {
-                taskRegistrationPool.execute(taskRegistrationExecutor);
+            if (taskRegistrationExecutor != null) {
+                if (taskRegistrationPool.getQueue().size() < 2) {
+                    taskRegistrationPool.execute(taskRegistrationExecutor);
+                }
+            } else {
+                throw new HobsonRuntimeException("No task registration executor defined");
             }
         }
     }
@@ -186,7 +198,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public TaskConditionClass getConditionClass(PropertyContainerClassContext ctx) {
-        return taskConditionClassProvider.getConditionClass(ctx);
+        return taskConditionClassProvider != null ? taskConditionClassProvider.getConditionClass(ctx) : null;
     }
 
     @Override
@@ -389,6 +401,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     @Override
     public void createTask(HubContext ctx, String name, String description, List<PropertyContainer> conditions, PropertyContainerSet actionSet) {
         if (conditions != null) {
+            TaskContext tctx = TaskContext.create(ctx, UUID.randomUUID().toString());
+
             // assign IDs to all conditions that don't already have one
             for (PropertyContainer pc : conditions) {
                 if (!pc.hasId()) {
@@ -399,15 +413,29 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             // make sure task has a trigger condition
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
+                // insert new task ID if necessary
+                PropertyContainerClass pcc = getConditionClass(triggerCondition.getContainerClassContext());
+                if (pcc.hasSupportedProperties()) {
+                    for (TypedProperty tp : pcc.getSupportedProperties()) {
+                        if (tp.getType().equals(TypedProperty.Type.CURRENT_TASK)) {
+                            triggerCondition.setPropertyValue(tp.getId(), tctx);
+                        }
+                    }
+                }
+
                 // create task and add to task store
-                final HobsonTask task = new HobsonTask(TaskContext.create(ctx, UUID.randomUUID().toString()), name, description, null, conditions, actionSet);
+                final HobsonTask task = new HobsonTask(tctx, name, description, null, conditions, actionSet);
                 taskStore.saveTask(task);
 
                 // queue the task registration
                 queueTaskRegistration();
 
                 // fire an update event
-                eventManager.postEvent(ctx, new TaskUpdatedEvent(System.currentTimeMillis(), task.getContext()));
+                if (eventManager != null) {
+                    eventManager.postEvent(ctx, new TaskUpdatedEvent(System.currentTimeMillis(), task.getContext()));
+                } else {
+                    logger.error("Unable to post task creation event - no event manager available");
+                }
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }
@@ -451,6 +479,11 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         } else {
             throw new HobsonInvalidRequestException("Task not found: " + ctx);
         }
+    }
+
+    @Override
+    public void executeTask(TaskContext taskContext) {
+        eventManager.postEvent(taskContext.getHubContext(), new ExecuteTaskEvent(System.currentTimeMillis(), taskContext));
     }
 
     @Override

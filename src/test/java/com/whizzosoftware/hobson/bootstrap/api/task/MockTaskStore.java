@@ -17,7 +17,7 @@ public class MockTaskStore implements TaskStore {
 
     @Override
     public Collection<HobsonTask> getAllTasks(HubContext hctx) {
-        return null;
+        return tasks.values();
     }
 
     @Override

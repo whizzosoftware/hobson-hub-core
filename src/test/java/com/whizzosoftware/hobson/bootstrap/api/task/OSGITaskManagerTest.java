@@ -1,17 +1,28 @@
+/*******************************************************************************
+ * Copyright (c) 2015 Whizzo Software, LLC.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
+import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
+import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
+import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
 import com.whizzosoftware.hobson.api.task.TaskContext;
+import com.whizzosoftware.hobson.api.task.condition.ConditionClassType;
+import com.whizzosoftware.hobson.api.task.condition.ConditionEvaluationContext;
+import com.whizzosoftware.hobson.api.task.condition.TaskConditionClass;
+import com.whizzosoftware.hobson.api.task.condition.TaskConditionClassProvider;
 import org.junit.Test;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.Assert.*;
 
@@ -64,5 +75,62 @@ public class OSGITaskManagerTest {
 
         assertEquals(1, taskProvider.getCreatedTasks().size());
         assertEquals(task, taskProvider.getCreatedTasks().get(0));
+    }
+
+    @Test
+    public void testCreateTask() {
+        final PluginContext pctx = PluginContext.createLocal("plugin1");
+        MockTaskStore store = new MockTaskStore();
+        MockPluginManager pm = new MockPluginManager();
+        OSGITaskManager tm = new OSGITaskManager();
+        tm.setPluginManager(pm);
+        tm.setTaskStore(store);
+        tm.setTaskRegistrationExecutor(new TaskRegistrationExecutor(HubContext.createLocal(), null));
+        tm.setTaskConditionClassProvider(new TaskConditionClassProvider() {
+            @Override
+            public TaskConditionClass getConditionClass(PropertyContainerClassContext ctx) {
+                final List<TypedProperty> props = new ArrayList<>();
+                props.add(new TypedProperty.Builder("id1", "name1", "desc1", TypedProperty.Type.STRING).build());
+                props.add(new TypedProperty.Builder("id2", "name2", "desc2", TypedProperty.Type.CURRENT_TASK).build());
+                return new MockTaskConditionClass(pctx, ConditionClassType.trigger) {
+                    public List<TypedProperty> createProperties() {
+                        return props;
+                    }
+                };
+            }
+        });
+
+        List<PropertyContainer> conds = new ArrayList<>();
+        Map<String,Object> map = new HashMap<>();
+        map.put("id1", "bar");
+        conds.add(new PropertyContainer(PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"), map));
+
+        List<PropertyContainer> lpc = new ArrayList<>();
+        PropertyContainerSet actions = new PropertyContainerSet("id1", lpc);
+
+        try {
+            tm.createTask(HubContext.createLocal(), null, null, null, null);
+            fail("Should have thrown exception");
+        } catch (HobsonInvalidRequestException ignored) {}
+        try {
+            tm.createTask(HubContext.createLocal(), "name", null, null, null);
+            fail("Should have thrown exception");
+        } catch (HobsonInvalidRequestException ignored) {}
+        try {
+            tm.createTask(HubContext.createLocal(), "name", "desc", null, null);
+            fail("Should have thrown exception");
+        } catch (HobsonInvalidRequestException ignored) {}
+        tm.createTask(HubContext.createLocal(), "name", "desc", conds, actions);
+
+        Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
+        assertEquals(1, tasks.size());
+        HobsonTask task = tasks.iterator().next();
+        assertEquals("name", task.getName());
+        assertEquals("desc", task.getDescription());
+        List<PropertyContainer> pcs = task.getConditions();
+        assertEquals(1, pcs.size());
+        PropertyContainer pc = pcs.get(0);
+        assertEquals("bar", pc.getStringPropertyValue("id1"));
+        assertEquals(task.getContext().toString(), pc.getStringPropertyValue("id2"));
     }
 }
