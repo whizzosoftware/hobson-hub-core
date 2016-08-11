@@ -7,9 +7,8 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
-import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.device.DeviceManager;
-import com.whizzosoftware.hobson.api.device.HobsonDevice;
+import com.whizzosoftware.hobson.api.device.*;
+import com.whizzosoftware.hobson.api.device.proxy.DeviceProxy;
 import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -39,12 +38,13 @@ public class DeviceAvailabilityMonitor implements Runnable {
     }
 
     public void run(long now) {
-        for (HobsonDevice device : deviceManager.getAllDevices(hubContext)) {
-            Long lastNotificationTime = lastNotificationTimeMap.get(device.getContext());
-            Long lastCheckIn = deviceManager.getDeviceLastCheckIn(device.getContext());
-            if (lastCheckIn != null && now - lastCheckIn >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
-                eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, device.getContext()));
-                lastNotificationTimeMap.put(device.getContext(), now);
+        for (DeviceDescription device : deviceManager.getAllDeviceDescriptions(hubContext)) {
+            DeviceContext dctx = device.getContext();
+            Long lastNotificationTime = lastNotificationTimeMap.get(dctx);
+            Long lastCheckIn = deviceManager.getDeviceLastCheckIn(dctx);
+            if (lastCheckIn != null && now - lastCheckIn >= DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
+                eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, dctx));
+                lastNotificationTimeMap.put(dctx, now);
             }
         }
     }

@@ -10,12 +10,12 @@ package com.whizzosoftware.hobson.bootstrap.api.activity;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.activity.ActivityLogEntry;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
+import com.whizzosoftware.hobson.api.device.DeviceDescription;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
-import com.whizzosoftware.hobson.api.device.HobsonDevice;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.variable.VariableChange;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableUpdate;
 import com.whizzosoftware.hobson.api.variable.VariableConstants;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.json.JSONObject;
@@ -73,12 +73,12 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
         // TODO: make this more efficient
         if (event instanceof TaskExecutionEvent) {
             appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
-        } else if (event instanceof VariableUpdateNotificationEvent) {
-            VariableUpdateNotificationEvent vune = (VariableUpdateNotificationEvent)event;
-            for (VariableChange change : vune.getUpdates()) {
-                if (!change.isInitial() && change.hasNewValue() && change.isChanged() && change.getContext().hasDeviceId()) {
-                    HobsonDevice device = deviceManager.getDevice(change.getContext().getDeviceContext());
-                    String s = createVariableChangeString(device.getName(), change.getName(), change.getNewValue());
+        } else if (event instanceof DeviceVariableUpdateEvent) {
+            DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
+            for (DeviceVariableUpdate update : vune.getUpdates()) {
+                if (!update.isInitial() && update.hasNewValue() && update.isChanged() && update.getContext().hasDeviceId()) {
+                    DeviceDescription device = deviceManager.getDeviceDescription(update.getContext().getDeviceContext());
+                    String s = createVariableChangeString(device.getName(), update.getName(), update.getNewValue());
                     if (s != null) {
                         appendEvent(s);
                     }

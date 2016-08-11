@@ -8,6 +8,8 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
 import com.whizzosoftware.hobson.api.task.TaskContext;
@@ -15,7 +17,8 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.task.condition.ConditionClassType;
 import com.whizzosoftware.hobson.api.task.condition.ConditionEvaluationContext;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClass;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.api.variable.DeviceVariable;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +38,7 @@ public class TaskConditionProcessor {
      *
      * @return a boolean indicating whether any of the task's conditions evaluated to false
      */
-    public boolean evaluate(final TaskManager taskManager, final HobsonTask task, final VariableManager varManager, final TaskContext context) {
+    public boolean evaluate(final TaskManager taskManager, final HobsonTask task, final HubManager hubManager, final DeviceManager deviceManager, final TaskContext context) {
         boolean conditionFailure = false;
 
         logger.trace("Evaluating conditions for task: {}", context);
@@ -47,8 +50,8 @@ public class TaskConditionProcessor {
                 if (pcc != null) {
                     if (pcc.getConditionClassType() == ConditionClassType.evaluator && !pcc.evaluate(new ConditionEvaluationContext() {
                         @Override
-                        public VariableManager getVariableManager() {
-                            return varManager;
+                        public DeviceVariable getDeviceVariable(DeviceVariableContext dvctx) {
+                            return deviceManager.getDeviceVariable(dvctx);
                         }
                     }, pc)) {
                         conditionFailure = true;

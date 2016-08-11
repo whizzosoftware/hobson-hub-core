@@ -8,13 +8,11 @@
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.device.HobsonDevice;
+import com.whizzosoftware.hobson.api.device.DeviceDescription;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
 
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * Interface for classes that provide storage of Hobson devices.
@@ -39,7 +37,7 @@ public interface DeviceStore {
      *
      * @return a Collection of HobsonDevice instances
      */
-    Collection<HobsonDevice> getAllDevices(HubContext ctx);
+    Collection<DeviceDescription> getAllDevices(HubContext ctx);
 
     /**
      * Retrieve a list of all devices published by a specific plugin.
@@ -48,7 +46,7 @@ public interface DeviceStore {
      *
      * @return a Collection of HobsonDevice instances
      */
-    Collection<HobsonDevice> getAllDevices(PluginContext ctx);
+    Collection<DeviceDescription> getAllDevices(PluginContext ctx);
 
     /**
      * Indicates whether a particular device context has been published.
@@ -66,20 +64,19 @@ public interface DeviceStore {
      *
      * @return a HobsonDevice instance
      */
-    HobsonDevice getDevice(DeviceContext ctx);
+    DeviceDescription getDevice(DeviceContext ctx);
 
     /**
      * Publishes a new device.
      *
      * @param device the device to publish
-     * @param republish indicates whether a re-publish should occur if the device has already been published (will fail otherwise)
      */
-    void publishDevice(HobsonDevice device, boolean republish);
+    void saveDevice(DeviceDescription device);
 
     /**
      * Unpublishes a specific device.
      *
      * @param ctx the device context
      */
-    void unpublishDevice(DeviceContext ctx);
+    void deleteDevice(DeviceContext ctx);
 }

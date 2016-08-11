@@ -15,6 +15,8 @@ import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
+import com.whizzosoftware.hobson.api.variable.GlobalVariable;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -239,6 +241,16 @@ public class OSGIPluginManager implements PluginManager {
     @Override
     public File getDataFile(PluginContext ctx, String filename) {
         return new File(getDataDirectory(ctx), (ctx != null ? (ctx.getPluginId() + "$") : "") + filename);
+    }
+
+    @Override
+    public GlobalVariable getGlobalVariable(GlobalVariableContext gvctx) {
+        return null;
+    }
+
+    @Override
+    public Collection<GlobalVariable> getGlobalVariables(PluginContext pctx) {
+        return null;
     }
 
     private void postPluginConfigurationUpdateEvent(PluginContext ctx) {

@@ -9,7 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.variable.HobsonVariable;
+import com.whizzosoftware.hobson.api.variable.DeviceVariable;
 import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.URIInfo;
 import com.whizzosoftware.hobson.rest.v1.util.URLVariableParser;
@@ -54,7 +54,7 @@ public class LocalDeviceMediaProxyHandler implements MediaProxyHandler {
     private static final int DEFAULT_REALM_PORT = 80;
 
     @Override
-    public Representation createRepresentation(HubContext hctx, HobsonVariable hvar, Form query, Response rresponse) {
+    public Representation createRepresentation(HubContext hctx, DeviceVariable hvar, Form query, Response rresponse) {
         if (hvar != null) {
             try {
                 String s = query.getFirstValue("base64");

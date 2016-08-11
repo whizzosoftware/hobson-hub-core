@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -151,7 +152,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass, String name) {
+    public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -159,23 +160,27 @@ public class MapDBConfigurationManager implements ConfigurationManager {
             Map<String,Object> props = persister.restoreDeviceConfiguration(cpctx, ctx);
 
             // build a list of PropertyContainer objects
-            PropertyContainer ci = new PropertyContainer();
-            for (TypedProperty meta : configurationClass.getSupportedProperties()) {
-                Object value = null;
-                if (props != null) {
-                    value = props.get(meta.getId());
-                }
+            PropertyContainer ci = null;
+            if (configurationClass != null) {
+                ci = new PropertyContainer();
+                List<TypedProperty> tps = configurationClass.getSupportedProperties();
+                if (tps != null) {
+                    for (TypedProperty meta : tps) {
+                        Object value = null;
+                        if (props != null) {
+                            value = props.get(meta.getId());
+                        }
 
-                // if the name property is null, use the default device name
-                if ("name".equals(meta.getId()) && value == null) {
-                    value = name;
-                }
+                        // if the name property is null, use the default device name
+                        //                if ("name".equals(meta.getId()) && value == null) {
+                        //                    value = name;
+                        //                }
 
-                ci.setPropertyValue(meta.getId(), value);
+                        ci.setPropertyValue(meta.getId(), value);
+                    }
+                }
+                ci.setContainerClassContext(configurationClass.getContext());
             }
-
-
-            ci.setContainerClassContext(configurationClass.getContext());
 
             return ci;
         } finally {

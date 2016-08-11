@@ -10,17 +10,21 @@ package com.whizzosoftware.hobson.bootstrap.api.device;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.*;
+import com.whizzosoftware.hobson.api.device.proxy.DeviceProxy;
+import com.whizzosoftware.hobson.api.device.proxy.DeviceProxyVariable;
 import com.whizzosoftware.hobson.api.device.store.DevicePassportStore;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.plugin.EventLoopExecutor;
+import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.HobsonPluginRuntime;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.api.property.*;
+import com.whizzosoftware.hobson.api.variable.DeviceVariable;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableContext;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableDescription;
 import com.whizzosoftware.hobson.bootstrap.api.device.store.*;
-import org.osgi.framework.BundleContext;
+import io.netty.util.concurrent.Future;
 import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +40,16 @@ import java.util.concurrent.*;
 public class OSGIDeviceManager implements DeviceManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    volatile private BundleContext bundleContext;
     volatile private EventManager eventManager;
     volatile private ConfigurationManager configManager;
-    volatile private VariableManager variableManager;
     volatile private PluginManager pluginManager;
 
     private Map<DeviceContext,Boolean> deviceAvailabilityMap = Collections.synchronizedMap(new HashMap<DeviceContext,Boolean>());
     private Map<DeviceContext,Long> deviceCheckIns = Collections.synchronizedMap(new HashMap<DeviceContext,Long>());
     private DeviceStore deviceStore;
     private DevicePassportStore passportStore;
+    private final Map<PluginContext,Map<DeviceType,PropertyContainerClass>> deviceTypeRegistry = new HashMap<>();
+    private final Set<String> variableNameSet = new HashSet<>();
     private ScheduledExecutorService deviceAvailabilityExecutor = Executors.newScheduledThreadPool(1, new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
@@ -54,12 +58,25 @@ public class OSGIDeviceManager implements DeviceManager {
     });
     private ScheduledFuture deviceAvailabilityFuture;
 
+    public void setEventManager(EventManager eventManager) {
+        this.eventManager = eventManager;
+    }
+
+    public void setPluginManager(PluginManager pluginManager) {
+        this.pluginManager = pluginManager;
+    }
+
     public void start() {
         logger.debug("Device manager is starting");
 
         // if a device store hasn't already been injected, create a default one
         if (deviceStore == null) {
-            deviceStore = new OSGIDeviceStore(bundleContext, configManager, eventManager, pluginManager);
+            deviceStore = new MapDBDeviceStore(
+                pluginManager.getDataFile(
+                    PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                    "devices"
+                )
+            );
             deviceStore.start();
         }
 
@@ -77,8 +94,8 @@ public class OSGIDeviceManager implements DeviceManager {
         DeviceAvailabilityMonitor deviceAvailabilityMonitor = new DeviceAvailabilityMonitor(HubContext.createLocal(), this, eventManager);
         deviceAvailabilityFuture = deviceAvailabilityExecutor.scheduleAtFixedRate(
                 deviceAvailabilityMonitor,
-            Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
-            Math.min(30, HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL),
+            Math.min(30, DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL),
+            Math.min(30, DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL),
             TimeUnit.SECONDS
         );
     }
@@ -140,6 +157,18 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
+    public Future sendDeviceHint(final DeviceDescription device, final PropertyContainer config) {
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(device.getContext().getPluginContext());
+        final HobsonPluginRuntime runtime = plugin.getRuntime();
+        return runtime.getEventLoopExecutor().executeInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                runtime.onDeviceHint(device.getName(), device.getDeviceType(), config);
+            }
+        });
+    }
+
+    @Override
     public void deleteDevicePassport(HubContext hubContext, String id) {
         passportStore.deletePassport(hubContext, id);
     }
@@ -171,29 +200,103 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public Collection<HobsonDevice> getAllDevices(HubContext ctx) {
+    public Collection<DeviceDescription> getAllDeviceDescriptions(HubContext ctx) {
         return deviceStore.getAllDevices(ctx);
     }
 
     @Override
-    public Collection<HobsonDevice> getAllDevices(PluginContext ctx) {
+    public Collection<DeviceDescription> getAllDeviceDescriptions(PluginContext ctx) {
         return deviceStore.getAllDevices(ctx);
     }
 
     @Override
-    public HobsonDevice getDevice(DeviceContext ctx) {
+    public Collection<String> getAllDeviceVariableNames(HubContext hubContext) {
+        return variableNameSet;
+    }
+
+    @Override
+    public DeviceDescription getDeviceDescription(DeviceContext ctx) {
         return deviceStore.getDevice(ctx);
     }
 
     @Override
-    public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
-        HobsonDevice device = getDevice(ctx);
-        return configManager.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName());
+    public DeviceVariable getDeviceVariable(DeviceVariableContext vctx) {
+        HobsonPlugin plugin = pluginManager.getLocalPlugin(vctx.getDeviceContext().getPluginContext());
+        DeviceDescription device = deviceStore.getDevice(vctx.getDeviceContext());
+        DeviceProxyVariable v = plugin.getRuntime().getDeviceVariableValue(vctx.getDeviceId(), vctx.getName());
+        return new DeviceVariable(device.getVariableDescription(vctx), v.getValue(), v.getLastUpdate());
     }
 
     @Override
-    public PropertyContainerClass getDeviceConfigurationClass(DeviceContext ctx) {
-        return getDevice(ctx).getConfigurationClass();
+    public Collection<DeviceVariable> getDeviceVariables(DeviceContext dctx) {
+        HobsonPlugin plugin = pluginManager.getLocalPlugin(dctx.getPluginContext());
+        List<DeviceVariable> results = new ArrayList<>();
+        Collection<DeviceProxyVariable> vars = plugin.getRuntime().getDeviceVariableValues(dctx.getDeviceId());
+        for (DeviceProxyVariable dpv : vars) {
+            DeviceDescription device = deviceStore.getDevice(dpv.getContext().getDeviceContext());
+            results.add(new DeviceVariable(device.getVariableDescription(dpv.getContext()), dpv.getValue(), dpv.getLastUpdate()));
+        }
+        return results;
+    }
+
+    @Override
+    public Future setDeviceVariable(final DeviceVariableContext ctx, final Object value) {
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx.getPluginContext());
+        return plugin.getRuntime().submitInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                plugin.getRuntime().onSetDeviceVariable(ctx.getDeviceId(), ctx.getName(), value);
+            }
+        });
+    }
+
+    @Override
+    public Future setDeviceVariables(final Map<DeviceVariableContext,Object> map) {
+        for (final DeviceVariableContext dvctx : map.keySet()) {
+            setDeviceVariable(dvctx, map.get(dvctx)); // TODO: single setDeviceVariables call?
+        }
+        return null; // TODO
+    }
+
+    @Override
+    public boolean hasDeviceVariableValue(DeviceVariableContext vctx) {
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(vctx.getPluginContext());
+        return plugin != null && plugin.getRuntime().hasDeviceVariableValue(vctx.getDeviceId(), vctx.getName());
+    }
+
+    @Override
+    public Collection<DeviceType> getPluginDeviceTypes(PluginContext pctx) {
+        synchronized (deviceTypeRegistry) {
+            Map<DeviceType,PropertyContainerClass> map = deviceTypeRegistry.get(pctx);
+            if (map != null) {
+                return map.keySet();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
+        DeviceDescription device = deviceStore.getDevice(ctx);
+        return configManager.getDeviceConfiguration(ctx, getDeviceConfigurationClass(device.getContext()));
+    }
+
+    @Override
+    public PropertyContainerClass getDeviceTypeConfigurationClass(PluginContext pctx, DeviceType type) {
+        synchronized (deviceTypeRegistry) {
+            Map<DeviceType,PropertyContainerClass> map = deviceTypeRegistry.get(pctx);
+            return map != null ? map.get(type) : null;
+        }
+    }
+
+    @Override
+    public PropertyContainerClass getDeviceConfigurationClass(DeviceContext dctx) {
+        HobsonPlugin plugin = pluginManager.getLocalPlugin(dctx.getPluginContext());
+        if (plugin != null) {
+            return plugin.getRuntime().getDeviceConfigurationClass(dctx.getDeviceId());
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -206,9 +309,21 @@ public class OSGIDeviceManager implements DeviceManager {
         return isDeviceAvailable(ctx, System.currentTimeMillis());
     }
 
+    @Override
+    public void publishDeviceType(PluginContext pctx, DeviceType type, TypedProperty[] configProperties) {
+        synchronized (deviceTypeRegistry) {
+            Map<DeviceType,PropertyContainerClass> map = deviceTypeRegistry.get(pctx);
+            if (map == null) {
+                map = new HashMap<>();
+                deviceTypeRegistry.put(pctx, map);
+            }
+            map.put(type, new PropertyContainerClass(PropertyContainerClassContext.create(pctx, "configuration"), "configuration", PropertyContainerClassType.DEVICE_CONFIG, null, Arrays.asList(configProperties)));
+        }
+    }
+
     boolean isDeviceAvailable(DeviceContext ctx, long now) {
         Long checkin = deviceCheckIns.get(ctx);
-        boolean stale = (checkin == null || now - checkin >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL);
+        boolean stale = (checkin == null || now - checkin >= DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL);
         Boolean avail = deviceAvailabilityMap.get(ctx);
         return (!stale && avail != null && avail);
     }
@@ -229,63 +344,49 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public void publishDevice(HobsonDevice device) {
-        publishDevice(device, false);
+    public Future publishDevice(PluginContext pctx, DeviceProxy proxy, Map<String,Object> config) {
+        return publishDevice(
+            pctx,
+            proxy,
+            new PropertyContainer(PropertyContainerClassContext.create(DeviceContext.create(pctx, proxy.getDeviceId()), "configuration"), config),
+            System.currentTimeMillis()
+        );
     }
 
-    @Override
-    synchronized public void publishDevice(HobsonDevice device, boolean republish) {
-        publishDevice(device, republish, System.currentTimeMillis());
-    }
-
-    void publishDevice(HobsonDevice device, boolean republish, long now) {
-        String deviceId = device.getContext().getDeviceId();
+    synchronized Future publishDevice(final PluginContext pctx, final DeviceProxy proxy, final PropertyContainer config, final long now) {
+        final DeviceDescription device = createDeviceDescription(pctx, proxy, config != null ? config.getPropertyValues() : null);
+        final String deviceId = device.getContext().getDeviceId();
 
         // check that the device ID is legal
         if (deviceId == null || deviceId.contains(",") || deviceId.contains(":")) {
             throw new HobsonRuntimeException("Unable to publish device \"" + deviceId + "\": the ID is either null or contains an invalid character");
         }
 
-        // publish the device
-        if (deviceStore != null) {
-            deviceStore.publishDevice(device, republish);
-        }
+        final HobsonPlugin plugin = pluginManager.getLocalPlugin(device.getContext().getPluginContext());
 
-        // we assume that since the device is published, it's availability is true
-        setDeviceAvailability(device.getContext(), true, now);
-    }
+        return plugin.getRuntime().submitInEventLoop(new Runnable() {
+            @Override
+            public void run() {
+                // invoke device's onStartup callback
+                proxy.onStartup(config);
 
-    @Override
-    synchronized public void unpublishDevice(final DeviceContext ctx, final EventLoopExecutor executor) {
-        unpublishDevice(getDevice(ctx), executor);
-
-    }
-
-    synchronized private void unpublishDevice(final HobsonDevice device, final EventLoopExecutor executor) {
-        if (device != null) {
-            // execute the device's shutdown method using its plugin event loop
-            executor.executeInEventLoop(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        device.getRuntime().onShutdown();
-                        logger.debug("Device {} has shut down", device.getContext());
-                    } catch (Throwable t) {
-                        logger.error("Error shutting down device: " + device.getContext(), t);
-                    } finally {
-                        deviceStore.unpublishDevice(device.getContext());
-                        eventManager.postEvent(device.getContext().getHubContext(), new DeviceStoppedEvent(System.currentTimeMillis(), device.getContext()));
+                // collect its list of variables
+                for (DeviceVariableDescription dvd : proxy.getVariableDescriptions()) {
+                    if (!variableNameSet.contains(dvd.getName())) {
+                        variableNameSet.add(dvd.getName());
                     }
                 }
-            });
-        }
-    }
 
-    @Override
-    synchronized public void unpublishAllDevices(final PluginContext ctx, final EventLoopExecutor executor) {
-        for (HobsonDevice device : deviceStore.getAllDevices(ctx)) {
-            unpublishDevice(device, executor);
-        }
+                // save the device description
+                if (deviceStore != null) {
+                    deviceStore.saveDevice(device);
+                }
+
+                if (eventManager != null) {
+                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
+                }
+            }
+        });
     }
 
     @Override
@@ -295,23 +396,46 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceConfigurationProperties(DeviceContext ctx, Map<String,Object> values, boolean overwrite) {
-        HobsonDevice device = getDevice(ctx);
-        configManager.setDeviceConfigurationProperties(ctx, device.getConfigurationClass(), device.getName(), values, overwrite);
+        setDeviceConfigurationProperties(deviceStore.getDevice(ctx), values, overwrite, true);
+    }
+
+    @Override
+    public void setDeviceName(DeviceContext dctx, String name) {
+
+    }
+
+    protected void setDeviceConfigurationProperties(DeviceDescription desc, Map<String,Object> values, boolean overwrite, boolean sendEvent) {
+        PropertyContainerClass configClass = getDeviceConfigurationClass(desc.getContext());
+        configManager.setDeviceConfigurationProperties(desc.getContext(), configClass, desc.getName(), values, overwrite);
 
         // send update event
-        eventManager.postEvent(
-            ctx.getPluginContext().getHubContext(),
-            new DeviceConfigurationUpdateEvent(
-                System.currentTimeMillis(),
-                ctx.getPluginId(),
-                ctx.getDeviceId(),
-                configManager.getDeviceConfiguration(ctx, device.getConfigurationClass(), device.getName())
-            )
-        );
+        if (sendEvent) {
+            eventManager.postEvent(
+                    desc.getContext().getPluginContext().getHubContext(),
+                    new DeviceConfigurationUpdateEvent(
+                        System.currentTimeMillis(),
+                        desc.getContext().getPluginId(),
+                        desc.getContext().getDeviceId(),
+                        configManager.getDeviceConfiguration(desc.getContext(), configClass)
+                    )
+            );
+        }
     }
 
     @Override
     public void setDeviceTags(DeviceContext deviceContext, Set<String> set) {
         throw new UnsupportedOperationException();
+    }
+
+    protected DeviceDescription createDeviceDescription(PluginContext pctx, DeviceProxy proxy, Map<String,Object> config) {
+        return new DeviceDescription.Builder(DeviceContext.create(pctx, proxy.getDeviceId())).
+            name(config != null && config.containsKey("name") ? (String)config.get("name") : proxy.getDefaultName()).
+            type(proxy.getDeviceType()).
+            preferredVariableName(proxy.getPreferredVariableName()).
+            manufacturerVersion(proxy.getManufacturerVersion()).
+            manufacturerName(proxy.getManufacturerName()).
+            modelName(proxy.getModelName()).
+            variableDescriptions(proxy.hasVariableDescriptions() ? proxy.getVariableDescriptions() : null).
+            build();
     }
 }

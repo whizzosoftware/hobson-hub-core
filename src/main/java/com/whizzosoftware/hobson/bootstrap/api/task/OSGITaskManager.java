@@ -10,6 +10,7 @@ package com.whizzosoftware.hobson.bootstrap.api.task;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.EventListener;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -22,7 +23,6 @@ import com.whizzosoftware.hobson.api.task.*;
 import com.whizzosoftware.hobson.api.task.action.TaskActionClass;
 import com.whizzosoftware.hobson.api.task.condition.*;
 import com.whizzosoftware.hobson.api.task.store.TaskStore;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.store.MapDBTaskStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
@@ -43,8 +43,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private volatile BundleContext bundleContext;
     private volatile EventManager eventManager;
     private volatile HubManager hubManager;
+    private volatile DeviceManager deviceManager;
     private volatile PluginManager pluginManager;
-    private volatile VariableManager variableManager;
 
     private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
     private TaskStore taskStore;
@@ -302,7 +302,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             List<TaskActionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
-                Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
+                Collection<String> publishedVariableNames = deviceManager.getAllDeviceVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     PropertyContainerClass pcc = (PropertyContainerClass)context.getService(ref);
                     if (!applyConstraints || pcc.evaluatePropertyConstraints(publishedVariableNames)) {
@@ -329,7 +329,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             List<TaskConditionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
-                Collection<String> publishedVariableNames = variableManager.getPublishedVariableNames(ctx);
+                Collection<String> publishedVariableNames = deviceManager.getAllDeviceVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     Object o = context.getService(ref);
                     if (o instanceof TaskConditionClass) {
@@ -486,7 +486,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             // get the task
             HobsonTask task = getTask(ctx);
 
-            if (conditionProcessor.evaluate(OSGITaskManager.this, task, variableManager, ctx)) {
+            if (conditionProcessor.evaluate(OSGITaskManager.this, task, hubManager, deviceManager, ctx)) {
                 logger.debug("Executing action set for task: {}", ctx);
                 executeActionSet(task.getContext().getHubContext(), task.getActionSet().getId());
             }

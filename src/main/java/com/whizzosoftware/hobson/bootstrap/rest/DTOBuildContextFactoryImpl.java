@@ -14,7 +14,6 @@ import com.whizzosoftware.hobson.api.persist.IdProvider;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.dto.ExpansionFields;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContext;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
@@ -37,8 +36,6 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
     @Inject
     TaskManager taskManager;
     @Inject
-    VariableManager variableManager;
-    @Inject
     IdProvider idProvider;
 
     @Override
@@ -49,7 +46,6 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
             pluginManager(pluginManager).
             presenceManager(presenceManager).
             taskManager(taskManager).
-            variableManager(variableManager).
             expansionFields(expansions).
             idProvider(idProvider).
             build();

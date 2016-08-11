@@ -22,7 +22,6 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.data.StubDataStreamManager;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
 import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
@@ -105,11 +104,6 @@ public class HobsonManagerModule extends AbstractModule {
     public DataStreamManager provideDataStreamManager() {
         DataStreamManager tm = (DataStreamManager)getManager(DataStreamManager.class);
         return tm != null ? tm : new StubDataStreamManager();
-    }
-
-    @Provides
-    public VariableManager provideVariableManager() {
-        return (VariableManager)getManager(VariableManager.class);
     }
 
     private Object getManager(Class clazz) {

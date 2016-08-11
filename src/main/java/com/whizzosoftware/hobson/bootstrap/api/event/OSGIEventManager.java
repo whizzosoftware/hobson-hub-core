@@ -55,8 +55,7 @@ public class OSGIEventManager implements EventManager {
             eventFactory.addEventClass(TaskDeletedEvent.ID, TaskDeletedEvent.class);
             eventFactory.addEventClass(TaskExecutionEvent.ID, TaskExecutionEvent.class);
             eventFactory.addEventClass(TaskUpdatedEvent.ID, TaskUpdatedEvent.class);
-            eventFactory.addEventClass(VariableUpdateNotificationEvent.ID, VariableUpdateNotificationEvent.class);
-            eventFactory.addEventClass(VariableUpdateRequestEvent.ID, VariableUpdateRequestEvent.class);
+            eventFactory.addEventClass(DeviceVariableUpdateEvent.ID, DeviceVariableUpdateEvent.class);
         } catch (NoSuchMethodException e) {
             logger.error("An error occurred during event registration", e);
         }
