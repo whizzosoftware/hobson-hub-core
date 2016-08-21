@@ -302,7 +302,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             List<TaskActionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
-                Collection<String> publishedVariableNames = deviceManager.getAllDeviceVariableNames(ctx);
+                Collection<String> publishedVariableNames = deviceManager.getDeviceVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     PropertyContainerClass pcc = (PropertyContainerClass)context.getService(ref);
                     if (!applyConstraints || pcc.evaluatePropertyConstraints(publishedVariableNames)) {
@@ -329,7 +329,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             List<TaskConditionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
-                Collection<String> publishedVariableNames = deviceManager.getAllDeviceVariableNames(ctx);
+                Collection<String> publishedVariableNames = deviceManager.getDeviceVariableNames(ctx);
                 for (ServiceReference ref : references) {
                     Object o = context.getService(ref);
                     if (o instanceof TaskConditionClass) {

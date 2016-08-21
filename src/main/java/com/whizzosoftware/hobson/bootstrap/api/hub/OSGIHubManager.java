@@ -26,6 +26,9 @@ import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
+import com.whizzosoftware.hobson.api.variable.GlobalVariable;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableDescription;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
@@ -61,6 +64,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     private NetworkInfo networkInfo;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
+    private Map<GlobalVariableContext,Object> globalVariableMap = new HashMap<>();
     private String webSocketUri;
 
     public void start() {
@@ -240,6 +244,34 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
 
         updateConfiguration(ctx, configuration);
+    }
+
+    @Override
+    public void setGlobalVariable(GlobalVariableContext gctx, Object value, long timestamp) {
+        globalVariableMap.put(gctx, value);
+    }
+
+    @Override
+    public void setGlobalVariables(Map<GlobalVariableContext, Object> values, long timestamp) {
+        for (GlobalVariableContext gvctx : values.keySet()) {
+            setGlobalVariable(gvctx, values.get(gvctx), timestamp);
+        }
+    }
+
+    @Override
+    public GlobalVariable getGlobalVariable(GlobalVariableContext gvctx) {
+        Object value = globalVariableMap.get(gvctx);
+        return new GlobalVariable(new GlobalVariableDescription(gvctx), null, value);
+    }
+
+    @Override
+    public Collection<GlobalVariable> getAllGlobalVariables(HubContext hctx) {
+        List<GlobalVariable> results = new ArrayList<>();
+        for (GlobalVariableContext gvctx : globalVariableMap.keySet()) {
+            Object value = globalVariableMap.get(gvctx);
+            results.add(new GlobalVariable(new GlobalVariableDescription(gvctx), null, value));
+        }
+        return results;
     }
 
     @Override

@@ -210,7 +210,7 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public Collection<String> getAllDeviceVariableNames(HubContext hubContext) {
+    public Collection<String> getDeviceVariableNames(HubContext hubContext) {
         return variableNameSet;
     }
 
@@ -222,21 +222,13 @@ public class OSGIDeviceManager implements DeviceManager {
     @Override
     public DeviceVariable getDeviceVariable(DeviceVariableContext vctx) {
         HobsonPlugin plugin = pluginManager.getLocalPlugin(vctx.getDeviceContext().getPluginContext());
-        DeviceDescription device = deviceStore.getDevice(vctx.getDeviceContext());
-        DeviceProxyVariable v = plugin.getRuntime().getDeviceVariableValue(vctx.getDeviceId(), vctx.getName());
-        return new DeviceVariable(device.getVariableDescription(vctx), v.getValue(), v.getLastUpdate());
+        return plugin.getRuntime().getDeviceVariable(vctx.getDeviceId(), vctx.getName());
     }
 
     @Override
     public Collection<DeviceVariable> getDeviceVariables(DeviceContext dctx) {
         HobsonPlugin plugin = pluginManager.getLocalPlugin(dctx.getPluginContext());
-        List<DeviceVariable> results = new ArrayList<>();
-        Collection<DeviceProxyVariable> vars = plugin.getRuntime().getDeviceVariableValues(dctx.getDeviceId());
-        for (DeviceProxyVariable dpv : vars) {
-            DeviceDescription device = deviceStore.getDevice(dpv.getContext().getDeviceContext());
-            results.add(new DeviceVariable(device.getVariableDescription(dpv.getContext()), dpv.getValue(), dpv.getLastUpdate()));
-        }
-        return results;
+        return plugin.getRuntime().getDeviceVariables(dctx.getDeviceId());
     }
 
     @Override
@@ -371,9 +363,9 @@ public class OSGIDeviceManager implements DeviceManager {
                 proxy.onStartup(config);
 
                 // collect its list of variables
-                for (DeviceVariableDescription dvd : proxy.getVariableDescriptions()) {
-                    if (!variableNameSet.contains(dvd.getName())) {
-                        variableNameSet.add(dvd.getName());
+                for (DeviceVariable dv : proxy.getVariables()) {
+                    if (!variableNameSet.contains(dv.getDescription().getName())) {
+                        variableNameSet.add(dv.getDescription().getName());
                     }
                 }
 
@@ -428,14 +420,16 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     protected DeviceDescription createDeviceDescription(PluginContext pctx, DeviceProxy proxy, Map<String,Object> config) {
-        return new DeviceDescription.Builder(DeviceContext.create(pctx, proxy.getDeviceId())).
+        DeviceDescription.Builder builder = new DeviceDescription.Builder(DeviceContext.create(pctx, proxy.getDeviceId())).
             name(config != null && config.containsKey("name") ? (String)config.get("name") : proxy.getDefaultName()).
             type(proxy.getDeviceType()).
             preferredVariableName(proxy.getPreferredVariableName()).
             manufacturerVersion(proxy.getManufacturerVersion()).
             manufacturerName(proxy.getManufacturerName()).
-            modelName(proxy.getModelName()).
-            variableDescriptions(proxy.hasVariableDescriptions() ? proxy.getVariableDescriptions() : null).
-            build();
+            modelName(proxy.getModelName());
+        for (DeviceVariable dv : proxy.getVariables()) {
+            builder.variableDescription(dv.getDescription());
+        }
+        return builder.build();
     }
 }

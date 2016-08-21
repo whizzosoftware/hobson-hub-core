@@ -6,10 +6,13 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.user.HobsonUser;
+import com.whizzosoftware.hobson.api.variable.GlobalVariable;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -139,6 +142,26 @@ public class LocalUserStoreTest {
             @Override
             public void setConfiguration(HubContext ctx, PropertyContainer configuration) {
 
+            }
+
+            @Override
+            public void setGlobalVariable(GlobalVariableContext gctx, Object value, long timestamp) {
+
+            }
+
+            @Override
+            public void setGlobalVariables(Map<GlobalVariableContext, Object> values, long timestamp) {
+
+            }
+
+            @Override
+            public GlobalVariable getGlobalVariable(GlobalVariableContext gctx) {
+                return null;
+            }
+
+            @Override
+            public Collection<GlobalVariable> getAllGlobalVariables(HubContext hctx) {
+                return null;
             }
         };
 
