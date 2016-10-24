@@ -1,22 +1,24 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.action.Action;
+import com.whizzosoftware.hobson.api.action.SingleAction;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.variable.GlobalVariable;
-import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -29,7 +31,6 @@ import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -44,7 +45,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Dan Noguerol
  */
-public class OSGIPluginManager implements PluginManager {
+public class OSGIPluginManager extends AbstractPluginManager {
     private static final Logger logger = LoggerFactory.getLogger(OSGIPluginManager.class);
 
     volatile private BundleContext bundleContext;
@@ -67,7 +68,7 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public HobsonPlugin getLocalPlugin(PluginContext ctx) {
+    protected HobsonPlugin getLocalPluginInternal(PluginContext ctx) {
         try {
             BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + ")(pluginId=" + ctx.getPluginId() + "))");
@@ -84,32 +85,58 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public Collection<PluginDescriptor> getLocalPluginDescriptors(HubContext ctx) {
+    protected ConfigurationManager getConfigurationManager() {
+        return configManager;
+    }
+
+    @Override
+    protected EventManager getEventManager() {
+        return eventManager;
+    }
+
+    @Override
+    public Collection<HobsonLocalPluginDescriptor> getLocalPlugins(HubContext ctx) {
+        try {
+            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
+            ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + HobsonPlugin.class.getName() + "))");
+            if (references != null && references.length > 0) {
+                List<HobsonLocalPluginDescriptor> results = new ArrayList<>();
+                for (ServiceReference sr : references) {
+                    HobsonPlugin p = (HobsonPlugin)context.getService(sr);
+                    results.add(p.getDescriptor());
+                }
+                return results;
+            } else if (references != null && references.length > 1) {
+                throw new HobsonRuntimeException("Duplicate plugins detected");
+            } else {
+                throw new HobsonNotFoundException("Unable to locate plugin: " + ctx);
+            }
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving plugin", e);
+        }
+    }
+
+    private Collection<HobsonPluginDescriptor> getLocalPluginDescriptors(HubContext ctx) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
         return new OSGILocalPluginListSource(context).getPlugins().values();
     }
 
     @Override
-    public Collection<PluginDescriptor> getRemotePluginDescriptors(HubContext ctx) {
+    public Collection<HobsonPluginDescriptor> getRemotePlugins(HubContext ctx) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
         return new OSGIRepoPluginListSource(context, getLocalPluginDescriptors(ctx)).getPlugins().values();
     }
 
     @Override
-    public PluginDescriptor getRemotePluginDescriptor(PluginContext ctx, String version) {
+    public HobsonPluginDescriptor getRemotePlugin(PluginContext ctx, String version) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
         OSGIRepoPluginListSource src = new OSGIRepoPluginListSource(context, null);
-        for (PluginDescriptor pd : src.getPlugin(ctx)) {
-            if (version.equals(pd.getVersionString())) {
+        for (HobsonPluginDescriptor pd : src.getPlugin(ctx)) {
+            if (version.equals(pd.getVersion())) {
                 return pd;
             }
         }
         return null;
-    }
-
-    @Override
-    public PropertyContainer getLocalPluginConfiguration(PluginContext ctx) {
-        return configManager.getLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass());
     }
 
     @Override
@@ -140,18 +167,6 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public void setLocalPluginConfiguration(PluginContext ctx, PropertyContainer newConfig) {
-        configManager.setLocalPluginConfiguration(ctx, getLocalPlugin(ctx).getConfigurationClass(), newConfig);
-        postPluginConfigurationUpdateEvent(ctx);
-    }
-
-    @Override
-    public void setLocalPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
-        configManager.setLocalPluginConfigurationProperty(ctx, getLocalPlugin(ctx).getConfigurationClass(), name, value);
-        postPluginConfigurationUpdateEvent(ctx);
-    }
-
-    @Override
     public void reloadLocalPlugin(PluginContext ctx) {
         try {
             Bundle bundle = BundleUtil.getBundleForSymbolicName(ctx.getPluginId());
@@ -169,6 +184,12 @@ public class OSGIPluginManager implements PluginManager {
         ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
         RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
         repoAdmin.removeRepository(uri);
+    }
+
+    @Override
+    public Long getLocalPluginDeviceLastCheckin(PluginContext ctx, String deviceId) {
+        HobsonPlugin plugin = getLocalPluginInternal(ctx);
+        return plugin.getDeviceLastCheckin(deviceId);
     }
 
     @Override
@@ -228,29 +249,9 @@ public class OSGIPluginManager implements PluginManager {
     }
 
     @Override
-    public File getDataDirectory(PluginContext ctx) {
-        File f = new File(System.getProperty(ConfigurationManager.HOBSON_HOME, "."), "data");
-        if (!f.exists()) {
-            if (!f.mkdir()) {
-                logger.error("Error creating data directory");
-            }
-        }
-        return f;
-    }
-
-    @Override
-    public File getDataFile(PluginContext ctx, String filename) {
-        return new File(getDataDirectory(ctx), (ctx != null ? (ctx.getPluginId() + "$") : "") + filename);
-    }
-
-    @Override
-    public GlobalVariable getGlobalVariable(GlobalVariableContext gvctx) {
-        return null;
-    }
-
-    @Override
-    public Collection<GlobalVariable> getGlobalVariables(PluginContext pctx) {
-        return null;
+    public Action createAction(PropertyContainer pc) {
+        HobsonPlugin plugin = getLocalPluginInternal(pc.getContainerClassContext().getPluginContext());
+        return plugin.createAction(pc.getContainerClassContext().getContainerClassId(), pc.getPropertyValues());
     }
 
     private void postPluginConfigurationUpdateEvent(PluginContext ctx) {

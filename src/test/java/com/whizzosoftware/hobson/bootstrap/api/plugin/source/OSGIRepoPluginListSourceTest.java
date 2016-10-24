@@ -7,7 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
-import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
+import com.whizzosoftware.hobson.api.plugin.HobsonPluginDescriptor;
 import org.apache.felix.bundlerepository.Capability;
 import org.apache.felix.bundlerepository.Requirement;
 import org.apache.felix.bundlerepository.Resource;
@@ -24,16 +24,16 @@ import static org.junit.Assert.assertNotNull;
 public class OSGIRepoPluginListSourceTest {
     @Test
     public void testGetPluginsWithTwoDifferentVersions() {
-        List<Resource> resources = new ArrayList<Resource>();
+        List<Resource> resources = new ArrayList<>();
         resources.add(new MockResource("foo", new Version(0, 1, 1)));
         resources.add(new MockResource("foo", new Version(0, 1, 0)));
 
         OSGIRepoPluginListSource pls = new OSGIRepoPluginListSource(null, null);
-        Map<String,PluginDescriptor> pds = pls.getPlugins(resources.toArray(new Resource[resources.size()]));
+        Map<String,HobsonPluginDescriptor> pds = pls.getPlugins(resources.toArray(new Resource[resources.size()]));
         assertEquals(1, pds.size());
         assertNotNull(pds.get("foo"));
-        PluginDescriptor pd = pds.get("foo");
-        assertEquals("0.1.1", pd.getVersionString());
+        HobsonPluginDescriptor pd = pds.get("foo");
+        assertEquals("0.1.1", pd.getVersion());
     }
 
     private class MockResource implements Resource {

@@ -1,15 +1,18 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.variable.DeviceVariable;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableDescriptor;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableState;
 import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.URIInfo;
 import com.whizzosoftware.hobson.rest.v1.util.URLVariableParser;
@@ -54,15 +57,15 @@ public class LocalDeviceMediaProxyHandler implements MediaProxyHandler {
     private static final int DEFAULT_REALM_PORT = 80;
 
     @Override
-    public Representation createRepresentation(HubContext hctx, DeviceVariable hvar, Form query, Response rresponse) {
+    public Representation createRepresentation(HubContext hctx, DeviceVariableDescriptor hvar, DeviceVariableState state, Form query, Response rresponse) {
         if (hvar != null) {
             try {
                 String s = query.getFirstValue("base64");
                 final boolean base64 = (s != null) && Boolean.parseBoolean(s);
 
-                if (hvar.getValue() != null) {
-                    logger.debug("Beginning proxy of {}", hvar.getValue());
-                    final HttpProps httpProps = createHttpGet(hvar.getValue().toString());
+                if (state.getValue() != null) {
+                    logger.debug("Beginning proxy of {}", state.getValue());
+                    final HttpProps httpProps = createHttpGet(state.getValue().toString());
 
                     try {
                         final CloseableHttpResponse response = httpProps.client.execute(httpProps.httpGet);

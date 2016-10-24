@@ -17,8 +17,8 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.task.condition.ConditionClassType;
 import com.whizzosoftware.hobson.api.task.condition.ConditionEvaluationContext;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClass;
-import com.whizzosoftware.hobson.api.variable.DeviceVariable;
 import com.whizzosoftware.hobson.api.variable.DeviceVariableContext;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +50,7 @@ public class TaskConditionProcessor {
                 if (pcc != null) {
                     if (pcc.getConditionClassType() == ConditionClassType.evaluator && !pcc.evaluate(new ConditionEvaluationContext() {
                         @Override
-                        public DeviceVariable getDeviceVariable(DeviceVariableContext dvctx) {
+                        public DeviceVariableState getDeviceVariableState(DeviceVariableContext dvctx) {
                             return deviceManager.getDeviceVariable(dvctx);
                         }
                     }, pc)) {

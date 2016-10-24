@@ -7,27 +7,27 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
+import com.whizzosoftware.hobson.api.plugin.HobsonPluginDescriptor;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MockPluginListSource implements PluginListSource {
-    public Map<String, PluginDescriptor> pluginMap = new HashMap<>();
+    public Map<String, HobsonPluginDescriptor> pluginMap = new HashMap<>();
 
-    public void addPluginDescriptor(PluginDescriptor pd) {
+    public void addPluginDescriptor(HobsonPluginDescriptor pd) {
         pluginMap.put(pd.getId(), pd);
     }
 
     @Override
-    public Map<String, PluginDescriptor> getPlugins() {
+    public Map<String, HobsonPluginDescriptor> getPlugins() {
         return pluginMap;
     }
 
     @Override
-    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
+    public Collection<HobsonPluginDescriptor> getPlugin(PluginContext ctx) {
         return null;
     }
 }

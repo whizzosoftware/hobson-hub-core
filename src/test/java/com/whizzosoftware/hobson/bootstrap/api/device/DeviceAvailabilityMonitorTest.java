@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.device.*;
-import com.whizzosoftware.hobson.api.device.proxy.DeviceProxy;
 import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.MockEventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -26,29 +25,29 @@ public class DeviceAvailabilityMonitorTest {
 
         // create some devices
         final long now = System.currentTimeMillis();
-        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin");
+        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin", "1.0.0");
         plugin.setDeviceManager(dm);
         final MockDeviceProxy device1  = new MockDeviceProxy(plugin, "device1", DeviceType.LIGHTBULB);
-        Future f = dm.publishDevice(plugin.getContext(), device1, null).await();
+        Future f = dm.publishDevice(device1, null, null).await();
         assertTrue(f.isSuccess());
-        dm.setDeviceAvailability(DeviceContext.create(plugin.getContext(), device1.getDeviceId()), true, now);
+        device1.setLastCheckin(now);
 
         final MockDeviceProxy device2 = new MockDeviceProxy(plugin, "device2", DeviceType.LIGHTBULB);
-        f = dm.publishDevice(plugin.getContext(), device2, null).await();
+        f = dm.publishDevice(device2, null, null).await();
         assertTrue(f.isSuccess());
-        dm.setDeviceAvailability(DeviceContext.create(plugin.getContext(), device2.getDeviceId()), true, now);
+        device2.setLastCheckin(now);
 
         DeviceAvailabilityMonitor monitor = new DeviceAvailabilityMonitor(hctx, dm, em);
 
         // make sure no events occur before the 5 minute mark
         assertEquals(0, em.getEventCount());
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL / 2);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL / 2);
         assertEquals(0, em.getEventCount());
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL - 1);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL - 1);
         assertEquals(0, em.getEventCount());
 
         // make sure two events occur at the 5 minute mark
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL);
         assertEquals(2, em.getEventCount());
         assertTrue(em.getEvent(0) instanceof DeviceUnavailableEvent);
         assertTrue("local:plugin:device1".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()) || "local:plugin:device2".equals(em.getEvent(0).getProperties().get(DeviceUnavailableEvent.PROP_DEVICE_CONTEXT).toString()));
@@ -57,22 +56,22 @@ public class DeviceAvailabilityMonitorTest {
         em.clearEvents();
 
         // make sure no events fire after the 5 minute mark
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL + 1);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 1);
         assertEquals(0, em.getEventCount());
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL + 100000);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 100000);
         assertEquals(0, em.getEventCount());
 
         // check in one device
-        dm.setDeviceAvailability(DeviceContext.create(plugin.getContext(), device1.getDeviceId()), true, now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL + 1000);
+        device1.setLastCheckin(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 1000);
 
         // make sure no events fire after the 5 minute mark
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL + 900);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 900);
         assertEquals(0, em.getEventCount());
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL * 2 - 1);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL * 2 - 1);
         assertEquals(0, em.getEventCount());
 
         // make sure one event fires after the 5 minute mark
-        monitor.run(now + DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL * 2 + 1000);
+        monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL * 2 + 1000);
         assertEquals(1, em.getEventCount());
     }
 }

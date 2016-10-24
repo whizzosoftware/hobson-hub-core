@@ -12,7 +12,6 @@ import com.whizzosoftware.hobson.api.disco.*;
 import com.whizzosoftware.hobson.api.event.DeviceAdvertisementEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -59,21 +58,20 @@ public class OSGIDiscoManager implements DiscoManager {
     }
 
     @Override
-    synchronized public void requestExternalDeviceAdvertisementSnapshot(PluginContext ctx, String protocolId) {
+    synchronized public Collection<DeviceAdvertisement> getExternalDeviceAdvertisements(PluginContext ctx, String protocolId) {
         try {
+            List<DeviceAdvertisement> results = null;
             BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
-            HobsonPlugin plugin = pluginManager.getLocalPlugin(ctx);
             ServiceReference[] references = context.getServiceReferences((String)null, "(&(objectClass=" + DeviceAdvertisement.class.getName() + ")(protocolId=" + protocolId + ")(internal=false))");
             if (references != null && references.length > 0) {
-                long now = System.currentTimeMillis();
+                results = new ArrayList<>();
                 for (ServiceReference ref : references) {
-                    DeviceAdvertisement adv = (DeviceAdvertisement) context.getService(ref);
-                    logger.debug("Resending device advertisement {} to plugin {}", adv.getId(), plugin);
-                    plugin.getRuntime().onHobsonEvent(new DeviceAdvertisementEvent(now, adv));
+                    results.add((DeviceAdvertisement)context.getService(ref));
                 }
             } else {
                 logger.debug("No device advertisements found to re-send");
             }
+            return results;
         } catch (InvalidSyntaxException e) {
             throw new HobsonRuntimeException("Error delivering device advertisement snapshot", e);
         }

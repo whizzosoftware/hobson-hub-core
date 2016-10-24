@@ -7,8 +7,8 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
+import com.whizzosoftware.hobson.api.plugin.HobsonPluginDescriptor;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
 
 import java.util.Collection;
 import java.util.Map;
@@ -24,7 +24,7 @@ public interface PluginListSource {
      *
      * @return a Map
      */
-    Map<String,PluginDescriptor> getPlugins();
+    Map<String,HobsonPluginDescriptor> getPlugins();
 
     /**
      * Returns a specific plugin descriptor. Note that there may be more than one
@@ -34,5 +34,5 @@ public interface PluginListSource {
      *
      * @return a PluginDescriptor instance (or null if not found)
      */
-    Collection<PluginDescriptor> getPlugin(PluginContext ctx);
+    Collection<HobsonPluginDescriptor> getPlugin(PluginContext ctx);
 }

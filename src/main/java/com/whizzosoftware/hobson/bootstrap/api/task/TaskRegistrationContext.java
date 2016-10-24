@@ -8,7 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
+import com.whizzosoftware.hobson.api.plugin.HobsonLocalPluginDescriptor;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
 
 import java.util.Collection;
@@ -19,7 +19,7 @@ public interface TaskRegistrationContext {
      *
      * @return a Collection of HobsonTask instances (or null if there are no unregistered tasks)
      */
-    Collection<HobsonTask> getAllTasks(HubContext ctx);
+    Collection<HobsonTask> getTasks(HubContext ctx);
 
     /**
      * Indicates that a task is "fully resolved" -- meaning all its condition and action classes have been
@@ -38,5 +38,5 @@ public interface TaskRegistrationContext {
      *
      * @return a HobsonPlugin instance (or null if no associated plugin was found)
      */
-    HobsonPlugin getPluginForTask(HobsonTask task);
+    HobsonLocalPluginDescriptor getPluginForTask(HobsonTask task);
 }

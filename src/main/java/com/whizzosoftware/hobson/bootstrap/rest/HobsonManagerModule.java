@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
@@ -83,6 +84,11 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public HubManager provideHubManager() {
         return hubManager;
+    }
+
+    @Provides
+    public ActionManager provideActionManager() {
+        return (ActionManager)getManager(ActionManager.class);
     }
 
     @Provides

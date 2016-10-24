@@ -8,13 +8,13 @@
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.action.ActionClass;
+import com.whizzosoftware.hobson.api.action.ActionClassProvider;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
-import com.whizzosoftware.hobson.api.task.action.TaskActionClass;
-import com.whizzosoftware.hobson.api.task.action.TaskActionClassProvider;
 import com.whizzosoftware.hobson.api.task.store.TaskStore;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
@@ -26,26 +26,26 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * An OSGi implementation of TaskActionClassProvider.
+ * An OSGi implementation of ActionClassProvider.
  *
  * @author Dan Noguerol
  */
-public class OSGITaskActionClassProvider implements TaskActionClassProvider {
+public class OSGIActionClassProvider implements ActionClassProvider {
     private BundleContext bundleContext;
     private TaskStore taskStore;
 
-    public OSGITaskActionClassProvider(BundleContext bundleContext, TaskStore taskStore) {
+    public OSGIActionClassProvider(BundleContext bundleContext, TaskStore taskStore) {
         this.bundleContext = bundleContext;
         this.taskStore = taskStore;
     }
 
     @Override
-    public TaskActionClass getActionClass(PropertyContainerClassContext ctx) {
+    public ActionClass getActionClass(PropertyContainerClassContext ctx) {
         try {
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(type=actionClass)(classId=" + ctx.getContainerClassId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
-                return (TaskActionClass)bundleContext.getService(refs[0]);
+                return (ActionClass)bundleContext.getService(refs[0]);
             } else {
                 throw new HobsonRuntimeException("Unable to find action class: " + ctx);
             }

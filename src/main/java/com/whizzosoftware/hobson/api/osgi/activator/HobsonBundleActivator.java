@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.api.osgi.activator;
 
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -46,12 +47,14 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             Component c = manager.createComponent();
             Properties props = new Properties();
             props.setProperty("pluginId", pluginId);
+            props.setProperty("version", context.getBundle().getVersion().toString());
             c.setInterface(HobsonPlugin.class.getName(), props);
             c.setFactory(new HobsonPluginFactory(context, pluginClass, pluginId), "create");
             c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
             c.add(createServiceDependency().setService(DiscoManager.class).setRequired(true));
             c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
             c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
+            c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
             c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
             manager.add(c);

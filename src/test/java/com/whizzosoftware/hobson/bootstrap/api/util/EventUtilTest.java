@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 public class EventUtilTest {
     @Test
     public void testDeviceStartedToEventMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
         MockDeviceProxy device = new MockDeviceProxy(plugin, dctx.getDeviceId(), DeviceType.LIGHTBULB);
@@ -33,7 +33,7 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStartedMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
         MockDeviceProxy device = new MockDeviceProxy(plugin, dctx.getDeviceId(), DeviceType.LIGHTBULB);
@@ -53,7 +53,7 @@ public class EventUtilTest {
 
     @Test
     public void testDeviceStoppedEventMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
         MockDeviceProxy device = new MockDeviceProxy(plugin, dctx.getDeviceId(), DeviceType.LIGHTBULB);
@@ -68,7 +68,7 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStoppedMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
         MockDeviceProxy device = new MockDeviceProxy(plugin, dctx.getDeviceId(), DeviceType.LIGHTBULB);

@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.hub;
 
 import ch.qos.logback.classic.Level;
@@ -28,7 +30,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.variable.GlobalVariable;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
-import com.whizzosoftware.hobson.api.variable.GlobalVariableDescription;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
@@ -151,6 +153,20 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
+    @Override
+    public boolean hasPropertyContainerClass(PropertyContainerClassContext ctx) {
+        if (ctx != null) {
+            try {
+                Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");
+                ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
+                return (refs != null && refs.length == 1);
+            } catch (InvalidSyntaxException e) {
+                logger.error("Error retrieving container class: " + ctx, e);
+            }
+        }
+        return false;
+    }
+
     private String getHubName(HubContext ctx) {
         PropertyContainer props = configManager.getHubConfiguration(ctx);
         String name = (String)props.getPropertyValue("name");
@@ -261,15 +277,15 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public GlobalVariable getGlobalVariable(GlobalVariableContext gvctx) {
         Object value = globalVariableMap.get(gvctx);
-        return new GlobalVariable(new GlobalVariableDescription(gvctx), null, value);
+        return new GlobalVariable(new GlobalVariableDescriptor(gvctx), null, value);
     }
 
     @Override
-    public Collection<GlobalVariable> getAllGlobalVariables(HubContext hctx) {
+    public Collection<GlobalVariable> getGlobalVariables(HubContext hctx) {
         List<GlobalVariable> results = new ArrayList<>();
         for (GlobalVariableContext gvctx : globalVariableMap.keySet()) {
             Object value = globalVariableMap.get(gvctx);
-            results.add(new GlobalVariable(new GlobalVariableDescription(gvctx), null, value));
+            results.add(new GlobalVariable(new GlobalVariableDescriptor(gvctx), null, value));
         }
         return results;
     }

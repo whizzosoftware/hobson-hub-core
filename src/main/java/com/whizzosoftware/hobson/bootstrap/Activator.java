@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
@@ -22,6 +23,7 @@ import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
 import com.whizzosoftware.hobson.bootstrap.api.config.MapDBConfigurationManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
@@ -253,8 +255,17 @@ public class Activator extends DependencyActivatorBase {
     }
 
     private void createManagers(DependencyManager manager) {
-        // register activity log manager
+        // register action manager
         org.apache.felix.dm.Component c = manager.createComponent();
+        c.setInterface(ActionManager.class.getName(), null);
+        c.setImplementation(OSGIActionManager.class);
+        c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
+        manager.add(c);
+        registeredComponents.add(c);
+
+        // register activity log manager
+        c = manager.createComponent();
         c.setInterface(ActivityLogManager.class.getName(), null);
         c.setImplementation(OSGIActivityLogManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
@@ -335,6 +346,7 @@ public class Activator extends DependencyActivatorBase {
         c = manager.createComponent();
         c.setInterface(TaskManager.class.getName(), null);
         c.setImplementation(OSGITaskManager.class);
+        c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));

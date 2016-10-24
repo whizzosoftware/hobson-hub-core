@@ -8,7 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.device.DeviceDescription;
+import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 
@@ -35,18 +35,18 @@ public interface DeviceStore {
      *
      * @param ctx a hub context
      *
-     * @return a Collection of HobsonDevice instances
+     * @return a Collection of HobsonDeviceDescription instances
      */
-    Collection<DeviceDescription> getAllDevices(HubContext ctx);
+    Collection<HobsonDeviceDescriptor> getAllDevices(HubContext ctx);
 
     /**
      * Retrieve a list of all devices published by a specific plugin.
      *
      * @param ctx a plugin context
      *
-     * @return a Collection of HobsonDevice instances
+     * @return a Collection of HobsonDeviceDescription instances
      */
-    Collection<DeviceDescription> getAllDevices(PluginContext ctx);
+    Collection<HobsonDeviceDescriptor> getAllDevices(PluginContext ctx);
 
     /**
      * Indicates whether a particular device context has been published.
@@ -62,16 +62,16 @@ public interface DeviceStore {
      *
      * @param ctx the device context
      *
-     * @return a HobsonDevice instance
+     * @return a HobsonDeviceDescription instance
      */
-    DeviceDescription getDevice(DeviceContext ctx);
+    HobsonDeviceDescriptor getDevice(DeviceContext ctx);
 
     /**
      * Publishes a new device.
      *
      * @param device the device to publish
      */
-    void saveDevice(DeviceDescription device);
+    void saveDevice(HobsonDeviceDescriptor device);
 
     /**
      * Unpublishes a specific device.

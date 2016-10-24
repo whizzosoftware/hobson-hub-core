@@ -10,8 +10,8 @@ package com.whizzosoftware.hobson.bootstrap.api.activity;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.activity.ActivityLogEntry;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
-import com.whizzosoftware.hobson.api.device.DeviceDescription;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.task.TaskManager;
@@ -46,7 +46,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
 
     public void start() {
         // TODO: if this remains file-based, a file size throttling mechanism is needed
-        eventManager.addListener(HubContext.createLocal(), this, new String[]{EventTopics.STATE_TOPIC});
+        eventManager.addListener(HubContext.createLocal(), this);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
             DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
             for (DeviceVariableUpdate update : vune.getUpdates()) {
                 if (!update.isInitial() && update.hasNewValue() && update.isChanged() && update.getContext().hasDeviceId()) {
-                    DeviceDescription device = deviceManager.getDeviceDescription(update.getContext().getDeviceContext());
+                    HobsonDeviceDescriptor device = deviceManager.getDevice(update.getContext().getDeviceContext());
                     String s = createVariableChangeString(device.getName(), update.getName(), update.getNewValue());
                     if (s != null) {
                         appendEvent(s);

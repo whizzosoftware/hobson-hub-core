@@ -8,7 +8,6 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.device.*;
-import com.whizzosoftware.hobson.api.device.proxy.DeviceProxy;
 import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -38,11 +37,11 @@ public class DeviceAvailabilityMonitor implements Runnable {
     }
 
     public void run(long now) {
-        for (DeviceDescription device : deviceManager.getAllDeviceDescriptions(hubContext)) {
+        for (HobsonDeviceDescriptor device : deviceManager.getDevices(hubContext)) {
             DeviceContext dctx = device.getContext();
             Long lastNotificationTime = lastNotificationTimeMap.get(dctx);
-            Long lastCheckIn = deviceManager.getDeviceLastCheckIn(dctx);
-            if (lastCheckIn != null && now - lastCheckIn >= DeviceProxy.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
+            Long lastCheckIn = deviceManager.getDeviceLastCheckin(dctx);
+            if (lastCheckIn != null && now - lastCheckIn >= HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
                 eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, dctx));
                 lastNotificationTimeMap.put(dctx, now);
             }

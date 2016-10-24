@@ -70,6 +70,11 @@ public class LocalUserStoreTest {
             }
 
             @Override
+            public boolean hasPropertyContainerClass(PropertyContainerClassContext ctx) {
+                return false;
+            }
+
+            @Override
             public LineRange getLog(HubContext ctx, long startLine, long endLine, Appendable appendable) {
                 return null;
             }
@@ -160,7 +165,7 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public Collection<GlobalVariable> getAllGlobalVariables(HubContext hctx) {
+            public Collection<GlobalVariable> getGlobalVariables(HubContext hctx) {
                 return null;
             }
         };

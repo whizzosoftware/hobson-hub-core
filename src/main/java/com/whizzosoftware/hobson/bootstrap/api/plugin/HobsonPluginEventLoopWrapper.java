@@ -1,22 +1,30 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
-import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.action.Action;
+import com.whizzosoftware.hobson.api.action.SingleAction;
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
+import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.task.TaskManager;
+import com.whizzosoftware.hobson.api.task.TaskProvider;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableState;
 import io.netty.util.concurrent.Future;
 import org.osgi.framework.FrameworkUtil;
 import org.osgi.framework.InvalidSyntaxException;
@@ -25,6 +33,7 @@ import org.osgi.framework.ServiceListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +55,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
     private volatile EventManager eventManager;
     private volatile ExecutorService executorService;
     private volatile HubManager hubManager;
+    private volatile ActionManager actionManager;
     private volatile PluginManager pluginManager;
     private volatile TaskManager taskManager;
 
@@ -57,11 +67,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
      * @param plugin the plugin to wrapper
      */
     public HobsonPluginEventLoopWrapper(HobsonPlugin plugin) {
-        if (plugin != null) {
-            this.plugin = plugin;
-        } else {
-            throw new HobsonRuntimeException("Passed a null plugin to HobsonPluginEventLoopWrapper");
-        }
+        this.plugin = plugin;
     }
 
     /**
@@ -72,12 +78,13 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
         logger.debug("Starting plugin: {}", plugin.getContext());
 
         // inject manager dependencies
-        getRuntime().setDeviceManager(deviceManager);
-        getRuntime().setDiscoManager(discoManager);
-        getRuntime().setEventManager(eventManager);
-        getRuntime().setHubManager(hubManager);
-        getRuntime().setPluginManager(pluginManager);
-        getRuntime().setTaskManager(taskManager);
+        setActionManager(actionManager);
+        setDeviceManager(deviceManager);
+        setDiscoManager(discoManager);
+        setEventManager(eventManager);
+        setHubManager(hubManager);
+        setPluginManager(pluginManager);
+        setTaskManager(taskManager);
 
         // wait for service to become registered before performing final initialization
         try {
@@ -111,14 +118,14 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
             logger.trace("Queuing final cleanup task for plugin {}", pctx);
 
             // wait for the async task to complete so that the OSGi framework knows that we've really stopped
-            plugin.getRuntime().getEventLoopExecutor().executeInEventLoop(new Runnable() {
+            plugin.getEventLoopExecutor().executeInEventLoop(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         logger.trace("Invoking plugin {} shutdown method", pctx);
 
                         // shut down the plugin
-                        getRuntime().onShutdown();
+                        onShutdown();
 
                         logger.trace("Plugin {} shutdown method returned", pctx);
 
@@ -154,7 +161,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
 
     @Override
     public void onHobsonEvent(final HobsonEvent event) {
-        plugin.getRuntime().submitInEventLoop(new Runnable() {
+        plugin.getEventLoopExecutor().executeInEventLoop(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -164,22 +171,14 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, EventListener
                         if (event instanceof PluginConfigurationUpdateEvent && pluginId.equals(((PluginConfigurationUpdateEvent)event).getPluginId())) {
                             PluginConfigurationUpdateEvent pcue = (PluginConfigurationUpdateEvent)event;
                             logger.trace("Dispatching device config update for {} to runtime", pcue.getPluginId());
-                            plugin.getRuntime().onPluginConfigurationUpdate(pcue.getConfiguration());
+                            plugin.onPluginConfigurationUpdate(pcue.getConfiguration());
                         } else if (event instanceof DeviceConfigurationUpdateEvent && pluginId.equals(((DeviceConfigurationUpdateEvent)event).getPluginId())) {
                             DeviceConfigurationUpdateEvent dcue = (DeviceConfigurationUpdateEvent)event;
                             logger.trace("Dispatching device config update for {}:{} to runtime", dcue.getPluginId(), dcue.getDeviceId());
-                            plugin.getRuntime().onDeviceConfigurationUpdate(dcue.getDeviceId(), dcue.getConfiguration());
-//                        } else if (event instanceof VariableUpdateRequestEvent) {
-//                            VariableUpdateRequestEvent dcue = (VariableUpdateRequestEvent)event;
-//                            for (VariableUpdate update : dcue.getUpdates()) {
-//                                if (pluginId.equals(update.getPluginId())) {
-//                                    logger.trace("Dispatching variable update request for {}:{} to runtime", update.getPluginId(), update.getDeviceId());
-//                                    plugin.getRuntime().onSetDeviceVariable(DeviceContext.create(plugin.getContext(), update.getDeviceId()), update.getName(), update.getValue());
-//                                }
-//                            }
+                            plugin.onDeviceConfigurationUpdate(dcue.getDeviceId(), dcue.getConfiguration());
                         } else {
                             logger.trace("Dispatching event to plugin {}: {}", pluginId, event);
-                            plugin.getRuntime().onHobsonEvent(event);
+                            plugin.onHobsonEvent(event);
                         }
                     } else {
                         logger.error("Error processing event for plugin " + plugin + ": " + event);

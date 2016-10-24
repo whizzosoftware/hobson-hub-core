@@ -1,7 +1,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.device.DeviceDescription;
+import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
 import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
@@ -44,16 +44,16 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
-    public Collection<DeviceDescription> getAllDevices(HubContext hctx) {
+    public Collection<HobsonDeviceDescriptor> getAllDevices(HubContext hctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            List<DeviceDescription> results = new ArrayList<>();
+            List<HobsonDeviceDescriptor> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
             for (Object o : ctx.getSet(idProvider.createDevicesId(hctx))) {
                 String key = (String)o;
-                DeviceDescription db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
+                HobsonDeviceDescriptor db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
                 if (db != null) {
                     results.add(db);
                 }
@@ -66,16 +66,16 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
-    public Collection<DeviceDescription> getAllDevices(PluginContext pctx) {
+    public Collection<HobsonDeviceDescriptor> getAllDevices(PluginContext pctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            List<DeviceDescription> results = new ArrayList<>();
+            List<HobsonDeviceDescriptor> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
             for (Object o : ctx.getSet(idProvider.createPluginDevicesId(pctx))) {
                 String key = (String)o;
-                DeviceDescription db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
+                HobsonDeviceDescriptor db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
                 if (db != null) {
                     results.add(db);
                 }
@@ -93,7 +93,7 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
-    public DeviceDescription getDevice(DeviceContext dctx) {
+    public HobsonDeviceDescriptor getDevice(DeviceContext dctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -105,7 +105,7 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
-    synchronized public void saveDevice(DeviceDescription device) {
+    synchronized public void saveDevice(HobsonDeviceDescriptor device) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());

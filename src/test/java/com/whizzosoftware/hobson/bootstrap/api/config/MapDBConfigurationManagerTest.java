@@ -7,17 +7,16 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.config;
 
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClassType;
+import com.whizzosoftware.hobson.api.property.*;
 import org.junit.Test;
 
 import java.io.File;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MapDBConfigurationManagerTest {
     @Test
@@ -50,14 +49,33 @@ public class MapDBConfigurationManagerTest {
 
         PropertyContainer config = new PropertyContainer();
         config.setPropertyValue("foo", "bar");
-        mgr.setLocalPluginConfiguration(pc, pcc, config);
+        mgr.setLocalPluginConfiguration(pc, config);
 
         config = mgr.getLocalPluginConfiguration(pc, pcc);
         assertEquals("bar", config.getPropertyValue("foo"));
 
         config.setPropertyValue("bar", "foo");
-        mgr.setLocalPluginConfiguration(pc, pcc, config);
+        mgr.setLocalPluginConfiguration(pc, config);
         config = mgr.getLocalPluginConfiguration(pc, pcc);
         assertEquals("bar", config.getPropertyValue("foo"));
+    }
+
+    @Test
+    public void testSetTwoIndividualConfigurationProperties() throws Exception {
+        File file = File.createTempFile("foo", ".db");
+        file.deleteOnExit();
+        MapDBConfigurationManager mgr = new MapDBConfigurationManager(file);
+
+        DeviceContext dctx = DeviceContext.createLocal("plugin1", "device1");
+        PropertyContainerClass pcc = new PropertyContainerClass(PropertyContainerClassContext.create(dctx, "configuration"), PropertyContainerClassType.DEVICE_CONFIG);
+        pcc.addSupportedProperty(new TypedProperty.Builder("foo", "foo", "foo", TypedProperty.Type.STRING).build());
+        pcc.addSupportedProperty(new TypedProperty.Builder("bar", "bar", "bar", TypedProperty.Type.STRING).build());
+
+        mgr.setDeviceConfigurationProperty(dctx, pcc, "foo", "bar");
+        mgr.setDeviceConfigurationProperty(dctx, pcc, "bar", "foo");
+
+        PropertyContainer pc = mgr.getDeviceConfiguration(dctx, pcc);
+        assertTrue(pc.hasPropertyValue("bar"));
+        assertTrue(pc.hasPropertyValue("foo"));
     }
 }
