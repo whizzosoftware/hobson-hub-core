@@ -9,7 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.disco;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.disco.*;
-import com.whizzosoftware.hobson.api.event.DeviceAdvertisementEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceAdvertisementEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;

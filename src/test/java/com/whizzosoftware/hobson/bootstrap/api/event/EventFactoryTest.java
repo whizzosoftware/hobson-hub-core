@@ -8,8 +8,8 @@
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
-import com.whizzosoftware.hobson.api.event.DeviceVariableUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceVariableUpdateEvent;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;

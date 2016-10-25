@@ -15,6 +15,8 @@ import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
 import com.whizzosoftware.hobson.api.event.*;
+import com.whizzosoftware.hobson.api.event.device.DeviceConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.property.*;

@@ -7,6 +7,7 @@
  *******************************************************************************/
 package com.whizzosoftware.hobson.bootstrap.api.util;
 
+import com.whizzosoftware.hobson.api.event.EventTopics;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
 import org.osgi.service.event.Event;
 
@@ -33,7 +34,7 @@ public class EventUtil {
             }
         }
 
-        return new Event(event.getTopic(), map);
+        return new Event(EventTopics.GLOBAL, map);
     }
 
     static public Map<String,Object> createMapFromEvent(Event event) {

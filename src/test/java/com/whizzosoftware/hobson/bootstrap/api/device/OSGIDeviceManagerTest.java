@@ -1,7 +1,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.device.*;
-import com.whizzosoftware.hobson.api.event.DeviceStartedEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.event.MockEventManager;
 import com.whizzosoftware.hobson.api.plugin.MockHobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.MockPluginManager;

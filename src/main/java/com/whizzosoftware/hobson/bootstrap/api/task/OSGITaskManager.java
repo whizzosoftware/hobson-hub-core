@@ -15,7 +15,11 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.event.EventListener;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskCreatedEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskDeletedEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
@@ -51,7 +55,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private TaskStore taskStore;
     private TaskConditionClassProvider taskConditionClassProvider;
     private TaskConditionProcessor conditionProcessor = new TaskConditionProcessor();
-    private EventListener pluginStartListener;
     /**
      * This executor is responsible for registering any unregistered tasks with the plugins that handle
      * their trigger condition. This has do be done asynchronously and monitored continuously because a
@@ -87,17 +90,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             synchronized (taskRegistrationPool) {
                 // add listener for any plugin startups
                 if (eventManager != null) {
-                    pluginStartListener = new EventListener() {
-                        @Override
-                        public void onHobsonEvent(HobsonEvent event) {
-                            // any time a plugin starts, queue up a task registration check
-                            if (event.getEventId().equals(PluginStartedEvent.ID)) {
-                                logger.debug("Detected plugin start: {}", ((PluginStartedEvent)event).getPluginId());
-                                queueTaskRegistration();
-                            }
-                        }
-                    };
-                    eventManager.addListener(HubContext.createLocal(), pluginStartListener, new String[]{EventTopics.STATE_TOPIC});
+                    eventManager.addListener(HubContext.createLocal(), this);
                 } else {
                     logger.error("No event manager available - will not be able to provide tasks to their plugins");
                 }
@@ -120,10 +113,19 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         }
     }
 
+    @EventHandler
+    public void handle(PluginStartedEvent event) {
+        // any time a plugin starts, queue up a task registration check
+        if (event.getEventId().equals(PluginStartedEvent.ID)) {
+            logger.debug("Detected plugin start: {}", event.getPluginId());
+            queueTaskRegistration();
+        }
+    }
+
     public void stop() {
         taskRegistrationPool.shutdown();
-        if (pluginStartListener != null) {
-            eventManager.removeListener(HubContext.createLocal(), pluginStartListener, new String[]{EventTopics.STATE_TOPIC});
+        if (eventManager != null) {
+            eventManager.removeListener(HubContext.createLocal(), this);
         }
     }
 

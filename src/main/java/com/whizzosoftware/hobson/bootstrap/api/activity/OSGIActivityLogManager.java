@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.activity;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
@@ -13,6 +15,8 @@ import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.event.*;
+import com.whizzosoftware.hobson.api.event.device.DeviceVariableUpdateEvent;
+import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.variable.DeviceVariableUpdate;
@@ -34,7 +38,7 @@ import java.util.List;
  *
  * @author Dan Noguerol
  */
-public class OSGIActivityLogManager implements ActivityLogManager, EventListener {
+public class OSGIActivityLogManager implements ActivityLogManager {
     private final Logger activityLog = LoggerFactory.getLogger("ACTIVITY");
 
     private volatile BundleContext bundleContext;
@@ -68,20 +72,20 @@ public class OSGIActivityLogManager implements ActivityLogManager, EventListener
         return events;
     }
 
-    @Override
-    public void onHobsonEvent(HobsonEvent event) {
-        // TODO: make this more efficient
-        if (event instanceof TaskExecutionEvent) {
-            appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
-        } else if (event instanceof DeviceVariableUpdateEvent) {
-            DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
-            for (DeviceVariableUpdate update : vune.getUpdates()) {
-                if (!update.isInitial() && update.hasNewValue() && update.isChanged() && update.getContext().hasDeviceId()) {
-                    HobsonDeviceDescriptor device = deviceManager.getDevice(update.getContext().getDeviceContext());
-                    String s = createVariableChangeString(device.getName(), update.getName(), update.getNewValue());
-                    if (s != null) {
-                        appendEvent(s);
-                    }
+    @EventHandler
+    public void handleTaskExecution(TaskExecutionEvent event) {
+        appendEvent("Task " + taskManager.getTask(((TaskExecutionEvent)event).getContext()).getName() + " was executed");
+    }
+
+    @EventHandler
+    public void handleDeviceVariableUpdate(DeviceVariableUpdateEvent event) {
+        DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
+        for (DeviceVariableUpdate update : vune.getUpdates()) {
+            if (!update.isInitial() && update.hasNewValue() && update.isChanged() && update.getContext().hasDeviceId()) {
+                HobsonDeviceDescriptor device = deviceManager.getDevice(update.getContext().getDeviceContext());
+                String s = createVariableChangeString(device.getName(), update.getName(), update.getNewValue());
+                if (s != null) {
+                    appendEvent(s);
                 }
             }
         }
