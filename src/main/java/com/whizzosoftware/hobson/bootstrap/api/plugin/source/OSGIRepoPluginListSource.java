@@ -95,7 +95,15 @@ public class OSGIRepoPluginListSource implements PluginListSource {
                     }
                     // only add the remote plugin to the result list if its version is newer than what is currently known
                     if (lastVersionString == null || VersionUtil.versionCompare(lastVersionString, repoResource.getVersion().toString()) < 0) {
-                        HobsonPluginDescriptor pd = new HobsonPluginDescriptor(sname, pluginType, repoResource.getPresentationName(), buildRepoDescription(repoResource), repoResource.getVersion().toString(), PluginStatus.notInstalled());
+                        // see if there's an image associated with the plugin
+                        String imageUrl = null;
+                        for (Capability c : repoResource.getCapabilities()) {
+                            if ("hobsonPlugin".equals(c.getName())) {
+                                imageUrl = (String)c.getPropertiesAsMap().get("image");
+                            }
+                        }
+
+                        HobsonPluginDescriptor pd = new HobsonPluginDescriptor(sname, pluginType, repoResource.getPresentationName(), buildRepoDescription(repoResource), repoResource.getVersion().toString(), PluginStatus.notInstalled(), imageUrl);
                         resultMap.put(sname, pd);
                     }
                 }

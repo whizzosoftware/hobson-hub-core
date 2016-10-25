@@ -33,7 +33,7 @@ public class HobsonPluginFactory {
     public HobsonPlugin create() throws Exception {
         // TODO: should we specifically handle the lack of an appropriate constructor here or let it bubble up?
         Class clazz = context.getBundle().loadClass(pluginClass);
-        Constructor c = clazz.getConstructor(String.class, String.class);
-        return new HobsonPluginEventLoopWrapper((HobsonPlugin)c.newInstance(pluginId, context.getBundle().getVersion().toString()));
+        Constructor c = clazz.getConstructor(String.class, String.class, String.class);
+        return new HobsonPluginEventLoopWrapper((HobsonPlugin)c.newInstance(pluginId, context.getBundle().getVersion().toString(), context.getBundle().getHeaders().get("Bundle-Description")));
     }
 }

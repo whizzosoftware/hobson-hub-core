@@ -26,7 +26,7 @@ public class OSGIDeviceManagerTest {
         dm.setDeviceStore(ds);
         dm.setPluginManager(pm);
         dm.setEventManager(em);
-        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0");
+        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0", "");
         plugin.setDeviceManager(dm);
         pm.addLocalPlugin(plugin);
         final MockDeviceProxy proxy = new MockDeviceProxy(plugin, "device1", DeviceType.LIGHTBULB, "name");
@@ -50,7 +50,7 @@ public class OSGIDeviceManagerTest {
     public void testIsDeviceAvailable() throws Exception {
         final long now = System.currentTimeMillis();
         final MockPluginManager pm = new MockPluginManager();
-        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0");
+        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0", "");
         pm.addLocalPlugin(plugin);
         final OSGIDeviceManager m = new OSGIDeviceManager();
         m.setPluginManager(pm);

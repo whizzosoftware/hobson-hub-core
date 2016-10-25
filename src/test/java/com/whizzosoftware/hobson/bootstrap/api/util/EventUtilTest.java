@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 public class EventUtilTest {
     @Test
     public void testDeviceStartedToEventMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0", "");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
         DeviceStartedEvent dse = new DeviceStartedEvent(System.currentTimeMillis(), dctx);
@@ -28,7 +28,7 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStartedMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0", "");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
 
@@ -46,7 +46,7 @@ public class EventUtilTest {
 
     @Test
     public void testDeviceStoppedEventMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0", "");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
 
@@ -59,7 +59,7 @@ public class EventUtilTest {
 
     @Test
     public void testEventToDeviceStoppedMapping() {
-        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0");
+        MockHobsonPlugin plugin = new MockHobsonPlugin("pid", "1.0.0", "");
         plugin.setDeviceManager(new MockDeviceManager());
         DeviceContext dctx = DeviceContext.create(plugin.getContext(), "did");
 

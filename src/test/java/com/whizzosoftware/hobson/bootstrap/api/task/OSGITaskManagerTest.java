@@ -44,7 +44,7 @@ public class OSGITaskManagerTest {
         store.saveTask(task);
 
         MockPluginManager pm = new MockPluginManager();
-        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0");
+        final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin1", "1.0.0", "");
         final MockTaskProvider taskProvider = new MockTaskProvider();
         plugin.setTaskProvider(new MockTaskProvider());
         plugin.setTaskManager(new MockTaskManager());
