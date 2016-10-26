@@ -26,7 +26,7 @@ public class LocalUserStoreTest {
             }
 
             @Override
-            public Collection<HubContext> getAllHubs() {
+            public Collection<HubContext> getHubs() {
                 return null;
             }
 

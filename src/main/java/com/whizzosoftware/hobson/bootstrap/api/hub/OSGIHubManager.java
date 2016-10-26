@@ -20,6 +20,7 @@ import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
+import com.whizzosoftware.hobson.api.action.ActionClass;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
@@ -31,6 +32,7 @@ import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.variable.GlobalVariable;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
+import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
@@ -88,12 +90,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public Collection<HubContext> getAllHubs() {
+    public Collection<HubContext> getHubs() {
         return Collections.singletonList(HubContext.createLocal());
     }
 
     public Collection<HubContext> getHubs(String userId) {
-        return getAllHubs();
+        return getHubs();
     }
 
     @Override
