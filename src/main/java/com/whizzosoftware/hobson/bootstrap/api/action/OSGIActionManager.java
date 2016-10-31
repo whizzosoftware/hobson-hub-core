@@ -9,10 +9,7 @@ import com.whizzosoftware.hobson.api.action.job.Job;
 import com.whizzosoftware.hobson.api.action.job.JobInfo;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
+import com.whizzosoftware.hobson.api.property.*;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -47,6 +44,9 @@ public class OSGIActionManager implements ActionManager {
 
     @Override
     public AsyncJobHandle executeAction(PropertyContainer action) {
+        // make sure action properties are valid
+        getActionClass(action.getContainerClassContext()).validate(action);
+
         // instantiate action
         Action a = pluginManager.createAction(action);
 
@@ -62,6 +62,9 @@ public class OSGIActionManager implements ActionManager {
         // instantiate actions
         List<Action> actions = new ArrayList<>();
         for (PropertyContainer action : actionSet.getProperties()) {
+            // make sure action properties are valid
+            getActionClass(action.getContainerClassContext()).validate(action);
+            // add to the list
             actions.add(pluginManager.createAction(action));
         }
 
