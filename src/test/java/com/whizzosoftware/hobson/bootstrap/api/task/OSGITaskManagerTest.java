@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.action.MockActionManager;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.MockEventManager;
 import com.whizzosoftware.hobson.api.event.task.TaskRegistrationEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -25,8 +26,10 @@ import com.whizzosoftware.hobson.api.task.TaskContext;
 import com.whizzosoftware.hobson.api.task.condition.ConditionClassType;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClass;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClassProvider;
+import com.whizzosoftware.hobson.bootstrap.api.task.store.MapDBTaskStore;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -88,12 +91,16 @@ public class OSGITaskManagerTest {
     }
 
     @Test
-    public void testCreateTask() {
+    public void testCreateTask() throws Exception {
         final PluginContext pctx = PluginContext.createLocal("plugin1");
-        MockTaskStore store = new MockTaskStore();
+        File f = File.createTempFile("foo", "db");
+        f.deleteOnExit();
+        MapDBTaskStore store = new MapDBTaskStore(f);
+        MockActionManager am = new MockActionManager();
         MockEventManager em = new MockEventManager();
         MockPluginManager pm = new MockPluginManager();
         OSGITaskManager tm = new OSGITaskManager();
+        tm.setActionManager(am);
         tm.setPluginManager(pm);
         tm.setTaskStore(store);
         tm.setTaskRegistrationExecutor(new TaskRegistrationExecutor(HubContext.createLocal(), em, null));
@@ -116,7 +123,9 @@ public class OSGITaskManagerTest {
         conds.add(new PropertyContainer(PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"), map));
 
         List<PropertyContainer> lpc = new ArrayList<>();
-        PropertyContainerSet actions = new PropertyContainerSet("id1", lpc);
+        lpc.add(new PropertyContainer(PropertyContainerClassContext.create(DeviceContext.createLocal("plugin1", "device1"), "cc1"), Collections.singletonMap("foo", (Object)"bar")));
+        lpc.add(new PropertyContainer(PropertyContainerClassContext.create(DeviceContext.createLocal("plugin1", "device1"), "cc2"), Collections.singletonMap("bar", (Object)"foo")));
+        PropertyContainerSet actions = new PropertyContainerSet(null, lpc);
 
         try {
             tm.createTask(HubContext.createLocal(), null, null, null, null);
@@ -132,7 +141,7 @@ public class OSGITaskManagerTest {
         } catch (HobsonInvalidRequestException ignored) {}
         tm.createTask(HubContext.createLocal(), "name", "desc", conds, actions);
 
-        Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
+        Collection<HobsonTask> tasks = tm.getTasks(HubContext.createLocal());
         assertEquals(1, tasks.size());
         HobsonTask task = tasks.iterator().next();
         assertEquals("name", task.getName());
@@ -141,5 +150,8 @@ public class OSGITaskManagerTest {
         assertEquals(1, pcs.size());
         PropertyContainer pc = pcs.get(0);
         assertEquals("bar", pc.getStringPropertyValue("id1"));
+        assertNotNull(task.getActionSet());
+        assertTrue(task.getActionSet().hasProperties());
+        assertEquals(2, task.getActionSet().getProperties().size());
     }
 }

@@ -55,19 +55,15 @@ public class MapDBTaskStore implements TaskStore {
     }
 
     @Override
-    public Collection<HobsonTask> getAllTasks(HubContext hctx) {
+    public Collection<TaskContext> getAllTasks(HubContext hctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            List<HobsonTask> results = new ArrayList<>();
+            List<TaskContext> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
             for (Object o : ctx.getSet(idProvider.createTasksId(hctx))) {
-                TaskContext tctx = TaskContext.create(hctx, (String)o);
-                HobsonTask task = persister.restoreTask(ctx, tctx);
-                if (task != null) {
-                    results.add(task);
-                }
+                results.add(TaskContext.create(hctx, (String)o));
             }
             return results;
 

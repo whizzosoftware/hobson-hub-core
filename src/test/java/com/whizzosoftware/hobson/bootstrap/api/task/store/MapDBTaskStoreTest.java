@@ -132,9 +132,9 @@ public class MapDBTaskStoreTest {
         store = new MapDBTaskStore(dbFile);
 
         // make sure only 1 task comes back
-        Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
+        Collection<TaskContext> tasks = store.getAllTasks(HubContext.createLocal());
         assertEquals(1, tasks.size());
-        task = tasks.iterator().next();
+        task = store.getTask(tasks.iterator().next());
         assertNotNull(task.getActionSet());
         assertEquals("actionSet1", task.getActionSet().getId());
     }

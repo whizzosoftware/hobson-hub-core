@@ -129,6 +129,10 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         }
     }
 
+    public void setActionManager(ActionManager actionManager) {
+        this.actionManager = actionManager;
+    }
+
     public void setEventManager(EventManager eventManager) {
         this.eventManager = eventManager;
     }
@@ -184,7 +188,11 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     @Override
     public Collection<HobsonTask> getTasks(HubContext ctx) {
-        return new ArrayList<>(taskStore.getAllTasks(ctx));
+        List<HobsonTask> tasks = new ArrayList<>();
+        for (TaskContext tctx : taskStore.getAllTasks(ctx)) {
+            tasks.add(getTask(tctx));
+        }
+        return tasks;
     }
 
     @Override
@@ -202,6 +210,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         if (task == null && failOnError) {
             throw new HobsonNotFoundException("Task not found");
         } else {
+            if (task != null && task.getActionSet() != null && task.getActionSet().hasId() && !task.getActionSet().hasProperties()) {
+                task.setActionSet(actionManager.getActionSet(ctx.getHubContext(), task.getActionSet().getId()));
+            }
             return task;
         }
     }
@@ -314,8 +325,15 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             // make sure task has a trigger condition
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
-                // create task and add to task store
+                // create the action set if needed
+                if (!actionSet.hasId()) {
+                    actionSet = actionManager.publishActionSet(ctx, actionSet.getName(), actionSet.getProperties());
+                }
+
+                // create task
                 final HobsonTask task = new HobsonTask(tctx, name, description, null, conditions, actionSet);
+
+                // save the task
                 taskStore.saveTask(task);
 
                 // queue the task registration

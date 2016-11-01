@@ -15,8 +15,8 @@ public class MockTaskStore implements TaskStore {
     private Map<TaskContext,HobsonTask> tasks = new HashMap<>();
 
     @Override
-    public Collection<HobsonTask> getAllTasks(HubContext hctx) {
-        return tasks.values();
+    public Collection<TaskContext> getAllTasks(HubContext hctx) {
+        return tasks.keySet();
     }
 
     @Override

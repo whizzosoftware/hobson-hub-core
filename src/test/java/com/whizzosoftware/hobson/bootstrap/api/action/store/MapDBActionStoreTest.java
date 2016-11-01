@@ -35,8 +35,8 @@ public class MapDBActionStoreTest {
         List<PropertyContainer> actions = new ArrayList<>();
         actions.add(
                 new PropertyContainer(
-                        PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"),
-                        Collections.singletonMap("foo", (Object) "bar")
+                    PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"),
+                    Collections.singletonMap("foo", (Object) "bar")
                 )
         );
         String actionSetId = store.saveActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
