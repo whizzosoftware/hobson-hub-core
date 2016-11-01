@@ -168,10 +168,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void unpublishActionSets(PluginContext ctx) {
-    }
-
-    @Override
     public void unpublishConditionClasses(PluginContext ctx) {
         synchronized (serviceRegistrationMap) {
             List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
@@ -210,10 +206,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         }
     }
 
-    @Override
-    public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
-        return taskStore.saveActionSet(ctx, name, actions);
-    }
 
     @Override
     public void publishConditionClass(TaskConditionClass conditionClass) {
@@ -242,16 +234,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         } catch (Throwable e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
-        return taskStore.getActionSet(ctx, actionSetId);
-    }
-
-    @Override
-    public Collection<PropertyContainerSet> getActionSets(HubContext ctx) {
-        return taskStore.getAllActionSets(ctx);
     }
 
     @Override
@@ -380,7 +362,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     @Override
     public void executeTask(TaskContext taskContext) {
         HobsonTask task = getTask(taskContext);
-        executeActionSet(taskContext.getHubContext(), task.getActionSet().getId());
+        actionManager.executeActionSet(task.getActionSet());
     }
 
     @Override
@@ -394,7 +376,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
             if (conditionProcessor.evaluate(OSGITaskManager.this, task, hubManager, deviceManager, ctx)) {
                 logger.debug("Executing action set for task: {}", ctx);
-                executeActionSet(task.getContext().getHubContext(), task.getActionSet().getId());
+                actionManager.executeActionSet(task.getActionSet());
             }
         } catch (Throwable e) {
             logger.error("Error firing task trigger", e);
@@ -404,18 +386,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void executeActionSet(HubContext ctx, String actionSetId) {
-        PropertyContainerSet actionSet = taskStore.getActionSet(ctx, actionSetId);
-        if (actionSet != null) {
-            actionManager.executeActionSet(actionSet);
-        } else {
-            throw new HobsonRuntimeException("Unable to find action set: " + actionSetId);
-        }
-    }
-
-    @Override
     public boolean isTaskFullyResolved(HobsonTask task) {
-        Collection<PropertyContainerClassContext> deps = task.getDependencies(new OSGIActionClassProvider(bundleContext, taskStore));
+        Collection<PropertyContainerClassContext> deps = task.getDependencies(new OSGIActionClassProvider(bundleContext, actionManager));
         for (PropertyContainerClassContext pccc : deps) {
             if (!hubManager.hasPropertyContainerClass(pccc)) {
                 return false;

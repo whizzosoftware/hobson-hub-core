@@ -2,6 +2,7 @@ package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.*;
+import com.whizzosoftware.hobson.api.action.store.ActionStore;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.action.job.AsyncJobHandle;
@@ -10,6 +11,7 @@ import com.whizzosoftware.hobson.api.action.job.JobInfo;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.*;
+import com.whizzosoftware.hobson.bootstrap.api.action.store.MapDBActionStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -30,8 +32,21 @@ public class OSGIActionManager implements ActionManager {
     @Inject
     volatile private PluginManager pluginManager;
 
+    private ActionStore actionStore;
     private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
     private final Map<String,Job> jobMap = Collections.synchronizedMap(new HashMap<String,Job>());
+
+    public void start() {
+        // if a task store hasn't already been injected, create a default one
+        if (actionStore == null) {
+            this.actionStore = new MapDBActionStore(
+                    pluginManager.getDataFile(
+                        PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                        "actions"
+                    )
+            );
+        }
+    }
 
     @Override
     public void addJobStatusMessage(PluginContext ctx, String msgName, Object o) {
@@ -140,6 +155,16 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
+    public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
+        return actionStore.getActionSet(ctx, actionSetId);
+    }
+
+    @Override
+    public Collection<PropertyContainerSet> getActionSets(HubContext ctx) {
+        return actionStore.getAllActionSets(ctx);
+    }
+
+    @Override
     public JobInfo getJobInfo(HubContext ctx, String jobId) {
         return jobMap.get(jobId);
     }
@@ -187,6 +212,11 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
+    public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
+        return actionStore.saveActionSet(ctx, name, actions);
+    }
+
+    @Override
     public void unpublishActionClasses(PluginContext ctx) {
         List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
         if (srl != null) {
@@ -195,5 +225,9 @@ public class OSGIActionManager implements ActionManager {
             }
             serviceRegistrationMap.remove(ctx.getPluginId());
         }
+    }
+
+    @Override
+    public void unpublishActionSets(PluginContext ctx) {
     }
 }

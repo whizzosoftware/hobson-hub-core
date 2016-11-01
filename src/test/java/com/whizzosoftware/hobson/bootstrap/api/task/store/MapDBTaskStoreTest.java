@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.task.store;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
@@ -28,43 +30,10 @@ import java.util.*;
 
 public class MapDBTaskStoreTest {
     @Test
-    public void testAddActionSet() throws Exception {
-        File dbFile = File.createTempFile("test", ".mapdb");
-        dbFile.deleteOnExit();
-
-        MockTaskManager taskManager = new MockTaskManager();
-
-        MapDBTaskStore store = new MapDBTaskStore(dbFile);
-
-        List<PropertyContainer> actions = new ArrayList<>();
-        actions.add(
-            new PropertyContainer(
-                PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"),
-                Collections.singletonMap("foo", (Object) "bar")
-            )
-        );
-        String actionSetId = store.saveActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
-
-        // close and re-open the store to make sure we're starting from scratch
-        store.close();
-        store = new MapDBTaskStore(dbFile);
-
-        PropertyContainerSet pcs = store.getActionSet(HubContext.createLocal(), actionSetId);
-        assertEquals(actionSetId, pcs.getId());
-        assertTrue(pcs.hasProperties());
-        assertEquals(1, pcs.getProperties().size());
-        assertEquals("cc1", pcs.getProperties().get(0).getContainerClassContext().getContainerClassId());
-        assertEquals("plugin1", pcs.getProperties().get(0).getContainerClassContext().getPluginId());
-        assertTrue(pcs.getProperties().get(0).hasPropertyValues());
-        assertEquals("bar", pcs.getProperties().get(0).getPropertyValue("foo"));
-    }
-
-    @Test
     public void testAddTask() throws Exception {
         File dbFile = File.createTempFile("test", ".mapdb");
         dbFile.deleteOnExit();
 
-        MockTaskManager taskManager = new MockTaskManager();
         MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();
@@ -104,7 +73,6 @@ public class MapDBTaskStoreTest {
         File dbFile = File.createTempFile("test", ".mapdb");
         dbFile.deleteOnExit();
 
-        MockTaskManager taskManager = new MockTaskManager();
         MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();
@@ -143,18 +111,7 @@ public class MapDBTaskStoreTest {
         File dbFile = File.createTempFile("test", ".mapdb");
         dbFile.deleteOnExit();
 
-        MockTaskManager taskManager = new MockTaskManager();
         MapDBTaskStore store = new MapDBTaskStore(dbFile);
-
-        // add an action set
-        List<PropertyContainer> actions = new ArrayList<>();
-        actions.add(
-                new PropertyContainer(
-                        PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1"),
-                        Collections.singletonMap("foo", (Object) "bar")
-                )
-        );
-        store.saveActionSet(HubContext.createLocal(), "actionSet1", actions).getId();
 
         // add a task
         List<PropertyContainer> conditions = new ArrayList<>();
@@ -177,6 +134,9 @@ public class MapDBTaskStoreTest {
         // make sure only 1 task comes back
         Collection<HobsonTask> tasks = store.getAllTasks(HubContext.createLocal());
         assertEquals(1, tasks.size());
+        task = tasks.iterator().next();
+        assertNotNull(task.getActionSet());
+        assertEquals("actionSet1", task.getActionSet().getId());
     }
 
     @Test
@@ -271,7 +231,6 @@ public class MapDBTaskStoreTest {
         File dbFile = File.createTempFile("test", ".mapdb");
         dbFile.deleteOnExit();
 
-        MockTaskManager taskManager = new MockTaskManager();
         MapDBTaskStore store = new MapDBTaskStore(dbFile);
 
         List<PropertyContainer> conditions = new ArrayList<>();

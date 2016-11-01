@@ -1,21 +1,24 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionClass;
 import com.whizzosoftware.hobson.api.action.ActionClassProvider;
+import com.whizzosoftware.hobson.api.action.ActionManager;
+import com.whizzosoftware.hobson.api.action.store.ActionStore;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
-import com.whizzosoftware.hobson.api.task.store.TaskStore;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.InvalidSyntaxException;
@@ -32,11 +35,11 @@ import java.util.List;
  */
 public class OSGIActionClassProvider implements ActionClassProvider {
     private BundleContext bundleContext;
-    private TaskStore taskStore;
+    private ActionManager actionManager;
 
-    public OSGIActionClassProvider(BundleContext bundleContext, TaskStore taskStore) {
+    public OSGIActionClassProvider(BundleContext bundleContext, ActionManager actionManager) {
         this.bundleContext = bundleContext;
-        this.taskStore = taskStore;
+        this.actionManager = actionManager;
     }
 
     @Override
@@ -57,7 +60,7 @@ public class OSGIActionClassProvider implements ActionClassProvider {
     @Override
     public Collection<PropertyContainerClassContext> getActionSetClassContexts(String actionSetId) {
         List<PropertyContainerClassContext> results = new ArrayList<>();
-        PropertyContainerSet pcs = taskStore.getActionSet(HubContext.createLocal(), actionSetId);
+        PropertyContainerSet pcs = actionManager.getActionSet(HubContext.createLocal(), actionSetId);
         for (PropertyContainer pc : pcs.getProperties()) {
             results.add(pc.getContainerClassContext());
         }
