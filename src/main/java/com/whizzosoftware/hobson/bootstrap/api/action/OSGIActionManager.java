@@ -33,7 +33,6 @@ public class OSGIActionManager implements ActionManager {
     volatile private PluginManager pluginManager;
 
     private ActionStore actionStore;
-    private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
     private final Map<String,Job> jobMap = Collections.synchronizedMap(new HashMap<String,Job>());
 
     public void start() {
@@ -182,19 +181,13 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
-    public void publishActionClass(ActionClass actionClass) {
+    public synchronized void publishActionClass(HubContext context, ActionClass actionClass) {
         String pluginId = actionClass.getContext().getPluginId();
         BundleContext ctx = BundleUtil.getBundleContext(getClass(), pluginId);
 
         if (ctx != null) {
             if (pluginId == null) {
                 throw new HobsonRuntimeException("Unable to publish action with null plugin ID");
-            }
-
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
-            if (srl == null) {
-                srl = new ArrayList<>();
-                serviceRegistrationMap.put(pluginId, srl);
             }
 
             Bundle b = BundleUtil.getBundleForSymbolicName(actionClass.getContext().getPluginContext().getPluginId());
@@ -205,7 +198,7 @@ public class OSGIActionManager implements ActionManager {
             props.put("pluginId", pluginId);
             props.put("classId", actionClass.getContext().getContainerClassId());
             props.put("type", "actionClass");
-            srl.add(bc.registerService(PropertyContainerClass.class, actionClass, props));
+            bc.registerService(PropertyContainerClass.class, actionClass, props);
         } else {
             throw new HobsonRuntimeException("Unable to obtain context to publish action");
         }
@@ -214,20 +207,5 @@ public class OSGIActionManager implements ActionManager {
     @Override
     public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
         return actionStore.saveActionSet(ctx, name, actions);
-    }
-
-    @Override
-    public void unpublishActionClasses(PluginContext ctx) {
-        List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
-        if (srl != null) {
-            for (ServiceRegistration sr : srl) {
-                sr.unregister();
-            }
-            serviceRegistrationMap.remove(ctx.getPluginId());
-        }
-    }
-
-    @Override
-    public void unpublishActionSets(PluginContext ctx) {
     }
 }

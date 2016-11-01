@@ -51,7 +51,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private volatile DeviceManager deviceManager;
     private volatile PluginManager pluginManager;
 
-    private final Map<String,List<ServiceRegistration>> serviceRegistrationMap = new HashMap<>();
     private TaskStore taskStore;
     private TaskConditionClassProvider taskConditionClassProvider;
     private TaskConditionProcessor conditionProcessor = new TaskConditionProcessor();
@@ -172,21 +171,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void unpublishConditionClasses(PluginContext ctx) {
-        synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(ctx.getPluginId());
-            if (srl != null) {
-                for (ServiceRegistration sr : srl) {
-                    if (sr.getReference().getProperty("conditionClassId") != null) {
-                        sr.unregister();
-                    }
-                }
-                serviceRegistrationMap.remove(ctx.getPluginId());
-            }
-        }
-    }
-
-    @Override
     public Collection<HobsonTask> getTasks(HubContext ctx) {
         List<HobsonTask> tasks = new ArrayList<>();
         for (TaskContext tctx : taskStore.getAllTasks(ctx)) {
@@ -234,7 +218,12 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     props.put("type", "conditionClass");
                     props.put("classId", conditionClass.getContext().getContainerClassId());
 
-                    registerPropertyContainerClass(context, pluginId, conditionClass, props);
+                    context.registerService(
+                            PropertyContainerClass.class,
+                            conditionClass,
+                            props
+                    );
+
                     queueTaskRegistration();
 
                     logger.debug("Condition class {} published", conditionClass.getContext());
@@ -421,22 +410,5 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             return pluginManager.getLocalPlugin(pc.getContainerClassContext().getPluginContext());
         }
         return null;
-    }
-
-    private void registerPropertyContainerClass(BundleContext context, String pluginId, PropertyContainerClass containerClass, Dictionary<String,String> props) {
-        synchronized (serviceRegistrationMap) {
-            List<ServiceRegistration> srl = serviceRegistrationMap.get(pluginId);
-            if (srl == null) {
-                srl = new ArrayList<>();
-                serviceRegistrationMap.put(pluginId, srl);
-            }
-            srl.add(
-                    context.registerService(
-                        PropertyContainerClass.class,
-                        containerClass,
-                        props
-                    )
-            );
-        }
     }
 }
