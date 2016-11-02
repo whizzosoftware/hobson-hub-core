@@ -188,11 +188,7 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     protected String getDeviceName(DeviceContext ctx) {
-        if (configManager != null) {
-            return configManager.getDeviceName(ctx);
-        } else {
-            return null;
-        }
+        return deviceStore.getDeviceName(ctx);
     }
 
     @Override
@@ -277,7 +273,7 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceName(DeviceContext dctx, String name) {
-        configManager.setDeviceName(dctx, name);
+        deviceStore.setDeviceName(dctx, name);
     }
 
     private void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String,Object> values, boolean sendEvent) {

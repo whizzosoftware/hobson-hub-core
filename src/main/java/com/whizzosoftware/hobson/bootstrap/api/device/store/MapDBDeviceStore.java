@@ -105,12 +105,36 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
+    public String getDeviceName(DeviceContext ctx) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            return persister.restoreDeviceName(pctx, ctx);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
     synchronized public void saveDevice(HobsonDeviceDescriptor device) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
             persister.saveDevice(ctx, device);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
+    public void setDeviceName(DeviceContext ctx, String name) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            persister.saveDeviceName(pctx, ctx, name);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

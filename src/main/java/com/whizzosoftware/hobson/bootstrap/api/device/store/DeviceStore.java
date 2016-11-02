@@ -67,11 +67,28 @@ public interface DeviceStore {
     HobsonDeviceDescriptor getDevice(DeviceContext ctx);
 
     /**
+     * Returns a device name.
+     *
+     * @param ctx the device context
+     *
+     * @return the device name
+     */
+    String getDeviceName(DeviceContext ctx);
+
+    /**
      * Publishes a new device.
      *
      * @param device the device to publish
      */
     void saveDevice(HobsonDeviceDescriptor device);
+
+    /**
+     * Sets a device's name.
+     *
+     * @param ctx the device context
+     * @param name the new device name
+     */
+    void setDeviceName(DeviceContext ctx, String name);
 
     /**
      * Unpublishes a specific device.

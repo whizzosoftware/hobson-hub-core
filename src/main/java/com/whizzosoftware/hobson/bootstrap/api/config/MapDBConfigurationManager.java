@@ -154,16 +154,6 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public String getDeviceName(DeviceContext ctx) {
-        return null;
-    }
-
-    @Override
-    public void setDeviceName(DeviceContext ctx, String name) {
-
-    }
-
-    @Override
     public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
