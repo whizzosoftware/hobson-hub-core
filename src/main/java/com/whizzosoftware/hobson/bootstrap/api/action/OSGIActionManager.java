@@ -1,3 +1,12 @@
+/*
+ *******************************************************************************
+ * Copyright (c) 2016 Whizzo Software, LLC.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
@@ -34,6 +43,11 @@ public class OSGIActionManager implements ActionManager {
 
     private ActionStore actionStore;
     private final Map<String,Job> jobMap = Collections.synchronizedMap(new HashMap<String,Job>());
+    private int maxJobCount = Integer.parseInt(System.getProperty("maxJobCount", "100"));
+
+    public void setMaxJobCount(int maxJobCount) {
+        this.maxJobCount = maxJobCount;
+    }
 
     public void start() {
         // if a task store hasn't already been injected, create a default one
@@ -87,16 +101,7 @@ public class OSGIActionManager implements ActionManager {
 
         // create job
         Job j = createJob(action);
-        jobMap.put(j.getId(), j);
-
         return new AsyncJobHandle(j.getId(), j.start());
-    }
-
-    private Job createJob(Action a) {
-        // create job
-        Job j = new Job(a, DEFAULT_TIMEOUT);
-        jobMap.put(j.getId(), j);
-        return j;
     }
 
     @Override
@@ -208,4 +213,56 @@ public class OSGIActionManager implements ActionManager {
     public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
         return actionStore.saveActionSet(ctx, name, actions);
     }
+
+    int getJobCount() {
+        return jobMap.size();
+    }
+
+    private Job createJob(Action a) {
+        return createJob(a, System.currentTimeMillis());
+    }
+
+    synchronized Job createJob(Action a, long now) {
+        // if there's no free slot for the new job, remove all completed jobs
+        if (jobMap.size() >= maxJobCount) {
+            logger.debug("Max job count has been reached; puring completed jobs");
+            Iterator<Map.Entry<String,Job>> it = jobMap.entrySet().iterator();
+            int count = 0;
+            while (it.hasNext()) {
+                Job j = it.next().getValue();
+                if (j.isComplete()) {
+                    it.remove();
+                    count++;
+                }
+            }
+            logger.debug("Successfully purged {} jobs", count);
+            // if there's still no free slot, remove all incomplete jobs that started more than an hour ago
+            if (jobMap.size() >= maxJobCount) {
+                count = 0;
+                logger.debug("Purging completed jobs didn't free up enough slots; stop incomplete jobs more than an hour old");
+                it = jobMap.entrySet().iterator();
+                while (it.hasNext()) {
+                    Job j = it.next().getValue();
+                    if (j.isOlderThanAnHour(now)) {
+                        j.stop();
+                        it.remove();
+                        count++;
+                    }
+                }
+                logger.debug("Successfully purged {} jobs", count);
+                // if there's still not enough space, throw an exception
+                if (jobMap.size() >= maxJobCount) {
+                    logger.error("There are more than {} active jobs less than an hour old; a new job cannot be created", maxJobCount);
+                    throw new HobsonRuntimeException("Unable to create a new job due to too many recent active jobs");
+                }
+            }
+        }
+
+        // create job
+        Job job = new Job(a, DEFAULT_TIMEOUT, now);
+        jobMap.put(job.getId(), job);
+        return job;
+    }
+
+
 }

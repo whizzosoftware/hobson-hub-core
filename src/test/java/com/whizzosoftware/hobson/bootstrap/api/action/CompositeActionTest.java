@@ -18,6 +18,7 @@ import static org.junit.Assert.assertTrue;
 public class CompositeActionTest {
     @Test
     public void testStartWithSyncCompletingActions() throws Exception {
+        long now = System.currentTimeMillis();
         PluginContext pctx = PluginContext.createLocal("plugin1");
         final EventLoopGroup pluginEventLoop = new LocalEventLoopGroup(3);
         EventLoopExecutor pluginExecutor = new EventLoopExecutor() {
@@ -35,7 +36,7 @@ public class CompositeActionTest {
         actions.add(a3);
 
         CompositeAction ca = new CompositeAction(actions);
-        Job job = new Job(ca, 2000);
+        Job job = new Job(ca, 2000, now);
         job.start();
 
         Thread.sleep(1000);
@@ -49,6 +50,7 @@ public class CompositeActionTest {
 
     @Test
     public void testStartWithAsyncCompletingActions() throws Exception {
+        long now = System.currentTimeMillis();
         PluginContext pctx = PluginContext.createLocal("plugin1");
         final EventLoopGroup pluginEventLoop = new LocalEventLoopGroup(3);
         EventLoopExecutor pluginExecutor = new EventLoopExecutor() {
@@ -66,7 +68,7 @@ public class CompositeActionTest {
         actions.add(a3);
 
         CompositeAction ca = new CompositeAction(actions);
-        Job job = new Job(ca, 2000);
+        Job job = new Job(ca, 2000, now);
         job.start().sync();
 
         assertTrue(a1.isOnStartCalled());
