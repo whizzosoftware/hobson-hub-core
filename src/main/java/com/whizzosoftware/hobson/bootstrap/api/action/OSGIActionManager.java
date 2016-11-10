@@ -12,6 +12,7 @@ package com.whizzosoftware.hobson.bootstrap.api.action;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.*;
 import com.whizzosoftware.hobson.api.action.store.ActionStore;
+import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.action.job.AsyncJobHandle;
@@ -139,8 +140,26 @@ public class OSGIActionManager implements ActionManager {
     @Override
     public Collection<ActionClass> getActionClasses(HubContext ctx, boolean applyConstraints) {
         try {
-            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass))");
+            return getActionClasses(ctx, filter, applyConstraints);
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving action classes", e);
+        }
+    }
+
+    @Override
+    public Collection<ActionClass> getActionClasses(DeviceContext ctx, boolean applyConstraints) {
+        try {
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass)(pluginId=" + ctx.getPluginId() + ")(deviceId=" + ctx.getDeviceId() + "))");
+            return getActionClasses(ctx.getHubContext(), filter, applyConstraints);
+        } catch (InvalidSyntaxException e) {
+            throw new HobsonRuntimeException("Error retrieving action classes", e);
+        }
+    }
+
+    private Collection<ActionClass> getActionClasses(HubContext ctx, Filter filter, boolean applyConstraints) {
+        try {
+            BundleContext context = BundleUtil.getBundleContext(getClass(), null);
             List<ActionClass> results = new ArrayList<>();
             ServiceReference[] references = context.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (references != null) {
@@ -188,6 +207,7 @@ public class OSGIActionManager implements ActionManager {
     @Override
     public synchronized void publishActionClass(HubContext context, ActionClass actionClass) {
         String pluginId = actionClass.getContext().getPluginId();
+        String deviceId = actionClass.getContext().getDeviceId();
         BundleContext ctx = BundleUtil.getBundleContext(getClass(), pluginId);
 
         if (ctx != null) {
@@ -201,6 +221,9 @@ public class OSGIActionManager implements ActionManager {
             // register action class as a service
             Dictionary<String,String> props = new Hashtable<>();
             props.put("pluginId", pluginId);
+            if (deviceId != null) {
+                props.put("deviceId", deviceId);
+            }
             props.put("classId", actionClass.getContext().getContainerClassId());
             props.put("type", "actionClass");
             bc.registerService(PropertyContainerClass.class, actionClass, props);

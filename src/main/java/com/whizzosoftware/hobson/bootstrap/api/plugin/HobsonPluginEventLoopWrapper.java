@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.action.Action;
 import com.whizzosoftware.hobson.api.action.ActionManager;
+import com.whizzosoftware.hobson.api.action.ActionProvider;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
@@ -186,6 +187,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public void postHubEvent(HobsonEvent event) {
         plugin.postHubEvent(event);
+    }
+
+    @Override
+    public void publishActionProvider(ActionProvider actionProvider) {
+        plugin.publishActionProvider(actionProvider);
     }
 
     @Override
