@@ -11,13 +11,11 @@ package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.action.Action;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.plugin.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -245,12 +243,6 @@ public class OSGIPluginManager extends AbstractPluginManager {
         } catch (Exception e) {
             throw new HobsonRuntimeException("Error adding remote repository", e);
         }
-    }
-
-    @Override
-    public Action createAction(PropertyContainer pc) {
-        HobsonPlugin plugin = getLocalPluginInternal(pc.getContainerClassContext().getPluginContext());
-        return plugin.createAction(pc.getContainerClassContext().getContainerClassId(), pc.getPropertyValues());
     }
 
     private void postPluginConfigurationUpdateEvent(PluginContext ctx) {

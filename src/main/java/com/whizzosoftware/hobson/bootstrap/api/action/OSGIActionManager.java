@@ -73,17 +73,23 @@ public class OSGIActionManager implements ActionManager {
 
     @Override
     public AsyncJobHandle executeAction(PropertyContainer action) {
+        ActionClass ac = getActionClass(action.getContainerClassContext());
+
         // make sure action properties are valid
-        getActionClass(action.getContainerClassContext()).validate(action);
+        ac.validate(action);
 
         // instantiate action
-        Action a = pluginManager.createAction(action);
+        Action a = ((ActionProvider)ac).createAction(action.getPropertyValues());
 
-        // create job
-        Job j = createJob(a);
-        jobMap.put(j.getId(), j);
+        if (a != null) {
+            // create job
+            Job j = createJob(a);
+            jobMap.put(j.getId(), j);
 
-        return new AsyncJobHandle(j.getId(), j.start());
+            return new AsyncJobHandle(j.getId(), j.start());
+        } else {
+            throw new HobsonRuntimeException("Unable to create action with action class: " + ac.getContext());
+        }
     }
 
     @Override
@@ -91,10 +97,11 @@ public class OSGIActionManager implements ActionManager {
         // instantiate actions
         List<Action> actions = new ArrayList<>();
         for (PropertyContainer action : actionSet.getProperties()) {
+            ActionClass ac = getActionClass(action.getContainerClassContext());
             // make sure action properties are valid
-            getActionClass(action.getContainerClassContext()).validate(action);
+            ac.validate(action);
             // add to the list
-            actions.add(pluginManager.createAction(action));
+            actions.add(((ActionProvider)ac).createAction(action.getPropertyValues()));
         }
 
         // create composite action
@@ -108,7 +115,13 @@ public class OSGIActionManager implements ActionManager {
     @Override
     public ActionClass getActionClass(PropertyContainerClassContext ctx) {
         try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + ")(type=actionClass))");
+            String s = "(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass)(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + ")";
+            if (ctx.hasDeviceContext()) {
+                s += "(deviceId=" + ctx.getDeviceId() + "))";
+            } else {
+                s += ")";
+            }
+            Filter filter = bundleContext.createFilter(s);
             ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (refs != null && refs.length == 1) {
                 return ((ActionClass)bundleContext.getService(refs[0]));
@@ -124,11 +137,15 @@ public class OSGIActionManager implements ActionManager {
     public Collection<ActionClass> getActionClasses(PluginContext ctx) {
         List<ActionClass> results = new ArrayList<>();
         try {
-            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginId() + ")(type=actionClass))");
+            Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(type=actionClass)(pluginId=" + ctx.getPluginId() + "))");
             ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
             if (refs != null) {
                 for (ServiceReference ref : refs) {
-                    results.add(((ActionClass)bundleContext.getService(ref)));
+                    ActionClass ac = (ActionClass)bundleContext.getService(ref);
+                    // in this case, we only want action classes that have the correct plugin identifier but no device identifier
+                    if (!ac.getContext().hasDeviceContext()) {
+                        results.add(((ActionClass) bundleContext.getService(ref)));
+                    }
                 }
             }
             return results;
@@ -205,9 +222,9 @@ public class OSGIActionManager implements ActionManager {
     }
 
     @Override
-    public synchronized void publishActionClass(HubContext context, ActionClass actionClass) {
-        String pluginId = actionClass.getContext().getPluginId();
-        String deviceId = actionClass.getContext().getDeviceId();
+    public synchronized void publishActionProvider(ActionProvider actionProvider) {
+        String pluginId = actionProvider.getContext().getPluginId();
+        String deviceId = actionProvider.getContext().getDeviceId();
         BundleContext ctx = BundleUtil.getBundleContext(getClass(), pluginId);
 
         if (ctx != null) {
@@ -215,7 +232,7 @@ public class OSGIActionManager implements ActionManager {
                 throw new HobsonRuntimeException("Unable to publish action with null plugin ID");
             }
 
-            Bundle b = BundleUtil.getBundleForSymbolicName(actionClass.getContext().getPluginContext().getPluginId());
+            Bundle b = BundleUtil.getBundleForSymbolicName(actionProvider.getContext().getPluginContext().getPluginId());
             BundleContext bc = b != null ? b.getBundleContext() : bundleContext;
 
             // register action class as a service
@@ -224,9 +241,9 @@ public class OSGIActionManager implements ActionManager {
             if (deviceId != null) {
                 props.put("deviceId", deviceId);
             }
-            props.put("classId", actionClass.getContext().getContainerClassId());
+            props.put("classId", actionProvider.getContext().getContainerClassId());
             props.put("type", "actionClass");
-            bc.registerService(PropertyContainerClass.class, actionClass, props);
+            bc.registerService(PropertyContainerClass.class, actionProvider, props);
         } else {
             throw new HobsonRuntimeException("Unable to obtain context to publish action");
         }

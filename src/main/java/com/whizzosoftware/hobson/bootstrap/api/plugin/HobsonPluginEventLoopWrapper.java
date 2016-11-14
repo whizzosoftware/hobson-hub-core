@@ -9,7 +9,6 @@
 */
 package com.whizzosoftware.hobson.bootstrap.api.plugin;
 
-import com.whizzosoftware.hobson.api.action.Action;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.action.ActionProvider;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
@@ -36,7 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
-import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -192,11 +190,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public void publishActionProvider(ActionProvider actionProvider) {
         plugin.publishActionProvider(actionProvider);
-    }
-
-    @Override
-    public Action createAction(String actionClassId, Map<String, Object> properties) {
-        return plugin.createAction(actionClassId, properties);
     }
 
     @Override
