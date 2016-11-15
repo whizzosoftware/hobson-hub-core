@@ -16,6 +16,7 @@ import com.whizzosoftware.hobson.api.device.*;
 import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.device.DeviceConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceDeletedEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceStartedEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.*;
@@ -105,6 +106,16 @@ public class OSGIDeviceManager implements DeviceManager {
         // stop the device availability monitor
         if (deviceAvailabilityFuture != null) {
             deviceAvailabilityFuture.cancel(true);
+        }
+    }
+
+    @Override
+    public void deleteDevice(DeviceContext dctx) {
+        if (deviceStore != null) {
+            deviceStore.deleteDevice(dctx);
+            eventManager.postEvent(HubContext.createLocal(), new DeviceDeletedEvent(System.currentTimeMillis(), dctx));
+        } else {
+            throw new HobsonRuntimeException("No device store is available");
         }
     }
 

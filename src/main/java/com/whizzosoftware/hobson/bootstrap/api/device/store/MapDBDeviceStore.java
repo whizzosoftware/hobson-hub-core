@@ -142,6 +142,13 @@ public class MapDBDeviceStore implements DeviceStore {
 
     @Override
     synchronized public void deleteDevice(DeviceContext ctx) {
-
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            MapDBCollectionPersistenceContext cpctx = new MapDBCollectionPersistenceContext(db);
+            persister.deleteDevice(cpctx, ctx);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
     }
 }
