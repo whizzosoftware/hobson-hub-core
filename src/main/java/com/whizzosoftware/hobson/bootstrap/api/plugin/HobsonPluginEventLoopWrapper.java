@@ -158,11 +158,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
      */
 
     @Override
-    public void onPluginConfigurationUpdate(PropertyContainer config) {
-        plugin.onPluginConfigurationUpdate(config);
-    }
-
-    @Override
     public void onRefresh() {
         plugin.onRefresh();
     }
@@ -284,11 +279,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public boolean hasTaskProvider() {
         return plugin.hasTaskProvider();
-    }
-
-    @Override
-    public void onDeviceConfigurationUpdate(String deviceId, PropertyContainer config) {
-        plugin.onDeviceConfigurationUpdate(deviceId, config);
     }
 
     @Override

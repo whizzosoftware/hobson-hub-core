@@ -93,10 +93,7 @@ public class OSGIEventManager implements EventManager, EventCallbackInvoker {
                 if (context != null) {
                     ServiceRegistration sr = context.registerService(EventHandler.class.getName(), new EventHandlerAdapter(eventFactory, listener, invoker), ht);
                     if (sr != null) {
-                        serviceRegMap.put(
-                                listener,
-                                sr
-                        );
+                        serviceRegMap.put(listener, sr);
                     } else {
                         logger.error("Received null service registration registering listener: " + listener);
                     }

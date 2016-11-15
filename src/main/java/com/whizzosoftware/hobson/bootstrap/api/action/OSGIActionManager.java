@@ -9,6 +9,7 @@
 */
 package com.whizzosoftware.hobson.bootstrap.api.action;
 
+import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.*;
 import com.whizzosoftware.hobson.api.action.store.ActionStore;
@@ -23,6 +24,7 @@ import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.property.*;
 import com.whizzosoftware.hobson.bootstrap.api.action.store.MapDBActionStore;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
+import io.netty.util.concurrent.Future;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -206,7 +208,12 @@ public class OSGIActionManager implements ActionManager {
 
     @Override
     public JobInfo getJobInfo(HubContext ctx, String jobId) {
-        return jobMap.get(jobId);
+        JobInfo info = jobMap.get(jobId);
+        if (info != null) {
+            return info;
+        } else {
+            throw new HobsonNotFoundException("Job \"" + jobId + "\" not found");
+        }
     }
 
     @Override
@@ -252,6 +259,16 @@ public class OSGIActionManager implements ActionManager {
     @Override
     public PropertyContainerSet publishActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
         return actionStore.saveActionSet(ctx, name, actions);
+    }
+
+    @Override
+    public Future stopJob(HubContext ctx, String jobId) {
+        Job job = jobMap.get(jobId);
+        if (job != null) {
+            return job.stop();
+        } else {
+            throw new HobsonNotFoundException("Unable to find job \"" + jobId + "\"");
+        }
     }
 
     int getJobCount() {
