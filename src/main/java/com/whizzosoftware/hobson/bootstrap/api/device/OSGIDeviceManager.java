@@ -249,6 +249,11 @@ public class OSGIDeviceManager implements DeviceManager {
                     deviceStore.saveDevice(device.getDescriptor());
                 }
 
+                // persist the device configuration
+                if (configManager != null && config != null && config.hasPropertyValues()) {
+                    configManager.setDeviceConfigurationProperties(device.getContext(), config.getPropertyValues());
+                }
+
                 // post the device started event
                 if (eventManager != null) {
                     eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
@@ -263,7 +268,7 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceConfigurationProperty(DeviceContext dctx, PropertyContainerClass configClass, String name, Object value) {
-        configManager.setDeviceConfigurationProperty(dctx, configClass, name, value);
+        configManager.setDeviceConfigurationProperty(dctx, name, value);
 
         // send update event
         eventManager.postEvent(
@@ -288,7 +293,7 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     private void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String,Object> values, boolean sendEvent) {
-        configManager.setDeviceConfigurationProperties(dctx, configClass, values);
+        configManager.setDeviceConfigurationProperties(dctx, values);
 
         // send update event
         if (sendEvent) {

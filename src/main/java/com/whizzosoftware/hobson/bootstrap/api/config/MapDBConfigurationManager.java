@@ -197,24 +197,24 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public void setDeviceConfigurationProperty(DeviceContext ctx, PropertyContainerClass configClass, String name, Object value) {
+    public void setDeviceConfigurationProperty(DeviceContext ctx, String name, Object value) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Map<String,Object> map = persister.restoreDeviceConfiguration(cpctx, ctx);
             Map<String,Object> newMap = new HashMap<>(map);
             newMap.put(name, value);
-            setDeviceConfigurationProperties(ctx, configClass, newMap);
+            setDeviceConfigurationProperties(ctx, newMap);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
     }
 
     @Override
-    public void setDeviceConfigurationProperties(DeviceContext ctx, PropertyContainerClass configClass, Map<String, Object> values) {
+    public void setDeviceConfigurationProperties(DeviceContext dctx, Map<String, Object> values) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
-            persister.deleteDeviceConfiguration(cpctx, ctx, false);
-            persister.saveDeviceConfiguration(cpctx, ctx, values);
+            persister.deleteDeviceConfiguration(cpctx, dctx, false);
+            persister.saveDeviceConfiguration(cpctx, dctx, values);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

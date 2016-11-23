@@ -35,6 +35,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -195,6 +196,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public void setDeviceConfigurationProperty(DeviceContext dctx, PropertyContainerClass configClass, String name, Object value) {
         plugin.setDeviceConfigurationProperty(dctx, configClass, name, value);
+    }
+
+    @Override
+    public void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String, Object> values) {
+        plugin.setDeviceConfigurationProperties(dctx, configClass, values);
     }
 
     @Override

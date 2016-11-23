@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2016 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.config;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
@@ -71,8 +73,8 @@ public class MapDBConfigurationManagerTest {
         pcc.addSupportedProperty(new TypedProperty.Builder("foo", "foo", "foo", TypedProperty.Type.STRING).build());
         pcc.addSupportedProperty(new TypedProperty.Builder("bar", "bar", "bar", TypedProperty.Type.STRING).build());
 
-        mgr.setDeviceConfigurationProperty(dctx, pcc, "foo", "bar");
-        mgr.setDeviceConfigurationProperty(dctx, pcc, "bar", "foo");
+        mgr.setDeviceConfigurationProperty(dctx, "foo", "bar");
+        mgr.setDeviceConfigurationProperty(dctx, "bar", "foo");
 
         PropertyContainer pc = mgr.getDeviceConfiguration(dctx, pcc);
         assertTrue(pc.hasPropertyValue("bar"));
