@@ -164,11 +164,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
-    public void onSetDeviceVariable(String deviceId, String name, Object value) {
-        plugin.onSetDeviceVariable(deviceId, name, value);
-    }
-
-    @Override
     public void onShutdown() {
         plugin.onShutdown();
     }
@@ -179,8 +174,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
-    public void postHubEvent(HobsonEvent event) {
-        plugin.postHubEvent(event);
+    public void postEvent(HobsonEvent event) {
+        plugin.postEvent(event);
     }
 
     @Override

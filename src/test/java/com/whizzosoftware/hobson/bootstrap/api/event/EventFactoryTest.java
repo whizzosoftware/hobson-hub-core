@@ -9,7 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
-import com.whizzosoftware.hobson.api.event.device.DeviceVariableUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
 import com.whizzosoftware.hobson.api.event.HobsonEvent;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -28,31 +28,31 @@ public class EventFactoryTest {
     @Test
     public void testVariableUpdateNotificationEventWithNoUpdates() throws Exception {
         EventFactory ef = new EventFactory();
-        ef.addEventClass(DeviceVariableUpdateEvent.ID, DeviceVariableUpdateEvent.class);
+        ef.addEventClass(DeviceVariablesUpdateEvent.ID, DeviceVariablesUpdateEvent.class);
 
         Map<String,Object> props = new HashMap<>();
-        props.put(HobsonEvent.PROP_EVENT_ID, DeviceVariableUpdateEvent.ID);
+        props.put(HobsonEvent.PROP_EVENT_ID, DeviceVariablesUpdateEvent.ID);
 
         HobsonEvent event = ef.createEvent(props);
-        assertTrue(event instanceof DeviceVariableUpdateEvent);
-        assertNull(((DeviceVariableUpdateEvent)event).getUpdates());
+        assertTrue(event instanceof DeviceVariablesUpdateEvent);
+        assertNull(((DeviceVariablesUpdateEvent)event).getUpdates());
     }
 
     @Test
     public void testVariableUpdateNotificationEventWithUpdates() throws Exception {
         EventFactory ef = new EventFactory();
-        ef.addEventClass(DeviceVariableUpdateEvent.ID, DeviceVariableUpdateEvent.class);
+        ef.addEventClass(DeviceVariablesUpdateEvent.ID, DeviceVariablesUpdateEvent.class);
 
         Map<String,Object> props = new HashMap<>();
         List<DeviceVariableUpdate> updates = new ArrayList<>();
         updates.add(new DeviceVariableUpdate(DeviceVariableContext.createGlobal(PluginContext.createLocal("plugin"), "name"), null, "value"));
-        props.put(HobsonEvent.PROP_EVENT_ID, DeviceVariableUpdateEvent.ID);
-        props.put(DeviceVariableUpdateEvent.PROP_UPDATES, updates);
+        props.put(HobsonEvent.PROP_EVENT_ID, DeviceVariablesUpdateEvent.ID);
+        props.put(DeviceVariablesUpdateEvent.PROP_UPDATES, updates);
 
         HobsonEvent event = ef.createEvent(props);
-        assertTrue(event instanceof DeviceVariableUpdateEvent);
+        assertTrue(event instanceof DeviceVariablesUpdateEvent);
 
-        DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
+        DeviceVariablesUpdateEvent vune = (DeviceVariablesUpdateEvent)event;
         assertNotNull(vune.getUpdates());
         assertEquals(1, vune.getUpdates().size());
         assertEquals("plugin", vune.getUpdates().get(0).getPluginId());

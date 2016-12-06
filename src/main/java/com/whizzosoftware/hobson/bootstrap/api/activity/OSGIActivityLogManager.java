@@ -15,7 +15,7 @@ import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.event.device.DeviceVariableUpdateEvent;
+import com.whizzosoftware.hobson.api.event.device.DeviceVariablesUpdateEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.task.TaskManager;
@@ -78,8 +78,8 @@ public class OSGIActivityLogManager implements ActivityLogManager {
     }
 
     @EventHandler
-    public void handleDeviceVariableUpdate(DeviceVariableUpdateEvent event) {
-        DeviceVariableUpdateEvent vune = (DeviceVariableUpdateEvent)event;
+    public void handleDeviceVariableUpdate(DeviceVariablesUpdateEvent event) {
+        DeviceVariablesUpdateEvent vune = (DeviceVariablesUpdateEvent)event;
         for (DeviceVariableUpdate update : vune.getUpdates()) {
             if (!update.isInitial() && update.hasNewValue() && update.isChanged() && update.getContext().hasDeviceId()) {
                 HobsonDeviceDescriptor device = deviceManager.getDevice(update.getContext().getDeviceContext());

@@ -134,19 +134,6 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public Future setDeviceVariable(final DeviceVariableContext ctx, final Object value) {
-        return pluginManager.setLocalPluginDeviceVariable(ctx, value);
-    }
-
-    @Override
-    public Future setDeviceVariables(final Map<DeviceVariableContext,Object> map) {
-        for (final DeviceVariableContext dvctx : map.keySet()) {
-            setDeviceVariable(dvctx, map.get(dvctx)); // TODO: single setDeviceVariables call?
-        }
-        return null; // TODO
-    }
-
-    @Override
     public PropertyContainer getDeviceConfiguration(DeviceContext ctx) {
         HobsonDeviceDescriptor device = deviceStore.getDevice(ctx);
         if (device != null) {

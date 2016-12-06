@@ -57,6 +57,8 @@ public class OSGIEventManager implements EventManager, EventCallbackInvoker {
             eventFactory.addEventClass(DeviceStartedEvent.ID, DeviceStartedEvent.class);
             eventFactory.addEventClass(DeviceStoppedEvent.ID, DeviceStoppedEvent.class);
             eventFactory.addEventClass(DeviceUnavailableEvent.ID, DeviceUnavailableEvent.class);
+            eventFactory.addEventClass(DeviceVariablesUpdateEvent.ID, DeviceVariablesUpdateEvent.class);
+            eventFactory.addEventClass(DeviceVariablesUpdateRequestEvent.ID, DeviceVariablesUpdateRequestEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginStartedEvent.ID, PluginStartedEvent.class);
@@ -68,7 +70,6 @@ public class OSGIEventManager implements EventManager, EventCallbackInvoker {
             eventFactory.addEventClass(TaskExecutionEvent.ID, TaskExecutionEvent.class);
             eventFactory.addEventClass(TaskRegistrationEvent.ID, TaskRegistrationEvent.class);
             eventFactory.addEventClass(TaskUpdatedEvent.ID, TaskUpdatedEvent.class);
-            eventFactory.addEventClass(DeviceVariableUpdateEvent.ID, DeviceVariableUpdateEvent.class);
         } catch (NoSuchMethodException e) {
             logger.error("An error occurred during event registration", e);
         }
