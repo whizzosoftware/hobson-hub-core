@@ -16,6 +16,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.plugin.PluginConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.image.ImageInputStream;
+import com.whizzosoftware.hobson.api.util.VersionUtil;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGILocalPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.source.OSGIRepoPluginListSource;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
@@ -122,6 +123,18 @@ public class OSGIPluginManager extends AbstractPluginManager {
     public Collection<HobsonPluginDescriptor> getRemotePlugins(HubContext ctx) {
         BundleContext context = FrameworkUtil.getBundle(getClass()).getBundleContext();
         return new OSGIRepoPluginListSource(context, getLocalPluginDescriptors(ctx)).getPlugins().values();
+    }
+
+    @Override
+    public Map<String, String> getRemotePluginVersions(HubContext ctx) {
+        Map<String,String> results = new HashMap<>();
+        for (HobsonPluginDescriptor hpd : getRemotePlugins(ctx)) {
+            String v = results.get(hpd.getId());
+            if (v == null || VersionUtil.versionCompare(hpd.getVersion(), v) > 0) {
+                results.put(hpd.getId(), hpd.getVersion());
+            }
+        }
+        return results;
     }
 
     @Override
