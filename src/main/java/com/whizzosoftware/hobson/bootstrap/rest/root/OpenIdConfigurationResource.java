@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.rest.root;
 
 import com.google.inject.Inject;
+import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.rest.oidc.OIDCConfig;
 import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
 import org.json.JSONArray;
@@ -27,6 +28,8 @@ public class OpenIdConfigurationResource extends ServerResource {
 
     @Inject
     OIDCConfigProvider provider;
+    @Inject
+    UserStore userStore;
 
     @Override
     protected Representation get() throws ResourceException {
@@ -55,7 +58,10 @@ public class OpenIdConfigurationResource extends ServerResource {
         ja.put("implicit");
         json.put("grant_types_supported", ja);
 
-        getResponse().getHeaders().add("X-Default-User", "local");
+        if (userStore.hasDefaultUser()) {
+            getResponse().getHeaders().add("X-Default-User", userStore.getDefaultUser());
+        }
+
         return new JsonRepresentation(json);
     }
 }

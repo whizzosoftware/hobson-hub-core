@@ -24,7 +24,7 @@ define([
 			'passwordChange': 'onPasswordChange'
 		},
 
-		password: 'local',
+		password: 'password',
 
 		render: function() {
 			this.$el.prepend(this.template());

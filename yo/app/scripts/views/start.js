@@ -42,8 +42,8 @@ define([
                         context: this,
                         method: 'POST',
                         data: {
-                            username: 'local',
-                            password: 'local',
+                            username: 'admin',
+                            password: 'password',
                             grant_type: 'password',
                             client_id: 'hobson-webconsole',
                             scope: 'openid'

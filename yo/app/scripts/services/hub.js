@@ -17,7 +17,7 @@ define([
 
 		setPassword: function(ctx, userId, hubId, password) {
 			var url = '/api/v1/hubs/' + hubId + '/password';
-			var data = {currentPassword: 'local', newPassword: password};
+			var data = {currentPassword: 'password', newPassword: password};
 			return $.ajax(url, {
 				context: ctx,
 				type: 'POST',

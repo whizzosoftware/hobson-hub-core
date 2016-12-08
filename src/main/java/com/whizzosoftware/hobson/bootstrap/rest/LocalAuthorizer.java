@@ -9,9 +9,9 @@
 */
 package com.whizzosoftware.hobson.bootstrap.rest;
 
+import com.whizzosoftware.hobson.api.user.HobsonRole;
 import com.whizzosoftware.hobson.rest.HobsonAuthorizer;
 import com.whizzosoftware.hobson.rest.HobsonRestContext;
-import com.whizzosoftware.hobson.rest.HobsonRole;
 import org.restlet.Request;
 import org.restlet.Response;
 import org.restlet.data.ClientInfo;
@@ -30,8 +30,8 @@ public class LocalAuthorizer extends Authorizer implements HobsonAuthorizer {
         HobsonRestContext ctx = HobsonRestContext.createContext(getApplication(), clientInfo, path);
         request.getAttributes().put(HUB_CONTEXT, ctx);
         return (
-            clientInfo.getRoles().contains(HobsonRole.ADMIN.value()) ||
-            ((ctx.getUserId() == null || clientInfo.getUser().getIdentifier().equals(ctx.getUserId())) && (ctx.getHubId() == null || "local".equals(ctx.getHubId())) && clientInfo.getRoles().contains(HobsonRole.USER.value()))
+            clientInfo.getRoles().contains(HobsonRole.administrator) ||
+            ((ctx.getUserId() == null || clientInfo.getUser().getIdentifier().equals(ctx.getUserId())) && (ctx.getHubId() == null || "local".equals(ctx.getHubId())))
         );
     }
 }

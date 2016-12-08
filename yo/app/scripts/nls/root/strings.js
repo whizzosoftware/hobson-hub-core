@@ -43,7 +43,7 @@ define({
 	"SendTestMessage": "Send test message",
 	"ServerHostname": "Server Hostname",
 	"ServerType": "Server type",
-    "SkipSetupPrompt": "Hint: Don't want to run through the configuration wizard? <a href=\"/console/index.html\">Click here</a> to start using Hobson immediately (the default password is \"local\").",
+    "SkipSetupPrompt": "Hint: Don't want to run through the configuration wizard? <a href=\"/console/index.html\">Click here</a> to start using Hobson immediately (the default password is \"password\").",
 	"Start": "Start",
 	"StartWelcome": "Welcome to Hobson! You'll need a few minutes to get rolling. Start by entering a nickname and address for your Hub. We'll use this as a unique identifier.",
 	"TestMessageServerMissing": "You must choose a server to send a test message.",

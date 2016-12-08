@@ -20,7 +20,6 @@ import ch.qos.logback.core.spi.FilterReply;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.action.ActionClass;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
@@ -32,9 +31,7 @@ import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.variable.GlobalVariable;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
-import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
 import gnu.io.CommPortIdentifier;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
 import org.slf4j.LoggerFactory;
@@ -58,7 +55,6 @@ import java.util.*;
 public class OSGIHubManager implements HubManager, LocalHubManager {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
 
-    private static final String ADMIN_PASSWORD = "adminPassword";
     private static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
     private static final String LOG_LEVEL = "logLevel";
 
@@ -176,28 +172,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void setLocalPassword(HubContext ctx, PasswordChange change) {
-        PropertyContainer props = configManager.getHubConfiguration(ctx);
-
-        // verify the old password
-        String shaOld = DigestUtils.sha256Hex(change.getCurrentPassword());
-        String hubPassword = (String)props.getPropertyValue(ADMIN_PASSWORD);
-        if (hubPassword != null && !hubPassword.equals(shaOld)) {
-            throw new HobsonRuntimeException("The current hub password is invalid");
-        }
-
-        // verify the password meets complexity requirements
-        if (!change.isValid()) {
-            throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
-        }
-
-        // set the new password
-        props.setPropertyValue(ADMIN_PASSWORD, DigestUtils.sha256Hex(change.getNewPassword()));
-
-        updateConfiguration(ctx, props);
-    }
-
-    @Override
     public NetworkInfo getNetworkInfo() throws IOException {
         if (networkInfo == null) {
             String nicString = System.getProperty("force.nic");
@@ -215,24 +189,6 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
 
         return networkInfo;
-    }
-
-    @Override
-    public boolean authenticateLocal(HubContext ctx, String password) {
-        String adminPassword = null;
-        PropertyContainer config = configManager.getHubConfiguration(ctx);
-
-        // if there's configuration available, try to obtain the encrypted admin password
-        if (config != null) {
-            adminPassword = (String)config.getPropertyValue(ADMIN_PASSWORD);
-        }
-
-        // if it hasn't been set, default to the "admin" password
-        if (adminPassword == null) {
-            adminPassword = DigestUtils.sha256Hex("local");
-        }
-
-        return (adminPassword.equals(DigestUtils.sha256Hex(password)));
     }
 
     @Override

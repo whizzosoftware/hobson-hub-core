@@ -98,7 +98,7 @@ define([
             if (error) {
                 this.showFormError(error.name, error.msg);
             } else {
-                HubService.sendTestEmail('local', 'local', config).
+                HubService.sendTestEmail('admin', 'password', config).
                     fail(function(response) {
                         if (response.status === 202) {
                             toastr.success(strings.TestMessageSuccessful);

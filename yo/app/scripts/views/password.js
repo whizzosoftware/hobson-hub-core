@@ -20,7 +20,7 @@ define([
         },
 
         initialize: function() {
-            this.footerView = new FooterView({previousTab: 'email', activeTab: 'password', nextTab: 'complete'}); 
+            this.footerView = new FooterView({previousTab: 'email', activeTab: 'password', nextTab: 'complete'});
         },
 
         remove: function() {
@@ -43,7 +43,7 @@ define([
 
             if (password) {
                 if (password === password2) {
-                    HubService.setPassword(this, 'local', 'local', password).fail(function(response) {
+                    HubService.setPassword(this, 'admin', 'local', password).fail(function(response) {
                         if (response.status === 202) {
                             this.$el.trigger('passwordChange', password);
                             Backbone.history.navigate('#complete', {trigger: true});
