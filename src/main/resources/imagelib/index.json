@@ -1,0 +1,51 @@
+[
+  {
+    "groupId": "bulbs",
+    "name": "Bulbs & Lights",
+    "images": [
+      "light7.png"
+    ]
+  },
+  {
+    "groupId": "cameras",
+    "name": "Cameras",
+    "images": [
+      "surveillance85.png"
+    ]
+  },
+  {
+    "groupId": "doorwinstairs",
+    "name": "Doors, Windows & Stairs",
+    "images": [
+      "black338.png"
+    ]
+  },
+  {
+    "groupId": "homes",
+    "name": "Homes",
+    "images": [
+      "house109.png"
+    ]
+  },
+  {
+    "groupId": "avphone",
+    "name": "Phones & A/V",
+    "images": [
+      "cellphone57.png"
+    ]
+  },
+  {
+    "groupId": "switches",
+    "name": "Switches & Outlets",
+    "images": [
+      "shutdown2.png"
+    ]
+  },
+  {
+    "groupId": "thermoweather",
+    "name": "Thermostats & Weather",
+    "images": [
+      "thermostat1.png"
+    ]
+  }
+]
