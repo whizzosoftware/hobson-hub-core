@@ -138,7 +138,7 @@ public class LocalUserStoreTest {
 
             @Override
             public OIDCConfig getOIDCConfiguration() {
-                return null;
+                return new LocalOIDCConfigProvider().getConfig();
             }
 
             @Override
