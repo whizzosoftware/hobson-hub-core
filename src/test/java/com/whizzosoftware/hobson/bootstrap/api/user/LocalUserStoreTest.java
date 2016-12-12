@@ -11,7 +11,7 @@ import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.user.UserAuthentication;
 import com.whizzosoftware.hobson.api.variable.GlobalVariable;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
-import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
+import com.whizzosoftware.hobson.bootstrap.api.hub.LocalOIDCConfigProvider;
 import org.junit.Test;
 
 import java.io.File;
@@ -43,7 +43,7 @@ public class LocalUserStoreTest {
         f.deleteOnExit();
 
         LocalUserStore s = new LocalUserStore(f);
-        s.setOIDCConfigProvider(new LocalOIDCConfigProvider());
+        s.setHubManager(new MockHubManager(new LocalOIDCConfigProvider()));
 
         // add a new user
         s.addUser("test", "test", "Test", "User", Collections.singletonList(HobsonRole.userRead));
@@ -68,7 +68,7 @@ public class LocalUserStoreTest {
         f.deleteOnExit();
 
         LocalUserStore s = new LocalUserStore(f);
-        s.setOIDCConfigProvider(new LocalOIDCConfigProvider());
+        s.setHubManager(new MockHubManager(new LocalOIDCConfigProvider()));
 
         UserAuthentication a = s.authenticate("admin", "password");
         assertEquals("admin", a.getUser().getId());
@@ -137,6 +137,16 @@ public class LocalUserStoreTest {
             }
 
             @Override
+            public OIDCConfig getOIDCConfiguration() {
+                return null;
+            }
+
+            @Override
+            public HobsonUser convertTokenToUser(String token) {
+                return null;
+            }
+
+            @Override
             public boolean hasPropertyContainerClass(PropertyContainerClassContext ctx) {
                 return false;
             }
@@ -149,6 +159,8 @@ public class LocalUserStoreTest {
             @Override
             public LocalHubManager getLocalManager() {
                 return new LocalHubManager() {
+                    private LocalOIDCConfigProvider p = new LocalOIDCConfigProvider();
+
                     @Override
                     public NetworkInfo getNetworkInfo() {
                         return null;
@@ -230,8 +242,7 @@ public class LocalUserStoreTest {
         File f = File.createTempFile("users", "db");
         f.deleteOnExit();
         LocalUserStore mgr = new LocalUserStore();
-        mgr.hubManager = hubManager;
-        mgr.oidcConfigProvider = new LocalOIDCConfigProvider();
+        mgr.setHubManager(hubManager);
         HobsonUser user = mgr.authenticate("admin", "password").getUser();
         assertNotNull(user);
 

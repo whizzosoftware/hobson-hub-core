@@ -1,16 +1,18 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2016 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.rest.root;
 
 import com.google.inject.Inject;
+import com.whizzosoftware.hobson.api.hub.HubManager;
+import com.whizzosoftware.hobson.api.hub.OIDCConfig;
 import com.whizzosoftware.hobson.api.user.UserStore;
-import com.whizzosoftware.hobson.rest.oidc.OIDCConfig;
-import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.restlet.ext.json.JsonRepresentation;
@@ -27,13 +29,13 @@ public class OpenIdConfigurationResource extends ServerResource {
     public static final String PATH = "/.well-known/openid-configuration";
 
     @Inject
-    OIDCConfigProvider provider;
+    HubManager hubManager;
     @Inject
     UserStore userStore;
 
     @Override
     protected Representation get() throws ResourceException {
-        OIDCConfig config = provider.getConfig();
+        OIDCConfig config = hubManager.getOIDCConfiguration();
 
         JSONObject json = new JSONObject();
         json.put("issuer", config.getIssuer());

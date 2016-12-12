@@ -17,6 +17,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
+import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
@@ -28,11 +29,14 @@ import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
+import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.variable.GlobalVariable;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
 import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
+import com.whizzosoftware.hobson.rest.TokenHelper;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.io.input.ReversedLinesFileReader;
+import org.jose4j.jwt.consumer.JwtConsumer;
 import org.osgi.framework.*;
 import org.slf4j.LoggerFactory;
 
@@ -63,11 +67,15 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private EventManager eventManager;
 
     private NetworkInfo networkInfo;
+    private OIDCConfigProvider oidcConfigProvider;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
     private Map<GlobalVariableContext,Object> globalVariableMap = new HashMap<>();
     private String webSocketUri;
+    private JwtConsumer jwtConsumer;
 
     public void start() {
+        this.oidcConfigProvider = new LocalOIDCConfigProvider();
+
         // set the log level
         String logLevel = (String)configManager.getHubConfigurationProperty(HubContext.createLocal(), LOG_LEVEL);
         if (logLevel != null) {
@@ -189,6 +197,20 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
 
         return networkInfo;
+    }
+
+    @Override
+    public OIDCConfig getOIDCConfiguration() {
+        return oidcConfigProvider.getConfig();
+    }
+
+    @Override
+    public HobsonUser convertTokenToUser(String token) {
+        try {
+            return TokenHelper.verifyToken(getOIDCConfiguration(), token);
+        } catch (Exception e) {
+            throw new HobsonAuthenticationException("Error validating bearer token: " + e.getMessage());
+        }
     }
 
     @Override

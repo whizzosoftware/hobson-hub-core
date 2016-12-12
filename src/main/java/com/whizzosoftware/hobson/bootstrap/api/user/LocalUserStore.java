@@ -12,7 +12,6 @@ package com.whizzosoftware.hobson.bootstrap.api.user;
 import com.google.inject.Inject;
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
-import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
@@ -22,7 +21,6 @@ import com.whizzosoftware.hobson.api.user.HobsonUser;
 import com.whizzosoftware.hobson.api.user.UserAuthentication;
 import com.whizzosoftware.hobson.api.user.UserStore;
 import com.whizzosoftware.hobson.rest.TokenHelper;
-import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -39,8 +37,6 @@ public class LocalUserStore implements UserStore {
 
     @Inject
     HubManager hubManager;
-    @Inject
-    OIDCConfigProvider oidcConfigProvider;
 
     private DB db;
 
@@ -57,6 +53,10 @@ public class LocalUserStore implements UserStore {
 
     LocalUserStore(File file) {
         setFile(file);
+    }
+
+    public void setHubManager(HubManager hubManager) {
+        this.hubManager = hubManager;
     }
 
     @Override
@@ -92,7 +92,7 @@ public class LocalUserStore implements UserStore {
                 String p = (String)map.get("password");
                 if (p != null && p.equals(DigestUtils.sha256Hex(password))) {
                     HobsonUser user = createUser(username, map);
-                    return new UserAuthentication(user, TokenHelper.createToken(oidcConfigProvider, user, user.getRoles(), Collections.singletonList(HubContext.DEFAULT_HUB)));
+                    return new UserAuthentication(user, TokenHelper.createToken(hubManager.getOIDCConfiguration(), user, user.getRoles(), Collections.singletonList(HubContext.DEFAULT_HUB)));
                 }
             }
 
@@ -201,10 +201,6 @@ public class LocalUserStore implements UserStore {
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
-    }
-
-    void setOIDCConfigProvider(OIDCConfigProvider oidcConfigProvider) {
-        this.oidcConfigProvider = oidcConfigProvider;
     }
 
     @Override
