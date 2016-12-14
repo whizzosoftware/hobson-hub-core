@@ -261,9 +261,6 @@
                     <exclude>**/version.properties</exclude>
                 </excludes>
             </resource>
-            <resource>
-                <directory>yo/dist</directory>
-            </resource>
         </resources>
         <plugins>
             <plugin>
@@ -274,28 +271,6 @@
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>2.7</version>
-                <executions>
-                    <execution>
-                        <id>copy-resources</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${basedir}/target/classes/setup</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>yo/app</directory>
-                                    <filtering>false</filtering>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -337,18 +312,6 @@
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*,com.whizzosoftware.hobson.json.*,com.whizzosoftware.hobson.dto.*</Export-Package>
                     </instructions>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>com.github.trecloux</groupId>
-                <artifactId>yeoman-maven-plugin</artifactId>
-                <version>0.2</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

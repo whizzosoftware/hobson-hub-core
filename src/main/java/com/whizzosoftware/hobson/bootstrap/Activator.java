@@ -17,8 +17,6 @@ import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
-import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
-import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.hub.HubWebApplication;
 import com.whizzosoftware.hobson.api.image.ImageManager;
@@ -38,7 +36,6 @@ import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
 import com.whizzosoftware.hobson.bootstrap.rest.root.RootApplication;
-import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -63,9 +60,7 @@ import org.restlet.util.Series;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.File;
-import java.net.URI;
 import java.util.*;
 import java.util.List;
 
@@ -147,9 +142,6 @@ public class Activator extends DependencyActivatorBase {
                     // register the REST API application
                     registerRestletApplication(injector.getInstance(ApiV1Application.class), ApiV1Application.API_ROOT);
 
-                    // register the setup wizard
-                    registerRestletApplication(new SetupApplication(), "/setup");
-
                     // start listening for new Restlet applications
                     applicationTracker = new ServiceTracker(context, HubWebApplication.class.getName(), null) {
                         @Override
@@ -178,30 +170,6 @@ public class Activator extends DependencyActivatorBase {
 
                     // start the Restlet component
                     component.start();
-
-                    // determine web app URL prefix
-                    String consoleURI;
-                    if (System.getProperty("useSSL") != null) {
-                        consoleURI = "https://localhost:8183";
-                    } else {
-                        consoleURI = "http://localhost:8182";
-                    }
-                    if (hubManager.getHub(HubContext.createLocal()).getConfiguration().getBooleanPropertyValue(HubConfigurationClass.SETUP_COMPLETE)) {
-                        consoleURI += "/console/index.html";
-                    } else {
-                        consoleURI += "/setup/index.html";
-                    }
-
-                    // launch a browser
-                    try {
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(new URI(consoleURI));
-                        } else {
-                            System.out.println("Hobson is now available at " + consoleURI);
-                        }
-                    } catch (Throwable t) {
-                        logger.warn("Unable to launch web browser", t);
-                    }
                 } catch (Exception e) {
                     logger.error("Error starting REST API server", e);
                 }

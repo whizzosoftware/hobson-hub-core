@@ -129,7 +129,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     public PropertyContainer getConfiguration(HubContext ctx) {
         PropertyContainer pc = configManager.getHubConfiguration(ctx);
         pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
-
+        if (System.getProperty("useSSL") != null) {
+            pc.setPropertyValue(HubConfigurationClass.SSL_MODE, true);
+        }
         return pc;
     }
 
