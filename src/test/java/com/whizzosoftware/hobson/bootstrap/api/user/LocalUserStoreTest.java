@@ -177,7 +177,7 @@ public class LocalUserStoreTest {
                     }
 
                     @Override
-                    public void setWebSocketUri(String uri) {
+                    public void setWebSocketInfo(String protocol, int port, String path) {
 
                     }
 

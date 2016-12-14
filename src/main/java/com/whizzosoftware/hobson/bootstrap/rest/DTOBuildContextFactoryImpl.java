@@ -44,7 +44,7 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
     IdProvider idProvider;
 
     @Override
-    public DTOBuildContext createContext(String apiRoot, ExpansionFields expansions) {
+    public DTOBuildContext createContext(String requestDomain, String apiRoot, ExpansionFields expansions) {
         return new MediaProxyDTOBuildContext.Builder(apiRoot).
             actionManager(actionManager).
             deviceManager(deviceManager).
@@ -54,6 +54,12 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
             taskManager(taskManager).
             expansionFields(expansions).
             idProvider(idProvider).
+            requestDomain(requestDomain).
             build();
+    }
+
+    @Override
+    public DTOBuildContext createContext(String apiRoot, ExpansionFields expansions) {
+        return createContext(null, apiRoot, expansions);
     }
 }

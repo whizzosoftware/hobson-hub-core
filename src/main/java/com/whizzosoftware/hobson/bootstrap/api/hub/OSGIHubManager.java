@@ -36,7 +36,6 @@ import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
 import com.whizzosoftware.hobson.rest.TokenHelper;
 import gnu.io.CommPortIdentifier;
 import org.apache.commons.io.input.ReversedLinesFileReader;
-import org.jose4j.jwt.consumer.JwtConsumer;
 import org.osgi.framework.*;
 import org.slf4j.LoggerFactory;
 
@@ -70,8 +69,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     private OIDCConfigProvider oidcConfigProvider;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
     private Map<GlobalVariableContext,Object> globalVariableMap = new HashMap<>();
-    private String webSocketUri;
-    private JwtConsumer jwtConsumer;
+    private WebSocketInfo webSocketInfo;
 
     public void start() {
         this.oidcConfigProvider = new LocalOIDCConfigProvider();
@@ -336,7 +334,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             name(getHubName(ctx)).
             version(version).
             configuration(getConfiguration(HubContext.createLocal()).getPropertyValues()).
-            webSocketUri(webSocketUri).
+            webSocketInfo(webSocketInfo).
             build();
     }
 
@@ -418,8 +416,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void setWebSocketUri(String uri) {
-        this.webSocketUri = uri;
+    public void setWebSocketInfo(String protocol, int port, String path) {
+        this.webSocketInfo = new WebSocketInfo(protocol, port, path);
     }
 
     private String getLogFilePath() {
