@@ -298,7 +298,9 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceTags(DeviceContext deviceContext, Set<String> set) {
-        throw new UnsupportedOperationException();
+        if (deviceStore != null) {
+            deviceStore.setDeviceTags(deviceContext, set);
+        }
     }
 
     @Override

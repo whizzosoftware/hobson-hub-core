@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2016 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.device.store;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
@@ -13,6 +15,7 @@ import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 
 import java.util.Collection;
+import java.util.Set;
 
 /**
  * Interface for classes that provide storage of Hobson devices.
@@ -76,6 +79,15 @@ public interface DeviceStore {
     String getDeviceName(DeviceContext ctx);
 
     /**
+     * Returns a device's tags.
+     *
+     * @param ctx the device context
+     *
+     * @return the tags associated with the device
+     */
+    Set<String> getDeviceTags(DeviceContext ctx);
+
+    /**
      * Publishes a new device.
      *
      * @param device the device to publish
@@ -89,6 +101,14 @@ public interface DeviceStore {
      * @param name the new device name
      */
     void setDeviceName(DeviceContext ctx, String name);
+
+    /**
+     * Sets a device's tags.
+     *
+     * @param ctx the device context
+     * @param tags the tags
+     */
+    void setDeviceTags(DeviceContext ctx, Set<String> tags);
 
     /**
      * Unpublishes a specific device.

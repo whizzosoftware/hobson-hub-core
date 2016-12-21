@@ -9,9 +9,9 @@ import com.whizzosoftware.hobson.api.property.TypedProperty;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
+import static junit.framework.TestCase.assertNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -29,12 +29,17 @@ public class MapDBDeviceStoreTest {
         a.addSupportedProperty(new TypedProperty.Builder("prop1", "pname", "pdesc", TypedProperty.Type.STRING).build());
         ac.add(a);
 
+        Set<String> tags = new HashSet<>();
+        tags.add("tag1");
+        tags.add("tag2");
+
         MapDBDeviceStore store = new MapDBDeviceStore(dbFile);
         HobsonDeviceDescriptor device = new HobsonDeviceDescriptor.Builder(dctx).
             name("Test").
             type(DeviceType.LIGHTBULB).
             modelName("Model").
             actionClasses(ac).
+            tags(tags).
             build();
         store.saveDevice(device);
 
@@ -61,6 +66,11 @@ public class MapDBDeviceStoreTest {
         assertEquals("pname", tp.getName());
         assertEquals("pdesc", tp.getDescription());
         assertEquals(TypedProperty.Type.STRING, tp.getType());
+
+        assertNotNull(device.getTags());
+        Iterator it = device.getTags().iterator();
+        assertEquals("tag1", it.next());
+        assertEquals("tag2", it.next());
     }
 
     @Test
@@ -86,5 +96,40 @@ public class MapDBDeviceStoreTest {
         assertEquals("Test2", device.getName());
         assertEquals(DeviceType.LIGHTBULB, device.getType());
         assertEquals("Model", device.getModelName());
+    }
+
+    @Test
+    public void testSetDeviceTags() throws Exception {
+        File dbFile = File.createTempFile("test", ".mapdb");
+        dbFile.deleteOnExit();
+
+        DeviceContext dctx = DeviceContext.createLocal("plugin1", "device1");
+
+        MapDBDeviceStore store = new MapDBDeviceStore(dbFile);
+        HobsonDeviceDescriptor device = new HobsonDeviceDescriptor.Builder(dctx).name("Test").type(DeviceType.LIGHTBULB).modelName("Model").build();
+        store.saveDevice(device);
+
+        device = store.getDevice(dctx);
+        assertNotNull(device);
+        assertNull(device.getTags());
+
+        Set<String> tags = new HashSet<>();
+        tags.add("tag1");
+        tags.add("tag2");
+        store.setDeviceTags(dctx, tags);
+
+        device = store.getDevice(dctx);
+        assertNotNull(device);
+        assertNotNull(device.getTags());
+        assertEquals(2, device.getTags().size());
+        Iterator it = device.getTags().iterator();
+        assertEquals("tag1", it.next());
+        assertEquals("tag2", it.next());
+
+        tags = store.getDeviceTags(dctx);
+        assertNotNull(tags);
+        it = tags.iterator();
+        assertEquals("tag1", it.next());
+        assertEquals("tag2", it.next());
     }
 }

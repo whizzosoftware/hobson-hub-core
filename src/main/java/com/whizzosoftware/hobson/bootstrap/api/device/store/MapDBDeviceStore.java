@@ -15,6 +15,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 public class MapDBDeviceStore implements DeviceStore {
     private DB db;
@@ -117,6 +118,18 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
+    public Set<String> getDeviceTags(DeviceContext ctx) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            return persister.restoreDeviceTags(pctx, ctx);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
     synchronized public void saveDevice(HobsonDeviceDescriptor device) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
@@ -135,6 +148,18 @@ public class MapDBDeviceStore implements DeviceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
             persister.saveDeviceName(pctx, ctx, name);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
+    public void setDeviceTags(DeviceContext ctx, Set<String> tags) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+            MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
+            persister.saveDeviceTags(pctx, ctx, tags);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
