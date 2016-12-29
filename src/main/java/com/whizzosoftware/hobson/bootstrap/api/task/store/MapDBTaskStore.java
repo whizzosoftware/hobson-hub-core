@@ -62,7 +62,7 @@ public class MapDBTaskStore implements TaskStore {
 
             List<TaskContext> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createTasksId(hctx))) {
+            for (Object o : ctx.getSet(idProvider.createTasksId(hctx).getId())) {
                 results.add(TaskContext.create(hctx, (String)o));
             }
             return results;
@@ -80,7 +80,7 @@ public class MapDBTaskStore implements TaskStore {
 
             List<HobsonTask> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createTasksId(pctx.getHubContext()))) {
+            for (Object o : ctx.getSet(idProvider.createTasksId(pctx.getHubContext()).getId())) {
                 TaskContext tctx = TaskContext.create(pctx.getHubContext(), (String)o);
                 HobsonTask task = persister.restoreTask(ctx, tctx);
                 if (task != null && task.hasConditions()) {

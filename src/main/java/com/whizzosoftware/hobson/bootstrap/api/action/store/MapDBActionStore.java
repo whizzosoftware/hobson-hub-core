@@ -62,7 +62,7 @@ public class MapDBActionStore implements ActionStore {
 
             List<PropertyContainerSet> results = new ArrayList<>();
             MapDBCollectionPersistenceContext mctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : mctx.getSet(idProvider.createActionSetsId(ctx))) {
+            for (Object o : mctx.getSet(idProvider.createActionSetsId(ctx).getId())) {
                 String key = (String)o;
                 String actionSetId = persister.getActionSetIdFromKey(ctx, key);
                 if (actionSetId != null) {

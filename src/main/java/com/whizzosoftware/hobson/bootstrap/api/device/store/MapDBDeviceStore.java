@@ -52,7 +52,7 @@ public class MapDBDeviceStore implements DeviceStore {
 
             List<HobsonDeviceDescriptor> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createDevicesId(hctx))) {
+            for (Object o : ctx.getSet(idProvider.createDevicesId(hctx).getId())) {
                 String key = (String)o;
                 HobsonDeviceDescriptor db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
                 if (db != null) {
@@ -74,7 +74,7 @@ public class MapDBDeviceStore implements DeviceStore {
 
             List<HobsonDeviceDescriptor> results = new ArrayList<>();
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createPluginDevicesId(pctx))) {
+            for (Object o : ctx.getSet(idProvider.createPluginDevicesId(pctx).getId())) {
                 String key = (String)o;
                 HobsonDeviceDescriptor db = persister.restoreDevice(ctx, idProvider.createDeviceContext(key));
                 if (db != null) {
