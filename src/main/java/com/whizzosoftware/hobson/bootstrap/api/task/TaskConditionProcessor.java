@@ -9,6 +9,7 @@ package com.whizzosoftware.hobson.bootstrap.api.task;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
@@ -49,6 +50,11 @@ public class TaskConditionProcessor {
                 TaskConditionClass pcc = taskManager.getConditionClass(pc.getContainerClassContext());
                 if (pcc != null) {
                     if (pcc.getConditionClassType() == ConditionClassType.evaluator && !pcc.evaluate(new ConditionEvaluationContext() {
+                        @Override
+                        public PropertyContainer getHubConfiguration(HubContext ctx) {
+                            return hubManager.getConfiguration(ctx);
+                        }
+
                         @Override
                         public DeviceVariableState getDeviceVariableState(DeviceVariableContext dvctx) {
                             return deviceManager.getDeviceVariable(dvctx);

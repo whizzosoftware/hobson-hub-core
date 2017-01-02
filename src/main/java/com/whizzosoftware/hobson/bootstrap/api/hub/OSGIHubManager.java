@@ -117,7 +117,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public void deleteConfiguration(HubContext ctx) {
         configManager.deleteHubConfiguration(ctx);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), getConfiguration(ctx)));
     }
 
     @Override
@@ -131,6 +131,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
         if (System.getProperty("useSSL") != null) {
             pc.setPropertyValue(HubConfigurationClass.SSL_MODE, true);
+        }
+        if (!pc.hasPropertyValue(HubConfigurationClass.AWAY)) {
+            pc.setPropertyValue(HubConfigurationClass.AWAY, false);
         }
         return pc;
     }
@@ -437,7 +440,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     private void updateConfiguration(HubContext ctx, PropertyContainer config) {
         configManager.setHubConfiguration(ctx, config);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), config));
     }
 
     /**

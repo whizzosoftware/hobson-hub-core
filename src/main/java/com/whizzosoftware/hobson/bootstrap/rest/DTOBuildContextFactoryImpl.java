@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.google.inject.Inject;
 import com.whizzosoftware.hobson.api.action.ActionManager;
+import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.persist.IdProvider;
@@ -31,6 +32,8 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
     @Inject
     ActionManager actionManager;
     @Inject
+    DataStreamManager dataStreamManager;
+    @Inject
     DeviceManager deviceManager;
     @Inject
     HubManager hubManager;
@@ -47,6 +50,7 @@ public class DTOBuildContextFactoryImpl implements DTOBuildContextFactory {
     public DTOBuildContext createContext(String requestDomain, String apiRoot, ExpansionFields expansions) {
         return new MediaProxyDTOBuildContext.Builder(apiRoot).
             actionManager(actionManager).
+            dataStreamManager(dataStreamManager).
             deviceManager(deviceManager).
             hubManager(hubManager).
             pluginManager(pluginManager).
