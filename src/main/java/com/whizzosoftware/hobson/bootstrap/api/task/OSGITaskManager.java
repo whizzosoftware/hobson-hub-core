@@ -116,7 +116,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     public void handle(PluginStartedEvent event) {
         // any time a plugin starts, queue up a task registration check
         if (event.getEventId().equals(PluginStartedEvent.ID)) {
-            logger.debug("Detected plugin start: {}", event.getPluginId());
+            logger.debug("Detected plugin start: {}", event.getContext());
             queueTaskRegistration();
         }
     }

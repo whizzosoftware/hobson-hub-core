@@ -51,6 +51,7 @@ public class OSGIEventManager implements EventManager, EventCallbackInvoker {
     public OSGIEventManager() {
         try {
             eventFactory.addEventClass(DeviceAdvertisementEvent.ID, DeviceAdvertisementEvent.class);
+            eventFactory.addEventClass(DeviceAvailableEvent.ID, DeviceAvailableEvent.class);
             eventFactory.addEventClass(DeviceCheckInEvent.ID, DeviceCheckInEvent.class);
             eventFactory.addEventClass(DeviceConfigurationUpdateEvent.ID, DeviceConfigurationUpdateEvent.class);
             eventFactory.addEventClass(DeviceDeletedEvent.ID, DeviceDeletedEvent.class);

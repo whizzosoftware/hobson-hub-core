@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
 import com.whizzosoftware.hobson.api.device.*;
+import com.whizzosoftware.hobson.api.event.device.DeviceAvailableEvent;
 import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.MockEventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -27,6 +28,7 @@ public class DeviceAvailabilityMonitorTest {
         final long now = System.currentTimeMillis();
         final MockHobsonPlugin plugin = new MockHobsonPlugin("plugin", "1.0.0", "");
         plugin.setDeviceManager(dm);
+        plugin.setEventManager(em);
         final MockDeviceProxy device1  = new MockDeviceProxy(plugin, "device1", DeviceType.LIGHTBULB);
         Future f = dm.publishDevice(device1, null, null).await();
         assertTrue(f.isSuccess());
@@ -36,6 +38,10 @@ public class DeviceAvailabilityMonitorTest {
         f = dm.publishDevice(device2, null, null).await();
         assertTrue(f.isSuccess());
         device2.setLastCheckin(now);
+
+        // confirm initial availability events
+        assertEquals(2, em.getEventCount());
+        em.clearEvents();
 
         DeviceAvailabilityMonitor monitor = new DeviceAvailabilityMonitor(hctx, dm, em);
 
@@ -63,6 +69,9 @@ public class DeviceAvailabilityMonitorTest {
 
         // check in one device
         device1.setLastCheckin(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 1000);
+        assertEquals(1, em.getEventCount());
+        assertTrue(em.getEvent(0) instanceof DeviceAvailableEvent);
+        em.clearEvents();
 
         // make sure no events fire after the 5 minute mark
         monitor.run(now + HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL + 900);
