@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.hub;
 
 import ch.qos.logback.classic.Level;
@@ -15,19 +17,24 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.FileAppender;
 import ch.qos.logback.core.spi.FilterReply;
+import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonInvalidRequestException;
 import com.whizzosoftware.hobson.api.HobsonNotFoundException;
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
-import com.whizzosoftware.hobson.api.event.HubConfigurationUpdateEvent;
+import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
+import com.whizzosoftware.hobson.api.user.HobsonUser;
+import com.whizzosoftware.hobson.api.variable.GlobalVariable;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableContext;
+import com.whizzosoftware.hobson.api.variable.GlobalVariableDescriptor;
+import com.whizzosoftware.hobson.rest.TokenHelper;
 import gnu.io.CommPortIdentifier;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.osgi.framework.*;
 import org.slf4j.LoggerFactory;
@@ -51,7 +58,6 @@ import java.util.*;
 public class OSGIHubManager implements HubManager, LocalHubManager {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(OSGIHubManager.class);
 
-    private static final String ADMIN_PASSWORD = "adminPassword";
     private static final String HOBSON_LOGGER = "com.whizzosoftware.hobson";
     private static final String LOG_LEVEL = "logLevel";
 
@@ -60,10 +66,14 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private EventManager eventManager;
 
     private NetworkInfo networkInfo;
+    private OIDCConfigProvider oidcConfigProvider;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
-    private String webSocketUri;
+    private Map<GlobalVariableContext,Object> globalVariableMap = new HashMap<>();
+    private WebSocketInfo webSocketInfo;
 
     public void start() {
+        this.oidcConfigProvider = new LocalOIDCConfigProvider();
+
         // set the log level
         String logLevel = (String)configManager.getHubConfigurationProperty(HubContext.createLocal(), LOG_LEVEL);
         if (logLevel != null) {
@@ -82,12 +92,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public Collection<HubContext> getAllHubs() {
+    public Collection<HubContext> getHubs() {
         return Collections.singletonList(HubContext.createLocal());
     }
 
     public Collection<HubContext> getHubs(String userId) {
-        return getAllHubs();
+        return getHubs();
     }
 
     @Override
@@ -107,7 +117,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public void deleteConfiguration(HubContext ctx) {
         configManager.deleteHubConfiguration(ctx);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), getConfiguration(ctx)));
     }
 
     @Override
@@ -119,7 +129,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     public PropertyContainer getConfiguration(HubContext ctx) {
         PropertyContainer pc = configManager.getHubConfiguration(ctx);
         pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
-
+        if (System.getProperty("useSSL") != null) {
+            pc.setPropertyValue(HubConfigurationClass.SSL_MODE, true);
+        }
+        if (!pc.hasPropertyValue(HubConfigurationClass.AWAY)) {
+            pc.setPropertyValue(HubConfigurationClass.AWAY, false);
+        }
         return pc;
     }
 
@@ -147,32 +162,24 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
     }
 
+    @Override
+    public boolean hasPropertyContainerClass(PropertyContainerClassContext ctx) {
+        if (ctx != null) {
+            try {
+                Filter filter = bundleContext.createFilter("(&(objectClass=" + PropertyContainerClass.class.getName() + ")(pluginId=" + ctx.getPluginContext().getPluginId() + ")(classId=" + ctx.getContainerClassId() + "))");
+                ServiceReference[] refs = bundleContext.getServiceReferences(PropertyContainerClass.class.getName(), filter.toString());
+                return (refs != null && refs.length == 1);
+            } catch (InvalidSyntaxException e) {
+                logger.error("Error retrieving container class: " + ctx, e);
+            }
+        }
+        return false;
+    }
+
     private String getHubName(HubContext ctx) {
         PropertyContainer props = configManager.getHubConfiguration(ctx);
         String name = (String)props.getPropertyValue("name");
         return (name == null) ? "Unnamed" : name;
-    }
-
-    @Override
-    public void setLocalPassword(HubContext ctx, PasswordChange change) {
-        PropertyContainer props = configManager.getHubConfiguration(ctx);
-
-        // verify the old password
-        String shaOld = DigestUtils.sha256Hex(change.getCurrentPassword());
-        String hubPassword = (String)props.getPropertyValue(ADMIN_PASSWORD);
-        if (hubPassword != null && !hubPassword.equals(shaOld)) {
-            throw new HobsonRuntimeException("The current hub password is invalid");
-        }
-
-        // verify the password meets complexity requirements
-        if (!change.isValid()) {
-            throw new HobsonInvalidRequestException("New password does not meet complexity requirements");
-        }
-
-        // set the new password
-        props.setPropertyValue(ADMIN_PASSWORD, DigestUtils.sha256Hex(change.getNewPassword()));
-
-        updateConfiguration(ctx, props);
     }
 
     @Override
@@ -196,21 +203,17 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public boolean authenticateLocal(HubContext ctx, String password) {
-        String adminPassword = null;
-        PropertyContainer config = configManager.getHubConfiguration(ctx);
+    public OIDCConfig getOIDCConfiguration() {
+        return oidcConfigProvider.getConfig();
+    }
 
-        // if there's configuration available, try to obtain the encrypted admin password
-        if (config != null) {
-            adminPassword = (String)config.getPropertyValue(ADMIN_PASSWORD);
+    @Override
+    public HobsonUser convertTokenToUser(String token) {
+        try {
+            return TokenHelper.verifyToken(getOIDCConfiguration(), token);
+        } catch (Exception e) {
+            throw new HobsonAuthenticationException("Error validating bearer token: " + e.getMessage());
         }
-
-        // if it hasn't been set, default to the "admin" password
-        if (adminPassword == null) {
-            adminPassword = DigestUtils.sha256Hex("local");
-        }
-
-        return (adminPassword.equals(DigestUtils.sha256Hex(password)));
     }
 
     @Override
@@ -240,6 +243,34 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         }
 
         updateConfiguration(ctx, configuration);
+    }
+
+    @Override
+    public void setGlobalVariable(GlobalVariableContext gctx, Object value, long timestamp) {
+        globalVariableMap.put(gctx, value);
+    }
+
+    @Override
+    public void setGlobalVariables(Map<GlobalVariableContext, Object> values, long timestamp) {
+        for (GlobalVariableContext gvctx : values.keySet()) {
+            setGlobalVariable(gvctx, values.get(gvctx), timestamp);
+        }
+    }
+
+    @Override
+    public GlobalVariable getGlobalVariable(GlobalVariableContext gvctx) {
+        Object value = globalVariableMap.get(gvctx);
+        return new GlobalVariable(new GlobalVariableDescriptor(gvctx), null, value);
+    }
+
+    @Override
+    public Collection<GlobalVariable> getGlobalVariables(HubContext hctx) {
+        List<GlobalVariable> results = new ArrayList<>();
+        for (GlobalVariableContext gvctx : globalVariableMap.keySet()) {
+            Object value = globalVariableMap.get(gvctx);
+            results.add(new GlobalVariable(new GlobalVariableDescriptor(gvctx), null, value));
+        }
+        return results;
     }
 
     @Override
@@ -308,7 +339,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             name(getHubName(ctx)).
             version(version).
             configuration(getConfiguration(HubContext.createLocal()).getPropertyValues()).
-            webSocketUri(webSocketUri).
+            webSocketInfo(webSocketInfo).
             build();
     }
 
@@ -390,8 +421,8 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     @Override
-    public void setWebSocketUri(String uri) {
-        this.webSocketUri = uri;
+    public void setWebSocketInfo(String protocol, int port, String path) {
+        this.webSocketInfo = new WebSocketInfo(protocol, port, path);
     }
 
     private String getLogFilePath() {
@@ -409,7 +440,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     private void updateConfiguration(HubContext ctx, PropertyContainer config) {
         configManager.setHubConfiguration(ctx, config);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis()));
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), config));
     }
 
     /**

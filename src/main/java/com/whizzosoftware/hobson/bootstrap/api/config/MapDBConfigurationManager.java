@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2016 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.config;
 
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -128,7 +131,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public void setLocalPluginConfiguration(PluginContext pctx, PropertyContainerClass configurationClass, PropertyContainer newConfig) {
+    public void setLocalPluginConfiguration(PluginContext pctx, PropertyContainer newConfig) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -140,7 +143,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public void setLocalPluginConfigurationProperty(PluginContext ctx, PropertyContainerClass configurationClass, String name, Object value) {
+    public void setLocalPluginConfigurationProperty(PluginContext ctx, String name, Object value) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -151,7 +154,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass, String name) {
+    public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -159,23 +162,21 @@ public class MapDBConfigurationManager implements ConfigurationManager {
             Map<String,Object> props = persister.restoreDeviceConfiguration(cpctx, ctx);
 
             // build a list of PropertyContainer objects
-            PropertyContainer ci = new PropertyContainer();
-            for (TypedProperty meta : configurationClass.getSupportedProperties()) {
-                Object value = null;
-                if (props != null) {
-                    value = props.get(meta.getId());
+            PropertyContainer ci = null;
+            if (configurationClass != null) {
+                ci = new PropertyContainer();
+                List<TypedProperty> tps = configurationClass.getSupportedProperties();
+                if (tps != null) {
+                    for (TypedProperty meta : tps) {
+                        Object value = null;
+                        if (props != null) {
+                            value = props.get(meta.getId());
+                        }
+                        ci.setPropertyValue(meta.getId(), value);
+                    }
                 }
-
-                // if the name property is null, use the default device name
-                if ("name".equals(meta.getId()) && value == null) {
-                    value = name;
-                }
-
-                ci.setPropertyValue(meta.getId(), value);
+                ci.setContainerClassContext(configurationClass.getContext());
             }
-
-
-            ci.setContainerClassContext(configurationClass.getContext());
 
             return ci;
         } finally {
@@ -196,11 +197,24 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public void setDeviceConfigurationProperties(DeviceContext ctx, PropertyContainerClass configurationClass, String deviceName, Map<String, Object> values, boolean overwrite) {
+    public void setDeviceConfigurationProperty(DeviceContext ctx, String name, Object value) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
-            persister.deleteDeviceConfiguration(cpctx, ctx, false);
-            persister.saveDeviceConfiguration(cpctx, ctx, values);
+            Map<String,Object> map = persister.restoreDeviceConfiguration(cpctx, ctx);
+            Map<String,Object> newMap = new HashMap<>(map);
+            newMap.put(name, value);
+            setDeviceConfigurationProperties(ctx, newMap);
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
+    public void setDeviceConfigurationProperties(DeviceContext dctx, Map<String, Object> values) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            persister.deleteDeviceConfiguration(cpctx, dctx, false);
+            persister.saveDeviceConfiguration(cpctx, dctx, values);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

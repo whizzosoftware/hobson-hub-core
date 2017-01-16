@@ -1,14 +1,17 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.rest;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
@@ -22,11 +25,8 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.data.StubDataStreamManager;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
 import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
-import com.whizzosoftware.hobson.bootstrap.rest.oidc.LocalOIDCConfigProvider;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
-import com.whizzosoftware.hobson.rest.oidc.OIDCConfigProvider;
 import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
 import org.osgi.framework.BundleContext;
@@ -49,7 +49,6 @@ public class HobsonManagerModule extends AbstractModule {
     @Override
     protected void configure() {
         bind(Authorizer.class).to(LocalAuthorizer.class).asEagerSingleton();
-        bind(OIDCConfigProvider.class).to(LocalOIDCConfigProvider.class).asEagerSingleton();
         bind(IdProvider.class).to(RestResourceIdProvider.class).asEagerSingleton();
         bind(MediaProxyHandler.class).to(LocalDeviceMediaProxyHandler.class).asEagerSingleton();
         bind(DTOBuildContextFactory.class).to(DTOBuildContextFactoryImpl.class);
@@ -87,6 +86,11 @@ public class HobsonManagerModule extends AbstractModule {
     }
 
     @Provides
+    public ActionManager provideActionManager() {
+        return (ActionManager)getManager(ActionManager.class);
+    }
+
+    @Provides
     public PluginManager providePluginManager() {
         return (PluginManager)getManager(PluginManager.class);
     }
@@ -105,11 +109,6 @@ public class HobsonManagerModule extends AbstractModule {
     public DataStreamManager provideDataStreamManager() {
         DataStreamManager tm = (DataStreamManager)getManager(DataStreamManager.class);
         return tm != null ? tm : new StubDataStreamManager();
-    }
-
-    @Provides
-    public VariableManager provideVariableManager() {
-        return (VariableManager)getManager(VariableManager.class);
     }
 
     private Object getManager(Class clazz) {

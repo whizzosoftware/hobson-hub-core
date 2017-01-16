@@ -1,28 +1,29 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
-import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
-import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.hub.HubWebApplication;
 import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
-import com.whizzosoftware.hobson.api.variable.VariableManager;
+import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
 import com.whizzosoftware.hobson.bootstrap.api.config.MapDBConfigurationManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
@@ -33,10 +34,8 @@ import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
-import com.whizzosoftware.hobson.bootstrap.api.variable.OSGIVariableManager;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
 import com.whizzosoftware.hobson.bootstrap.rest.root.RootApplication;
-import com.whizzosoftware.hobson.bootstrap.rest.SetupApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -61,9 +60,7 @@ import org.restlet.util.Series;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.File;
-import java.net.URI;
 import java.util.*;
 import java.util.List;
 
@@ -145,9 +142,6 @@ public class Activator extends DependencyActivatorBase {
                     // register the REST API application
                     registerRestletApplication(injector.getInstance(ApiV1Application.class), ApiV1Application.API_ROOT);
 
-                    // register the setup wizard
-                    registerRestletApplication(new SetupApplication(), "/setup");
-
                     // start listening for new Restlet applications
                     applicationTracker = new ServiceTracker(context, HubWebApplication.class.getName(), null) {
                         @Override
@@ -176,30 +170,6 @@ public class Activator extends DependencyActivatorBase {
 
                     // start the Restlet component
                     component.start();
-
-                    // determine web app URL prefix
-                    String consoleURI;
-                    if (System.getProperty("useSSL") != null) {
-                        consoleURI = "https://localhost:8183";
-                    } else {
-                        consoleURI = "http://localhost:8182";
-                    }
-                    if (hubManager.getHub(HubContext.createLocal()).getConfiguration().getBooleanPropertyValue(HubConfigurationClass.SETUP_COMPLETE)) {
-                        consoleURI += "/console/index.html";
-                    } else {
-                        consoleURI += "/setup/index.html";
-                    }
-
-                    // launch a browser
-                    try {
-                        if (Desktop.isDesktopSupported()) {
-                            Desktop.getDesktop().browse(new URI(consoleURI));
-                        } else {
-                            System.out.println("Hobson is now available at " + consoleURI);
-                        }
-                    } catch (Throwable t) {
-                        logger.warn("Unable to launch web browser", t);
-                    }
                 } catch (Exception e) {
                     logger.error("Error starting REST API server", e);
                 }
@@ -255,8 +225,17 @@ public class Activator extends DependencyActivatorBase {
     }
 
     private void createManagers(DependencyManager manager) {
-        // register activity log manager
+        // register action manager
         org.apache.felix.dm.Component c = manager.createComponent();
+        c.setInterface(ActionManager.class.getName(), null);
+        c.setImplementation(OSGIActionManager.class);
+        c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
+        manager.add(c);
+        registeredComponents.add(c);
+
+        // register activity log manager
+        c = manager.createComponent();
         c.setInterface(ActivityLogManager.class.getName(), null);
         c.setImplementation(OSGIActivityLogManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
@@ -278,7 +257,6 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIDeviceManager.class);
         c.add(createServiceDependency().setService(ConfigurationManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
-        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
@@ -338,18 +316,11 @@ public class Activator extends DependencyActivatorBase {
         c = manager.createComponent();
         c.setInterface(TaskManager.class.getName(), null);
         c.setImplementation(OSGITaskManager.class);
+        c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
-        c.add(createServiceDependency().setService(VariableManager.class).setRequired(true));
-        manager.add(c);
-        registeredComponents.add(c);
-
-        // register variable manager
-        c = manager.createComponent();
-        c.setInterface(VariableManager.class.getName(), null);
-        c.setImplementation(OSGIVariableManager.class);
-        c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
-        c.add(createServiceDependency().setService(ConfigurationManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
     }

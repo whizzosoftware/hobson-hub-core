@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.presence.store;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
@@ -25,7 +27,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 public class MapDBPresenceStore implements PresenceStore {
     private static final Logger logger = LoggerFactory.getLogger(MapDBPresenceStore.class);
@@ -56,7 +57,7 @@ public class MapDBPresenceStore implements PresenceStore {
 
             List<PresenceEntity> results = new ArrayList<>();
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : pctx.getSet(idProvider.createPresenceEntitiesId(ctx))) {
+            for (Object o : pctx.getSet(idProvider.createPresenceEntitiesId(ctx).getId())) {
                 PresenceEntityContext pectx = PresenceEntityContext.create(ctx, (String)o);
                 results.add(persister.restorePresenceEntity(pctx, pectx));
             }
@@ -115,7 +116,7 @@ public class MapDBPresenceStore implements PresenceStore {
 
             List<PresenceLocation> results = new ArrayList<>();
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : pctx.getSet(idProvider.createPresenceLocationsId(ctx))) {
+            for (Object o : pctx.getSet(idProvider.createPresenceLocationsId(ctx).getId())) {
                 PresenceLocationContext plctx = PresenceLocationContext.create(ctx, (String)o);
                 results.add(persister.restorePresenceLocation(pctx, plctx));
             }

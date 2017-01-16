@@ -3,7 +3,6 @@ package com.whizzosoftware.hobson.bootstrap.api.task;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
 import com.whizzosoftware.hobson.api.task.HobsonTask;
 import com.whizzosoftware.hobson.api.task.TaskContext;
 import com.whizzosoftware.hobson.api.task.TaskHelper;
@@ -16,8 +15,8 @@ public class MockTaskStore implements TaskStore {
     private Map<TaskContext,HobsonTask> tasks = new HashMap<>();
 
     @Override
-    public Collection<HobsonTask> getAllTasks(HubContext hctx) {
-        return tasks.values();
+    public Collection<TaskContext> getAllTasks(HubContext hctx) {
+        return tasks.keySet();
     }
 
     @Override
@@ -47,26 +46,6 @@ public class MockTaskStore implements TaskStore {
 
     @Override
     public void deleteTask(TaskContext context) {
-
-    }
-
-    @Override
-    public Collection<PropertyContainerSet> getAllActionSets(HubContext ctx) {
-        return null;
-    }
-
-    @Override
-    public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
-        return null;
-    }
-
-    @Override
-    public PropertyContainerSet saveActionSet(HubContext ctx, String name, List<PropertyContainer> actions) {
-        return null;
-    }
-
-    @Override
-    public void deleteActionSet(String actionSetId) {
 
     }
 

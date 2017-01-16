@@ -89,37 +89,37 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-common</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-buffer</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-codec</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-handler</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-transport-rxtx</artifactId>
-            <version>4.0.21.Final</version>
+            <version>4.0.27.Final</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -179,17 +179,17 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api</artifactId>
-            <version>0.9.1</version>
+            <version>0.10.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-dto</artifactId>
-            <version>0.9.0</version>
+            <version>0.10.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-restv1</artifactId>
-            <version>0.9.1</version>
+            <version>0.10.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -241,7 +241,7 @@
         <dependency>
             <groupId>com.whizzosoftware.hobson.hub</groupId>
             <artifactId>hobson-hub-api-mock</artifactId>
-            <version>0.9.0</version>
+            <version>0.10.0-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -261,9 +261,6 @@
                     <exclude>**/version.properties</exclude>
                 </excludes>
             </resource>
-            <resource>
-                <directory>yo/dist</directory>
-            </resource>
         </resources>
         <plugins>
             <plugin>
@@ -274,28 +271,6 @@
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>2.7</version>
-                <executions>
-                    <execution>
-                        <id>copy-resources</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${basedir}/target/classes/setup</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>yo/app</directory>
-                                    <filtering>false</filtering>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -337,18 +312,6 @@
                         <Export-Package>org.xml.sax.*,javax.xml.parsers.*,org.slf4j,ch.qos.logback.*,org.apache.commons.logging.*,com.whizzosoftware.hobson.api.*,com.whizzosoftware.hobson.json.*,com.whizzosoftware.hobson.dto.*</Export-Package>
                     </instructions>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>com.github.trecloux</groupId>
-                <artifactId>yeoman-maven-plugin</artifactId>
-                <version>0.2</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>build</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

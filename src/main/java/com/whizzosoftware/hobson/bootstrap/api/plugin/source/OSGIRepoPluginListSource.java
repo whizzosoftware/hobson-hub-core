@@ -8,10 +8,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
 import com.whizzosoftware.hobson.api.HobsonRuntimeException;
-import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
-import com.whizzosoftware.hobson.api.plugin.PluginStatus;
-import com.whizzosoftware.hobson.api.plugin.PluginType;
+import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.util.VersionUtil;
 import org.apache.felix.bundlerepository.Capability;
 import org.apache.felix.bundlerepository.RepositoryAdmin;
@@ -43,20 +40,20 @@ public class OSGIRepoPluginListSource implements PluginListSource {
      * @param bundleContext the bundle context
      * @param installedPlugins a Map of plugin id -> version string for all installed plugins
      */
-    public OSGIRepoPluginListSource(BundleContext bundleContext, Collection<PluginDescriptor> installedPlugins) {
+    public OSGIRepoPluginListSource(BundleContext bundleContext, Collection<HobsonPluginDescriptor> installedPlugins) {
         this.bundleContext = bundleContext;
 
         // build in installed plugin name to version string map
         if (installedPlugins != null) {
             this.installedPlugins = new HashMap<>();
-            for (PluginDescriptor pd : installedPlugins) {
-                this.installedPlugins.put(pd.getId(), pd.getVersionString());
+            for (HobsonPluginDescriptor pd : installedPlugins) {
+                this.installedPlugins.put(pd.getId(), pd.getVersion());
             }
         }
     }
 
     @Override
-    public Map<String, PluginDescriptor> getPlugins() {
+    public Map<String, HobsonPluginDescriptor> getPlugins() {
         // try to determine latest version of each bundle from repository
         ServiceReference ref = bundleContext.getServiceReference(RepositoryAdmin.class.getName());
         RepositoryAdmin repoAdmin = (RepositoryAdmin)bundleContext.getService(ref);
@@ -68,14 +65,14 @@ public class OSGIRepoPluginListSource implements PluginListSource {
     }
 
     @Override
-    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
+    public Collection<HobsonPluginDescriptor> getPlugin(PluginContext ctx) {
         return null;
     }
 
-    protected Map<String,PluginDescriptor> getPlugins(Resource[] resources) {
+    protected Map<String,HobsonPluginDescriptor> getPlugins(Resource[] resources) {
         Capability[] apiCapabilities = getAPICapabilities();
 
-        Map<String,PluginDescriptor> resultMap = new HashMap<>();
+        Map<String,HobsonPluginDescriptor> resultMap = new HashMap<>();
 
         for (Resource repoResource : resources) {
             String sname = repoResource.getSymbolicName();
@@ -91,15 +88,22 @@ public class OSGIRepoPluginListSource implements PluginListSource {
             try {
                 if (isSatisfied(getAPIRequirement(repoResource), apiCapabilities)) {
                     // get the last processed version number for this plugin
-                    String lastVersionString = resultMap.get(sname) != null ? resultMap.get(sname).getVersionString() : null;
+                    String lastVersionString = resultMap.get(sname) != null ? resultMap.get(sname).getVersion() : null;
                     // if there was no last processed version number, get the currently installed version
                     if (lastVersionString == null && installedPlugins != null) {
                         lastVersionString = installedPlugins.get(sname);
                     }
                     // only add the remote plugin to the result list if its version is newer than what is currently known
                     if (lastVersionString == null || VersionUtil.versionCompare(lastVersionString, repoResource.getVersion().toString()) < 0) {
-                        PluginDescriptor pd = new PluginDescriptor(sname, repoResource.getPresentationName(), buildRepoDescription(repoResource), pluginType, PluginStatus.notInstalled(), null);
-                        pd.setVersionString(repoResource.getVersion().toString());
+                        // see if there's an image associated with the plugin
+                        String imageUrl = null;
+                        for (Capability c : repoResource.getCapabilities()) {
+                            if ("hobsonPlugin".equals(c.getName())) {
+                                imageUrl = (String)c.getPropertiesAsMap().get("image");
+                            }
+                        }
+
+                        HobsonPluginDescriptor pd = new HobsonPluginDescriptor(sname, pluginType, repoResource.getPresentationName(), buildRepoDescription(repoResource), repoResource.getVersion().toString(), PluginStatus.notInstalled(), imageUrl);
                         resultMap.put(sname, pd);
                     }
                 }

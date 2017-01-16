@@ -1,17 +1,16 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.plugin.source;
 
-import com.whizzosoftware.hobson.api.plugin.PluginContext;
+import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.bootstrap.api.util.BundleUtil;
-import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
-import com.whizzosoftware.hobson.api.plugin.PluginDescriptor;
-import com.whizzosoftware.hobson.api.plugin.PluginType;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,22 +32,16 @@ public class OSGILocalPluginListSource implements PluginListSource {
     }
 
     @Override
-    public Map<String,PluginDescriptor> getPlugins() {
-        Map<String,PluginDescriptor> resultMap = new HashMap<>();
+    public Map<String,HobsonPluginDescriptor> getPlugins() {
+        Map<String,HobsonPluginDescriptor> resultMap = new HashMap<>();
 
         // build collection of all installed OSGi bundles
         Bundle[] bundles = bundleContext.getBundles();
         for (Bundle bundle : bundles) {
             String id = bundle.getSymbolicName();
             try {
-                PluginDescriptor pd = createPluginDescriptor(bundle, id);
                 HobsonPlugin plugin = com.whizzosoftware.hobson.bootstrap.api.plugin.PluginUtil.getPlugin(bundle.getBundleContext(), id);
-                // set the status to the specific Hobson plugin status if available
-                if (plugin != null) {
-                    pd.setStatus(plugin.getStatus());
-                }
-                pd.setConfigurable((plugin != null) && plugin.isConfigurable());
-                resultMap.put(id, pd);
+                resultMap.put(id, (plugin != null) ? plugin.getDescriptor() : createPluginDescriptor(bundle, id));
             } catch (Exception e) {
                 logger.error("Error creating plugin descriptor for " + id, e);
             }
@@ -58,16 +51,19 @@ public class OSGILocalPluginListSource implements PluginListSource {
     }
 
     @Override
-    public Collection<PluginDescriptor> getPlugin(PluginContext ctx) {
+    public Collection<HobsonPluginDescriptor> getPlugin(PluginContext ctx) {
         for (Bundle bundle : bundleContext.getBundles()) {
             if (ctx.getPluginId().equals(bundle.getSymbolicName())) {
-                return Collections.singletonList(createPluginDescriptor(bundle, ctx.getPluginId()));
+                HobsonPlugin plugin = com.whizzosoftware.hobson.bootstrap.api.plugin.PluginUtil.getPlugin(bundle.getBundleContext(), ctx.getPluginId());
+                if (plugin != null) {
+                    return Collections.singletonList((HobsonPluginDescriptor)plugin.getDescriptor());
+                }
             }
         }
         return null;
     }
 
-    protected PluginDescriptor createPluginDescriptor(Bundle bundle, String pluginId) {
+    protected HobsonPluginDescriptor createPluginDescriptor(Bundle bundle, String pluginId) {
         String name = createDisplayNameFromSymbolicName(bundle.getHeaders(), bundle.getSymbolicName());
 
         PluginType pluginType = PluginType.FRAMEWORK;
@@ -80,12 +76,15 @@ public class OSGILocalPluginListSource implements PluginListSource {
             pluginType = PluginType.PLUGIN;
         }
 
-        return new PluginDescriptor(
+        PluginStatus status = BundleUtil.createPluginStatusFromBundleState(bundle.getState());
+
+        return new HobsonPluginDescriptor(
             pluginId,
+            pluginType,
             name,
             (String)headers.get(Constants.BUNDLE_DESCRIPTION),
-            pluginType,
-            BundleUtil.createPluginStatusFromBundleState(bundle.getState()), bundle.getVersion().toString()
+            bundle.getVersion().toString(),
+            status
         );
     }
 

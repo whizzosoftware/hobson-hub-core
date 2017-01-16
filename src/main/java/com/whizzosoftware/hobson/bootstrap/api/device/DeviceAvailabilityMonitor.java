@@ -1,16 +1,16 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2015 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.device;
 
-import com.whizzosoftware.hobson.api.device.DeviceContext;
-import com.whizzosoftware.hobson.api.device.DeviceManager;
-import com.whizzosoftware.hobson.api.device.HobsonDevice;
-import com.whizzosoftware.hobson.api.event.DeviceUnavailableEvent;
+import com.whizzosoftware.hobson.api.device.*;
+import com.whizzosoftware.hobson.api.event.device.DeviceUnavailableEvent;
 import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 
@@ -39,12 +39,13 @@ public class DeviceAvailabilityMonitor implements Runnable {
     }
 
     public void run(long now) {
-        for (HobsonDevice device : deviceManager.getAllDevices(hubContext)) {
-            Long lastNotificationTime = lastNotificationTimeMap.get(device.getContext());
-            Long lastCheckIn = deviceManager.getDeviceLastCheckIn(device.getContext());
-            if (lastCheckIn != null && now - lastCheckIn >= HobsonDevice.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
-                eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, device.getContext()));
-                lastNotificationTimeMap.put(device.getContext(), now);
+        for (HobsonDeviceDescriptor device : deviceManager.getDevices(hubContext)) {
+            DeviceContext dctx = device.getContext();
+            Long lastNotificationTime = lastNotificationTimeMap.get(dctx);
+            Long lastCheckIn = deviceManager.getDeviceLastCheckin(dctx);
+            if (lastCheckIn != null && now - lastCheckIn >= HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL && (lastNotificationTime == null || lastNotificationTime < lastCheckIn)) {
+                eventManager.postEvent(hubContext, new DeviceUnavailableEvent(now, dctx));
+                lastNotificationTimeMap.put(dctx, now);
             }
         }
     }

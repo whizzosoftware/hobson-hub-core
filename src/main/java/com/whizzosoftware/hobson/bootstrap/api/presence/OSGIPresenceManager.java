@@ -1,14 +1,18 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.presence;
 
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.event.EventListener;
+import com.whizzosoftware.hobson.api.event.presence.PresenceEvent;
+import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
+import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateRequestEvent;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
@@ -24,7 +28,7 @@ import java.util.*;
  *
  * @author Dan Noguerol
  */
-public class OSGIPresenceManager implements PresenceManager, EventListener {
+public class OSGIPresenceManager implements PresenceManager {
     private PresenceStore presenceStore;
     private Map<PresenceEntityContext,PresenceLocationContext> entityLocations = new HashMap<>();
 
@@ -33,7 +37,7 @@ public class OSGIPresenceManager implements PresenceManager, EventListener {
 
     public void start() {
         // listen for presence events
-        eventManager.addListener(HubContext.createLocal(), this, new String[] {EventTopics.PRESENCE_TOPIC});
+        eventManager.addListener(HubContext.createLocal(), this);
 
         // if a task store hasn't already been injected, create a default one
         if (presenceStore == null) {
@@ -47,8 +51,16 @@ public class OSGIPresenceManager implements PresenceManager, EventListener {
 
     }
 
+    @EventHandler
+    public void handle(PresenceEvent event) {
+        if (event != null && event instanceof PresenceUpdateRequestEvent) {
+            PresenceUpdateRequestEvent pure = (PresenceUpdateRequestEvent)event;
+            updatePresenceEntityLocation(pure.getEntityContext(), pure.getLocation());
+        }
+    }
+
     public void stop() {
-        eventManager.removeListener(HubContext.createLocal(), this, new String[]{EventTopics.PRESENCE_TOPIC});
+        eventManager.removeListener(HubContext.createLocal(), this);
     }
 
     public void setPresenceStore(PresenceStore presenceStore) {
@@ -124,13 +136,5 @@ public class OSGIPresenceManager implements PresenceManager, EventListener {
     @Override
     public void deletePresenceLocation(PresenceLocationContext ctx) {
         presenceStore.deletePresenceLocation(ctx);
-    }
-
-    @Override
-    public void onHobsonEvent(HobsonEvent event) {
-        if (event != null && event instanceof PresenceUpdateRequestEvent) {
-            PresenceUpdateRequestEvent pure = (PresenceUpdateRequestEvent)event;
-            updatePresenceEntityLocation(pure.getEntityContext(), pure.getLocation());
-        }
     }
 }

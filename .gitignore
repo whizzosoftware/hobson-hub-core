@@ -1,0 +1,6 @@
+.idea/
+logs/
+yo/node_modules/
+yo/app/bower_components/
+yo/app/styles/
+*.iml
