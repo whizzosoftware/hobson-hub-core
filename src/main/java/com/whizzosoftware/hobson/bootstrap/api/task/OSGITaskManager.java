@@ -377,7 +377,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     public void fireTaskTrigger(final TaskContext ctx) {
         logger.debug("Task trigger fired: {}", ctx);
 
-        Throwable error = null;
         try {
             // get the task
             HobsonTask task = getTask(ctx);
@@ -385,6 +384,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
             if (conditionProcessor.evaluate(OSGITaskManager.this, task, hubManager, deviceManager, ctx)) {
                 logger.debug("Executing action set for task: {}", ctx);
                 actionManager.executeActionSet(task.getActionSet());
+                eventManager.postEvent(ctx.getHubContext(), new TaskExecutionEvent(System.currentTimeMillis(), ctx, null));
             }
         } catch (Throwable e) {
             logger.error("Error firing task trigger", e);
