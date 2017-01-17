@@ -262,7 +262,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void updateTask(final TaskContext ctx, final String name, final String description, final List<PropertyContainer> conditions, final PropertyContainerSet actionSet) {
+    public void updateTask(final TaskContext ctx, final String name, final String description, final boolean enabled, final List<PropertyContainer> conditions, final PropertyContainerSet actionSet) {
         if (conditions != null) {
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
@@ -271,6 +271,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     // update task attributes
                     task.setName(name);
                     task.setDescription(description);
+                    task.setEnabled(enabled);
                     task.setConditions(conditions);
                     task.setActionSet(actionSet);
 
@@ -320,7 +321,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 }
 
                 // create task
-                final HobsonTask task = new HobsonTask(tctx, name, description, null, conditions, actionSet);
+                final HobsonTask task = new HobsonTask(tctx, name, description, true, null, conditions, actionSet);
 
                 // save the task
                 taskStore.saveTask(task);

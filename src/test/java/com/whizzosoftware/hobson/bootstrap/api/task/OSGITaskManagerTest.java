@@ -43,7 +43,7 @@ public class OSGITaskManagerTest {
         final PropertyContainerClassContext pccc = PropertyContainerClassContext.create(PluginContext.createLocal("plugin1"), "cc1");
         taskConditions.add(new PropertyContainer(pccc, null));
 
-        final HobsonTask task = new HobsonTask(TaskContext.createLocal("task1"), "task", null, null, taskConditions, null);
+        final HobsonTask task = new HobsonTask(TaskContext.createLocal("task1"), "task", null, true, null, taskConditions, null);
         store.saveTask(task);
 
         MockPluginManager pm = new MockPluginManager();

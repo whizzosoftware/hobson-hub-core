@@ -46,6 +46,7 @@ public class MapDBTaskStoreTest {
             tctx,
             "My Task",
             "Do something",
+            true,
             props,
             conditions,
             new PropertyContainerSet("actionSet1")
@@ -60,6 +61,7 @@ public class MapDBTaskStoreTest {
         assertNotNull(t);
         assertEquals("My Task", t.getName());
         assertEquals("Do something", t.getDescription());
+        assertTrue(t.isEnabled());
         assertNotNull(t.getProperties());
         assertEquals(1, t.getProperties().size());
         assertEquals("bar", t.getProperties().get("foo"));
@@ -82,6 +84,7 @@ public class MapDBTaskStoreTest {
                 tctx,
                 "My Task 1",
                 "Do something 1",
+                false,
                 null,
                 conditions,
                 new PropertyContainerSet("actionSet1")
@@ -96,6 +99,7 @@ public class MapDBTaskStoreTest {
         assertNotNull(t);
         assertEquals("My Task 1", t.getName());
         assertEquals("Do something 1", t.getDescription());
+        assertFalse(t.isEnabled());
         assertNull(t.getProperties());
         assertNotNull(t.getConditions());
         assertEquals(1, t.getConditions().size());
@@ -121,6 +125,7 @@ public class MapDBTaskStoreTest {
                 tctx,
                 "My Task",
                 "Do something",
+                true,
                 null,
                 conditions,
                 new PropertyContainerSet("actionSet1")
@@ -190,6 +195,7 @@ public class MapDBTaskStoreTest {
                 tctx,
                 "My Task",
                 "Do something",
+                true,
                 null,
                 conditions,
                 new PropertyContainerSet("actionSet1")
@@ -204,6 +210,7 @@ public class MapDBTaskStoreTest {
                 tctx,
                 "My Task",
                 "Do something",
+                true,
                 null,
                 conditions,
                 new PropertyContainerSet("actionSet1")
@@ -243,6 +250,7 @@ public class MapDBTaskStoreTest {
                 tctx,
                 "My Task",
                 "Do something",
+                true,
                 props,
                 conditions,
                 new PropertyContainerSet("actionSet1")
