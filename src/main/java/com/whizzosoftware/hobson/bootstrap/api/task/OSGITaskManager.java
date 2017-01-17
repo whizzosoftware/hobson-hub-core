@@ -16,7 +16,6 @@ import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
-import com.whizzosoftware.hobson.api.event.task.TaskCreatedEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskDeletedEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
@@ -328,13 +327,6 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
                 // queue the task registration
                 queueTaskRegistration();
-
-                // fire an update event
-                if (eventManager != null) {
-                    eventManager.postEvent(ctx, new TaskCreatedEvent(System.currentTimeMillis(), task.getContext()));
-                } else {
-                    logger.error("Unable to post task creation event - no event manager available");
-                }
             } else {
                 throw new HobsonInvalidRequestException("Trigger condition has no condition class defined");
             }

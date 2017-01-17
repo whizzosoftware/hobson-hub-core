@@ -77,7 +77,7 @@ public class TaskRegistrationExecutor implements Runnable {
                 final List<TaskContext> taskList = taskMap.get(plugin);
                 logger.trace("Registering tasks for plugin {}", plugin.getContext());
                 try {
-                    eventManager.postEvent(hubContext, new TaskRegistrationEvent(System.currentTimeMillis(), taskList));
+                    eventManager.postEvent(hubContext, new TaskRegistrationEvent(System.currentTimeMillis(), plugin.getContext().getPluginId(), taskList));
                     // flag the tasks as registered so they aren't attempted again
                     synchronized (TaskRegistrationExecutor.this) {
                         for (TaskContext task : taskList) {
