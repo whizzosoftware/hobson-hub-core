@@ -261,7 +261,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void updateTask(final TaskContext ctx, final String name, final String description, final boolean enabled, final List<PropertyContainer> conditions, final PropertyContainerSet actionSet) {
+    public void updateTask(final PluginContext pctx, final TaskContext ctx, final String name, final String description, final boolean enabled, final List<PropertyContainer> conditions, final PropertyContainerSet actionSet) {
         if (conditions != null) {
             PropertyContainer triggerCondition = TaskHelper.getTriggerCondition(this, conditions);
             if (triggerCondition != null) {
@@ -278,7 +278,7 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                     taskStore.saveTask(task);
 
                     // fire an update event
-                    eventManager.postEvent(ctx.getHubContext(), new TaskUpdatedEvent(System.currentTimeMillis(), task.getContext()));
+                    eventManager.postEvent(ctx.getHubContext(), new TaskUpdatedEvent(System.currentTimeMillis(), pctx != null ? pctx.getPluginId() : null, task.getContext()));
                 } else {
                     throw new HobsonInvalidRequestException("No task found to update: " + ctx);
                 }
@@ -291,12 +291,14 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @Override
-    public void updateTaskProperties(TaskContext ctx, Map<String, Object> properties) {
+    public void updateTaskProperties(PluginContext pctx, TaskContext ctx, Map<String, Object> properties) {
         HobsonTask task = getTask(ctx);
         for (String key : properties.keySet()) {
             task.setProperty(key, properties.get(key));
         }
         taskStore.saveTask(task);
+        // fire an update event
+        eventManager.postEvent(ctx.getHubContext(), new TaskUpdatedEvent(System.currentTimeMillis(), pctx.getPluginId(), task.getContext()));
     }
 
     @Override
