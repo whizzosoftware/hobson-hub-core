@@ -30,6 +30,7 @@ import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.NotSerializableException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -161,6 +162,11 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
+    public boolean hasDeviceVariable(DeviceVariableContext ctx) {
+        return pluginManager.hasLocalPluginDeviceVariable(ctx);
+    }
+
+    @Override
     public Collection<HobsonDeviceDescriptor> getDevices(HubContext hctx) {
         return deviceStore.getAllDevices(hctx);
     }
@@ -236,18 +242,22 @@ public class OSGIDeviceManager implements DeviceManager {
                     deviceStore.saveDevice(device.getDescriptor());
                 }
 
-                // persist the device configuration
-                if (configManager != null && config != null && config.hasPropertyValues()) {
-                    configManager.setDeviceConfigurationProperties(device.getContext(), config.getPropertyValues());
-                }
+                try {
+                    // persist the device configuration
+                    if (configManager != null && config != null && config.hasPropertyValues()) {
+                        configManager.setDeviceConfigurationProperties(device.getContext(), config.getPropertyValues());
+                    }
 
-                // post the device started event
-                if (eventManager != null) {
-                    eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
-                }
+                    // post the device started event
+                    if (eventManager != null) {
+                        eventManager.postEvent(device.getContext().getPluginContext().getHubContext(), new DeviceStartedEvent(System.currentTimeMillis(), device.getContext()));
+                    }
 
-                if (runnable != null) {
-                    runnable.run();
+                    if (runnable != null) {
+                        runnable.run();
+                    }
+                } catch (NotSerializableException e) {
+                    logger.error("Unable to save configuration for device " + device.getContext() + ": " + config, e);
                 }
             }
         });
@@ -255,18 +265,21 @@ public class OSGIDeviceManager implements DeviceManager {
 
     @Override
     public void setDeviceConfigurationProperty(DeviceContext dctx, PropertyContainerClass configClass, String name, Object value) {
-        configManager.setDeviceConfigurationProperty(dctx, name, value);
+        try {
+            configManager.setDeviceConfigurationProperty(dctx, name, value);
 
-        // send update event
-        eventManager.postEvent(
+            // send update event
+            eventManager.postEvent(
                 dctx.getHubContext(),
                 new DeviceConfigurationUpdateEvent(
-                        System.currentTimeMillis(),
-                        dctx.getPluginId(),
-                        dctx.getDeviceId(),
-                        configManager.getDeviceConfiguration(dctx, configClass)
+                    System.currentTimeMillis(),
+                    dctx,
+                    configManager.getDeviceConfiguration(dctx, configClass)
                 )
-        );
+            );
+        } catch (NotSerializableException e) {
+            throw new HobsonRuntimeException("Unable to set device configuration property for " + dctx + ": \"" + name + "\"=\"" + value + "\"", e);
+        }
     }
 
     @Override
@@ -280,19 +293,22 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     private void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String,Object> values, boolean sendEvent) {
-        configManager.setDeviceConfigurationProperties(dctx, values);
+        try {
+            configManager.setDeviceConfigurationProperties(dctx, values);
 
-        // send update event
-        if (sendEvent) {
-            eventManager.postEvent(
-                dctx.getHubContext(),
-                new DeviceConfigurationUpdateEvent(
-                    System.currentTimeMillis(),
-                    dctx.getPluginId(),
-                    dctx.getDeviceId(),
-                    configManager.getDeviceConfiguration(dctx, configClass)
-                )
-            );
+            // send update event
+            if (sendEvent) {
+                eventManager.postEvent(
+                    dctx.getHubContext(),
+                    new DeviceConfigurationUpdateEvent(
+                        System.currentTimeMillis(),
+                        dctx,
+                        configManager.getDeviceConfiguration(dctx, configClass)
+                    )
+                );
+            }
+        } catch (NotSerializableException e) {
+            throw new HobsonRuntimeException("Unable to set device configuration for " + dctx + ": " + values, e);
         }
     }
 

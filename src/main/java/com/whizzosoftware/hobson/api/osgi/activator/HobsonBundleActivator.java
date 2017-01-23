@@ -8,6 +8,7 @@
 package com.whizzosoftware.hobson.api.osgi.activator;
 
 import com.whizzosoftware.hobson.api.action.ActionManager;
+import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
@@ -57,6 +58,7 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
             c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
             c.add(createServiceDependency().setService(TaskManager.class).setRequired(true));
+            c.add(createServiceDependency().setService(DataStreamManager.class).setRequired(false));
             manager.add(c);
         } else {
             logger.error("No hobson.plugin provided capability found for plugin {}", context.getBundle().getSymbolicName());

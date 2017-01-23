@@ -439,8 +439,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     private void updateConfiguration(HubContext ctx, PropertyContainer config) {
-        configManager.setHubConfiguration(ctx, config);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), config));
+        try {
+            configManager.setHubConfiguration(ctx, config);
+            eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), config));
+        } catch (NotSerializableException e) {
+            throw new HobsonRuntimeException("Unable to update hub configuration: " + config, e);
+        }
     }
 
     /**

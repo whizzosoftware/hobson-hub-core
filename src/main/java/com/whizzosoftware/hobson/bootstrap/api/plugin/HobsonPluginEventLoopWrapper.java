@@ -278,6 +278,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
+    public boolean hasDeviceVariableState(String deviceId, String name) {
+        return plugin.hasDeviceVariableState(deviceId, name);
+    }
+
+    @Override
     public boolean hasTaskProvider() {
         return plugin.hasTaskProvider();
     }

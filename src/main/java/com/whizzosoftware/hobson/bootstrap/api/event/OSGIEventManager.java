@@ -10,6 +10,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.event.*;
+import com.whizzosoftware.hobson.api.event.advertisement.DeviceAdvertisementEvent;
 import com.whizzosoftware.hobson.api.event.device.*;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginConfigurationUpdateEvent;
