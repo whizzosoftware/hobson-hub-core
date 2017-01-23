@@ -16,9 +16,7 @@ import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStoppedEvent;
-import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
@@ -104,12 +102,12 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
         try {
             logger.debug("Stopping plugin: {}", plugin.getContext());
 
-            final long now = System.currentTimeMillis();
+            // post plugin stopping event
+            eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStatusChangeEvent(System.currentTimeMillis(), plugin.getContext(), PluginStatus.stopping()));
 
             // remove the service listener
             FrameworkUtil.getBundle(getClass()).getBundleContext().removeServiceListener(this);
 
-            final HubContext ctx = HubContext.createLocal();
             final PluginContext pctx = plugin.getContext();
             final BlockingQueue<Object> blockingQueue = new ArrayBlockingQueue<>(1);
 
@@ -129,7 +127,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
                         logger.trace("Plugin {} shutdown method returned", pctx);
 
                         // post plugin stopped event
-                        eventManager.postEvent(ctx, new PluginStoppedEvent(now, pctx));
+                        eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStatusChangeEvent(System.currentTimeMillis(), plugin.getContext(), PluginStatus.stopped()));
                     } catch (Throwable t) {
                         logger.error("Error shutting down plugin \"" + pctx + "\"", t);
                     }
@@ -295,6 +293,9 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public void serviceChanged(ServiceEvent serviceEvent) {
         if (serviceEvent.getType() == ServiceEvent.REGISTERED) {
+            // post plugin initializing event
+            eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStatusChangeEvent(System.currentTimeMillis(), plugin.getContext(), PluginStatus.initializing()));
+
             // register the plugin as an event listener
             eventManager.addListener(plugin.getContext().getHubContext(), plugin, new EventCallbackInvoker() {
                 @Override
@@ -318,9 +319,6 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
                 public void run() {
                     // start the plugin
                     onStartup(pluginManager.getLocalPluginConfiguration(plugin.getContext()));
-
-                    // post plugin started event
-                    eventManager.postEvent(plugin.getContext().getHubContext(), new PluginStartedEvent(System.currentTimeMillis(), getContext()));
 
                     // schedule the refresh callback if the plugin's refresh interval > 0
                     if (plugin.getRefreshInterval() > 0) {

@@ -14,8 +14,7 @@ import com.whizzosoftware.hobson.api.event.advertisement.DeviceAdvertisementEven
 import com.whizzosoftware.hobson.api.event.device.*;
 import com.whizzosoftware.hobson.api.event.hub.HubConfigurationUpdateEvent;
 import com.whizzosoftware.hobson.api.event.plugin.PluginConfigurationUpdateEvent;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStoppedEvent;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateRequestEvent;
 import com.whizzosoftware.hobson.api.event.task.*;
@@ -63,8 +62,7 @@ public class OSGIEventManager implements EventManager, EventCallbackInvoker {
             eventFactory.addEventClass(DeviceVariablesUpdateRequestEvent.ID, DeviceVariablesUpdateRequestEvent.class);
             eventFactory.addEventClass(HubConfigurationUpdateEvent.ID, HubConfigurationUpdateEvent.class);
             eventFactory.addEventClass(PluginConfigurationUpdateEvent.ID, PluginConfigurationUpdateEvent.class);
-            eventFactory.addEventClass(PluginStartedEvent.ID, PluginStartedEvent.class);
-            eventFactory.addEventClass(PluginStoppedEvent.ID, PluginStoppedEvent.class);
+            eventFactory.addEventClass(PluginStatusChangeEvent.ID, PluginStatusChangeEvent.class);
             eventFactory.addEventClass(PresenceUpdateNotificationEvent.ID, PresenceUpdateNotificationEvent.class);
             eventFactory.addEventClass(PresenceUpdateRequestEvent.ID, PresenceUpdateRequestEvent.class);
             eventFactory.addEventClass(TaskDeletedEvent.ID, TaskDeletedEvent.class);

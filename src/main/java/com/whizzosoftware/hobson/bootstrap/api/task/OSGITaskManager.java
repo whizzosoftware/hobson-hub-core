@@ -15,7 +15,7 @@ import com.whizzosoftware.hobson.api.HobsonRuntimeException;
 import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.event.*;
-import com.whizzosoftware.hobson.api.event.plugin.PluginStartedEvent;
+import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskDeletedEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
@@ -112,9 +112,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     @EventHandler
-    public void handle(PluginStartedEvent event) {
-        // any time a plugin starts, queue up a task registration check
-        if (event.getEventId().equals(PluginStartedEvent.ID)) {
+    public void handle(PluginStatusChangeEvent event) {
+        // any time a plugin goes to a running state, queue up a task registration check
+        if (event.getStatus().equals(PluginStatus.running())) {
             logger.debug("Detected plugin start: {}", event.getContext());
             queueTaskRegistration();
         }
