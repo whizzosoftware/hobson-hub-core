@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,11 +34,22 @@ public class EventHandlerAdapter implements org.osgi.service.event.EventHandler 
     private EventFactory eventFactory;
     private Object listener;
     private EventCallbackInvoker invoker;
+    private List<MethodRef> methodCache = new ArrayList<>();
 
     public EventHandlerAdapter(EventFactory eventFactory, Object listener, EventCallbackInvoker invoke) {
         this.eventFactory = eventFactory;
         this.listener = listener;
         this.invoker = invoke;
+
+        // build reflection cache
+        for (Method m : listener.getClass().getMethods()) {
+            if (m.isAnnotationPresent(EventHandler.class)) {
+                Class[] params = m.getParameterTypes();
+                if (params.length == 1) {
+                    methodCache.add(new MethodRef(m, params[0]));
+                }
+            }
+        }
     }
 
     @Override
@@ -48,12 +61,9 @@ public class EventHandlerAdapter implements org.osgi.service.event.EventHandler 
         if (listener != null) {
             HobsonEvent he = eventFactory.createEvent(props);
             if (he != null) {
-                for (Method m : listener.getClass().getMethods()) {
-                    if (m.isAnnotationPresent(EventHandler.class)) {
-                        Class[] params = m.getParameterTypes();
-                        if (params.length == 1 && params[0].isAssignableFrom(he.getClass())) {
-                            invoker.invoke(m, listener, he);
-                        }
+                for (MethodRef r : methodCache) {
+                    if (r.param.isAssignableFrom(he.getClass())) {
+                        invoker.invoke(r.method, listener, he);
                     }
                 }
             } else {
@@ -61,6 +71,16 @@ public class EventHandlerAdapter implements org.osgi.service.event.EventHandler 
             }
         } else {
             logger.warn("No event listener registered; ignoring event {}", HobsonEvent.readEventId(props));
+        }
+    }
+
+    private class MethodRef {
+        public Method method;
+        public Class param;
+
+        public MethodRef(Method method, Class param) {
+            this.method = method;
+            this.param = param;
         }
     }
 }
