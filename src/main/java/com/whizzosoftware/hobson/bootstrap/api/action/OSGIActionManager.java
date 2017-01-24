@@ -78,7 +78,7 @@ public class OSGIActionManager implements ActionManager {
         ActionClass ac = getActionClass(action.getContainerClassContext());
 
         // make sure action properties are valid
-        ac.validate(action);
+        ac.validate(action.getPropertyValues());
 
         // instantiate action
         Action a = ((ActionProvider)ac).createAction(action.getPropertyValues());
@@ -101,7 +101,7 @@ public class OSGIActionManager implements ActionManager {
         for (PropertyContainer action : actionSet.getProperties()) {
             ActionClass ac = getActionClass(action.getContainerClassContext());
             // make sure action properties are valid
-            ac.validate(action);
+            ac.validate(action.getPropertyValues());
             // add to the list
             actions.add(((ActionProvider)ac).createAction(action.getPropertyValues()));
         }

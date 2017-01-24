@@ -65,6 +65,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     volatile private ConfigurationManager configManager;
     volatile private EventManager eventManager;
 
+    private PropertyContainerClass localHubConfigClass;
     private NetworkInfo networkInfo;
     private OIDCConfigProvider oidcConfigProvider;
     private Map<String,ServiceRegistration> webAppMap = Collections.synchronizedMap(new HashMap<String,ServiceRegistration>());
@@ -75,10 +76,12 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         this.oidcConfigProvider = new LocalOIDCConfigProvider();
 
         // set the log level
-        String logLevel = (String)configManager.getHubConfigurationProperty(HubContext.createLocal(), LOG_LEVEL);
+        String logLevel = configManager != null ? (String)configManager.getHubConfigurationProperty(HubContext.createLocal(), LOG_LEVEL) : null;
         if (logLevel != null) {
             ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel(logLevel));
         }
+
+        localHubConfigClass = new HubConfigurationClass();
     }
 
     @Override
@@ -117,7 +120,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     @Override
     public void deleteConfiguration(HubContext ctx) {
         configManager.deleteHubConfiguration(ctx);
-        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), getConfiguration(ctx)));
+        eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), getConfiguration(ctx).getPropertyValues()));
     }
 
     @Override
@@ -127,20 +130,31 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public PropertyContainer getConfiguration(HubContext ctx) {
-        PropertyContainer pc = configManager.getHubConfiguration(ctx);
-        pc.setPropertyValue(LOG_LEVEL, ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
-        if (System.getProperty("useSSL") != null) {
-            pc.setPropertyValue(HubConfigurationClass.SSL_MODE, true);
+        if (HubContext.DEFAULT_HUB.equals(ctx.getHubId())) {
+            Map<String, Object> values = new HashMap<>();
+            if (configManager != null) {
+                values.putAll(configManager.getHubConfiguration(ctx));
+            }
+            values.put(LOG_LEVEL, ((Logger) LoggerFactory.getLogger(HOBSON_LOGGER)).getLevel().toString());
+            if (System.getProperty("useSSL") != null) {
+                values.put(HubConfigurationClass.SSL_MODE, true);
+            }
+            if (!values.containsKey(HubConfigurationClass.AWAY)) {
+                values.put(HubConfigurationClass.AWAY, false);
+            }
+            return new PropertyContainer(getConfigurationClass(ctx).getContext(), values);
+        } else {
+            return null;
         }
-        if (!pc.hasPropertyValue(HubConfigurationClass.AWAY)) {
-            pc.setPropertyValue(HubConfigurationClass.AWAY, false);
-        }
-        return pc;
     }
 
     @Override
     public PropertyContainerClass getConfigurationClass(HubContext ctx) {
-        return getHub(ctx).getConfigurationClass();
+        if (HubContext.DEFAULT_HUB.equals(ctx.getHubId())) {
+            return localHubConfigClass;
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -177,8 +191,13 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     private String getHubName(HubContext ctx) {
-        PropertyContainer props = configManager.getHubConfiguration(ctx);
-        String name = (String)props.getPropertyValue("name");
+        String name = null;
+        if (configManager != null) {
+            Map<String, Object> props = configManager.getHubConfiguration(ctx);
+            if (props != null) {
+                name = (String) props.get("name");
+            }
+        }
         return (name == null) ? "Unnamed" : name;
     }
 
@@ -242,7 +261,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
             ((Logger)LoggerFactory.getLogger(HOBSON_LOGGER)).setLevel(Level.toLevel((String)configuration.getPropertyValue(LOG_LEVEL)));
         }
 
-        updateConfiguration(ctx, configuration);
+        updateConfiguration(ctx, configuration.getPropertyValues());
     }
 
     @Override
@@ -333,11 +352,13 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
     }
 
     private HobsonHub createLocalHubDetails() {
-        String version = FrameworkUtil.getBundle(getClass()).getVersion().toString();
+        Bundle b = FrameworkUtil.getBundle(getClass());
+        String version = b != null ? b.getVersion().toString() : null;
         HubContext ctx = HubContext.createLocal();
         return new HobsonHub.Builder(ctx).
             name(getHubName(ctx)).
             version(version).
+            configurationClass(localHubConfigClass).
             configuration(getConfiguration(HubContext.createLocal()).getPropertyValues()).
             webSocketInfo(webSocketInfo).
             build();
@@ -438,7 +459,7 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         return null;
     }
 
-    private void updateConfiguration(HubContext ctx, PropertyContainer config) {
+    private void updateConfiguration(HubContext ctx, Map<String,Object> config) {
         try {
             configManager.setHubConfiguration(ctx, config);
             eventManager.postEvent(ctx, new HubConfigurationUpdateEvent(System.currentTimeMillis(), config));

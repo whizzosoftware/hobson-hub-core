@@ -187,13 +187,13 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
-    public void setDeviceConfigurationProperty(DeviceContext dctx, PropertyContainerClass configClass, String name, Object value) {
-        plugin.setDeviceConfigurationProperty(dctx, configClass, name, value);
+    public void setDeviceConfigurationProperty(DeviceContext dctx, String name, Object value) {
+        plugin.setDeviceConfigurationProperty(dctx, name, value);
     }
 
     @Override
-    public void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String, Object> values) {
-        plugin.setDeviceConfigurationProperties(dctx, configClass, values);
+    public void setDeviceConfigurationProperties(DeviceContext dctx, Map<String, Object> values) {
+        plugin.setDeviceConfigurationProperties(dctx, values);
     }
 
     @Override

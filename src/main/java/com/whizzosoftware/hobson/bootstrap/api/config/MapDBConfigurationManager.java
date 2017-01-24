@@ -17,10 +17,7 @@ import com.whizzosoftware.hobson.api.persist.CollectionPersistenceContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
 import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
-import com.whizzosoftware.hobson.api.property.PropertyContainer;
-import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
-import com.whizzosoftware.hobson.api.property.TypedProperty;
 import com.whizzosoftware.hobson.bootstrap.util.MapDBCollectionPersistenceContext;
 import org.mapdb.DBMaker;
 import org.slf4j.Logger;
@@ -29,7 +26,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -47,7 +43,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         this(new File(new File(System.getProperty(ConfigurationManager.HOBSON_HOME), "data"), "config"));
     }
 
-    MapDBConfigurationManager(File file) {
+    public MapDBConfigurationManager(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
@@ -68,15 +64,11 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public PropertyContainer getHubConfiguration(HubContext ctx) {
+    public Map<String,Object> getHubConfiguration(HubContext ctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            Map<String,Object> m = persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID));
-            return new PropertyContainer(
-                PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID),
-                new HashMap<>(m) // make sure this is a copy so the DB's map isn't modified
-            );
+            return new HashMap<>(persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID)));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -94,11 +86,11 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public void setHubConfiguration(HubContext ctx, PropertyContainer config) {
+    public void setHubConfiguration(HubContext ctx, Map<String,Object> config) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.saveHubConfiguration(cpctx, ctx, config.getPropertyValues());
+            persister.saveHubConfiguration(cpctx, ctx, config);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -116,27 +108,23 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public PropertyContainer getLocalPluginConfiguration(PluginContext ctx, PropertyContainerClass configurationClass) {
+    public Map<String,Object> getLocalPluginConfiguration(PluginContext ctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            Map<String,Object> m = persister.restoreLocalPluginConfiguration(cpctx, ctx);
-            return new PropertyContainer(
-                PropertyContainerClassContext.create(ctx, configurationClass.getContext().getContainerClassId()),
-                new HashMap<>(m) // make sure this is a copy so the DB's map isn't modified
-            );
+            return new HashMap<>(persister.restoreLocalPluginConfiguration(cpctx, ctx));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
     }
 
     @Override
-    public void setLocalPluginConfiguration(PluginContext pctx, PropertyContainer newConfig) {
+    public void setLocalPluginConfiguration(PluginContext pctx, Map<String,Object> newConfig) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             persister.deleteLocalPluginConfiguration(cpctx, pctx, false);
-            persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig.getPropertyValues());
+            persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -154,31 +142,11 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     }
 
     @Override
-    public PropertyContainer getDeviceConfiguration(DeviceContext ctx, PropertyContainerClass configurationClass) {
+    public Map<String,Object> getDeviceConfiguration(DeviceContext ctx) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-
-            Map<String,Object> props = persister.restoreDeviceConfiguration(cpctx, ctx);
-
-            // build a list of PropertyContainer objects
-            PropertyContainer ci = null;
-            if (configurationClass != null) {
-                ci = new PropertyContainer();
-                List<TypedProperty> tps = configurationClass.getSupportedProperties();
-                if (tps != null) {
-                    for (TypedProperty meta : tps) {
-                        Object value = null;
-                        if (props != null) {
-                            value = props.get(meta.getId());
-                        }
-                        ci.setPropertyValue(meta.getId(), value);
-                    }
-                }
-                ci.setContainerClassContext(configurationClass.getContext());
-            }
-
-            return ci;
+            return new HashMap<>(persister.restoreDeviceConfiguration(cpctx, ctx));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

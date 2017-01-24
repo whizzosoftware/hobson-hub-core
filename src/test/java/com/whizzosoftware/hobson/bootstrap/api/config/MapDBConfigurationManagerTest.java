@@ -16,6 +16,8 @@ import com.whizzosoftware.hobson.api.property.*;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -27,17 +29,17 @@ public class MapDBConfigurationManagerTest {
         file.deleteOnExit();
         MapDBConfigurationManager mgr = new MapDBConfigurationManager(file);
 
-        PropertyContainer config = new PropertyContainer();
-        config.setPropertyValue("adminPassword", "foo");
+        Map<String,Object> config = new HashMap<>();
+        config.put("adminPassword", "foo");
         mgr.setHubConfiguration(HubContext.createLocal(), config);
 
         config = mgr.getHubConfiguration(HubContext.createLocal());
-        assertEquals("foo", config.getPropertyValue("adminPassword"));
+        assertEquals("foo", config.get("adminPassword"));
 
-        config.setPropertyValue("foo", "bar");
+        config.put("foo", "bar");
         mgr.setHubConfiguration(HubContext.createLocal(), config);
         config = mgr.getHubConfiguration(HubContext.createLocal());
-        assertEquals("foo", config.getPropertyValue("adminPassword"));
+        assertEquals("foo", config.get("adminPassword"));
     }
 
     @Test
@@ -49,17 +51,17 @@ public class MapDBConfigurationManagerTest {
         PluginContext pc = PluginContext.createLocal("plugin1");
         PropertyContainerClass pcc = new PropertyContainerClass(PropertyContainerClassContext.create(pc, "configuration"), PropertyContainerClassType.PLUGIN_CONFIG);
 
-        PropertyContainer config = new PropertyContainer();
-        config.setPropertyValue("foo", "bar");
+        Map<String,Object> config = new HashMap<>();
+        config.put("foo", "bar");
         mgr.setLocalPluginConfiguration(pc, config);
 
-        config = mgr.getLocalPluginConfiguration(pc, pcc);
-        assertEquals("bar", config.getPropertyValue("foo"));
+        config = mgr.getLocalPluginConfiguration(pc);
+        assertEquals("bar", config.get("foo"));
 
-        config.setPropertyValue("bar", "foo");
+        config.put("bar", "foo");
         mgr.setLocalPluginConfiguration(pc, config);
-        config = mgr.getLocalPluginConfiguration(pc, pcc);
-        assertEquals("bar", config.getPropertyValue("foo"));
+        config = mgr.getLocalPluginConfiguration(pc);
+        assertEquals("bar", config.get("foo"));
     }
 
     @Test
@@ -76,8 +78,8 @@ public class MapDBConfigurationManagerTest {
         mgr.setDeviceConfigurationProperty(dctx, "foo", "bar");
         mgr.setDeviceConfigurationProperty(dctx, "bar", "foo");
 
-        PropertyContainer pc = mgr.getDeviceConfiguration(dctx, pcc);
-        assertTrue(pc.hasPropertyValue("bar"));
-        assertTrue(pc.hasPropertyValue("foo"));
+        Map<String,Object> pc = mgr.getDeviceConfiguration(dctx);
+        assertTrue(pc.containsKey("bar"));
+        assertTrue(pc.containsKey("foo"));
     }
 }

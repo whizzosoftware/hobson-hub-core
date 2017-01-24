@@ -4,8 +4,10 @@ import com.whizzosoftware.hobson.api.action.ActionClass;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceType;
 import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
+import com.whizzosoftware.hobson.api.property.PropertyConstraintType;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.property.TypedProperty;
+import com.whizzosoftware.hobson.api.property.TypedPropertyConstraint;
 import org.junit.Test;
 
 import java.io.File;
@@ -26,7 +28,11 @@ public class MapDBDeviceStoreTest {
 
         List<ActionClass> ac = new ArrayList<>();
         ActionClass a = new ActionClass(PropertyContainerClassContext.create(DeviceContext.createLocal("plugin1", "device1"), "ac1"), "name", "description", true, 2000);
-        a.addSupportedProperty(new TypedProperty.Builder("prop1", "pname", "pdesc", TypedProperty.Type.STRING).build());
+        a.addSupportedProperty(
+            new TypedProperty.Builder("prop1", "pname", "pdesc", TypedProperty.Type.STRING).
+                constraint(PropertyConstraintType.required, true).
+                enumerate("foo", "bar").
+                build());
         ac.add(a);
 
         Set<String> tags = new HashSet<>();
@@ -61,11 +67,20 @@ public class MapDBDeviceStoreTest {
         assertEquals(2000, a.getTimeoutInterval());
         assertTrue(a.hasSupportedProperties());
         assertEquals(1, a.getSupportedProperties().size());
-        TypedProperty tp = a.getSupportedProperties().get(0);
+        TypedProperty tp = a.getSupportedProperties().iterator().next();
         assertEquals("prop1", tp.getId());
         assertEquals("pname", tp.getName());
         assertEquals("pdesc", tp.getDescription());
         assertEquals(TypedProperty.Type.STRING, tp.getType());
+        assertTrue(tp.hasConstraintValues());
+        assertEquals(1, tp.getConstraints().size());
+        TypedPropertyConstraint tpc = tp.getConstraints().iterator().next();
+        assertEquals(PropertyConstraintType.required, tpc.getType());
+        assertEquals(true, tpc.getArgument());
+        assertTrue(tp.hasEnumeration());
+        Map<String,String> e = tp.getEnumeration();
+        assertEquals(1, e.size());
+        assertEquals("bar", e.get("foo"));
 
         assertNotNull(device.getTags());
         Iterator it = device.getTags().iterator();

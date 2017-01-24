@@ -140,7 +140,7 @@ public class OSGIDeviceManager implements DeviceManager {
         if (device != null) {
             PropertyContainerClass configClass = device.getConfigurationClass();
             if (configClass != null) {
-                return configManager.getDeviceConfiguration(ctx, configClass);
+                return new PropertyContainer(configClass.getContext(), configManager.getDeviceConfiguration(ctx));
             }
         }
         return null;
@@ -201,15 +201,7 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public Future publishDevice(HobsonDeviceProxy proxy, Map<String, Object> config, Runnable runnable) {
-        return publishDevice(
-            proxy,
-            new PropertyContainer(PropertyContainerClassContext.create(DeviceContext.create(proxy.getContext().getPluginContext(), proxy.getContext().getDeviceId()), "configuration"), config),
-            runnable
-        );
-    }
-
-    synchronized Future publishDevice(final HobsonDeviceProxy device, final PropertyContainer config, final Runnable runnable) {
+    synchronized public Future publishDevice(final HobsonDeviceProxy device, final Map<String,Object> config, final Runnable runnable) {
         final String deviceId = device.getContext().getDeviceId();
 
         // check that the device ID is legal
@@ -244,8 +236,8 @@ public class OSGIDeviceManager implements DeviceManager {
 
                 try {
                     // persist the device configuration
-                    if (configManager != null && config != null && config.hasPropertyValues()) {
-                        configManager.setDeviceConfigurationProperties(device.getContext(), config.getPropertyValues());
+                    if (configManager != null && config != null && config.size() > 0) {
+                        configManager.setDeviceConfigurationProperties(device.getContext(), config);
                     }
 
                     // post the device started event
@@ -264,7 +256,7 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public void setDeviceConfigurationProperty(DeviceContext dctx, PropertyContainerClass configClass, String name, Object value) {
+    public void setDeviceConfigurationProperty(DeviceContext dctx, String name, Object value) {
         try {
             configManager.setDeviceConfigurationProperty(dctx, name, value);
 
@@ -274,7 +266,7 @@ public class OSGIDeviceManager implements DeviceManager {
                 new DeviceConfigurationUpdateEvent(
                     System.currentTimeMillis(),
                     dctx,
-                    configManager.getDeviceConfiguration(dctx, configClass)
+                    configManager.getDeviceConfiguration(dctx)
                 )
             );
         } catch (NotSerializableException e) {
@@ -283,8 +275,8 @@ public class OSGIDeviceManager implements DeviceManager {
     }
 
     @Override
-    public void setDeviceConfiguration(DeviceContext dctx, PropertyContainerClass configClass, Map<String, Object> values) {
-        setDeviceConfigurationProperties(dctx, configClass, values, true);
+    public void setDeviceConfiguration(DeviceContext dctx, Map<String, Object> values) {
+        setDeviceConfigurationProperties(dctx, values, true);
     }
 
     @Override
@@ -292,8 +284,10 @@ public class OSGIDeviceManager implements DeviceManager {
         deviceStore.setDeviceName(dctx, name);
     }
 
-    private void setDeviceConfigurationProperties(DeviceContext dctx, PropertyContainerClass configClass, Map<String,Object> values, boolean sendEvent) {
+    private void setDeviceConfigurationProperties(DeviceContext dctx, Map<String,Object> values, boolean sendEvent) {
         try {
+            getDevice(dctx).getConfigurationClass().validate(values);
+
             configManager.setDeviceConfigurationProperties(dctx, values);
 
             // send update event
@@ -303,7 +297,7 @@ public class OSGIDeviceManager implements DeviceManager {
                     new DeviceConfigurationUpdateEvent(
                         System.currentTimeMillis(),
                         dctx,
-                        configManager.getDeviceConfiguration(dctx, configClass)
+                        values
                     )
                 );
             }
