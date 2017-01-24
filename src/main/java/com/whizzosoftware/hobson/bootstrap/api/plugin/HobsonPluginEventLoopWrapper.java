@@ -241,6 +241,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
+    public PropertyContainerClass getConfigurationClass() {
+        return plugin.getConfigurationClass();
+    }
+
+    @Override
     public PluginContext getContext() {
         return plugin.getContext();
     }
