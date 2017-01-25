@@ -27,6 +27,7 @@ public class MapDBDeviceStore implements DeviceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             db = DBMaker.newFileDB(file)
+                .asyncWriteEnable()
                 .closeOnJvmShutdown()
                 .make();
         } finally {
@@ -135,7 +136,7 @@ public class MapDBDeviceStore implements DeviceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            persister.saveDevice(ctx, device);
+            persister.saveDevice(ctx, device, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -147,7 +148,7 @@ public class MapDBDeviceStore implements DeviceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
-            persister.saveDeviceName(pctx, ctx, name);
+            persister.saveDeviceName(pctx, ctx, name, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -159,7 +160,7 @@ public class MapDBDeviceStore implements DeviceStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             MapDBCollectionPersistenceContext pctx = new MapDBCollectionPersistenceContext(db);
-            persister.saveDeviceTags(pctx, ctx, tags);
+            persister.saveDeviceTags(pctx, ctx, tags, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

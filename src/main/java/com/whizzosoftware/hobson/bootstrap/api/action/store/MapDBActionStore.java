@@ -19,8 +19,6 @@ import com.whizzosoftware.hobson.api.property.PropertyContainerSet;
 import com.whizzosoftware.hobson.bootstrap.util.MapDBCollectionPersistenceContext;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -34,8 +32,6 @@ import java.util.UUID;
  * @author Dan Noguerol
  */
 public class MapDBActionStore implements ActionStore {
-    private static final Logger logger = LoggerFactory.getLogger(MapDBActionStore.class);
-
     private DB db;
     private IdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister(idProvider);
@@ -111,9 +107,10 @@ public class MapDBActionStore implements ActionStore {
             tas.setProperties(al);
 
             persister.saveActionSet(
-                    ctx,
-                    new MapDBCollectionPersistenceContext(db),
-                    tas
+                ctx,
+                new MapDBCollectionPersistenceContext(db),
+                tas,
+                true
             );
 
             return tas;

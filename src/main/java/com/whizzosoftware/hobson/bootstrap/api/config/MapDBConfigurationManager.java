@@ -27,6 +27,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A MapDB implementation of ConfigurationManager.
@@ -68,7 +69,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            return new HashMap<>(persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID)));
+            return new TreeMap<>(persister.restoreHubConfiguration(cpctx, ctx, PropertyContainerClassContext.create(ctx, HubConfigurationClass.ID)));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -90,7 +91,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.saveHubConfiguration(cpctx, ctx, config);
+            persister.saveHubConfiguration(cpctx, ctx, config, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -112,7 +113,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            return new HashMap<>(persister.restoreLocalPluginConfiguration(cpctx, ctx));
+            return new TreeMap<>(persister.restoreLocalPluginConfiguration(cpctx, ctx));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -124,7 +125,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
             persister.deleteLocalPluginConfiguration(cpctx, pctx, false);
-            persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig);
+            persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -135,7 +136,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.saveLocalPluginConfiguration(cpctx, ctx, Collections.singletonMap(name, value));
+            persister.saveLocalPluginConfiguration(cpctx, ctx, Collections.singletonMap(name, value), true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -146,7 +147,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            return new HashMap<>(persister.restoreDeviceConfiguration(cpctx, ctx));
+            return new TreeMap<>(persister.restoreDeviceConfiguration(cpctx, ctx));
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -182,7 +183,7 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             persister.deleteDeviceConfiguration(cpctx, dctx, false);
-            persister.saveDeviceConfiguration(cpctx, dctx, values);
+            persister.saveDeviceConfiguration(cpctx, dctx, values, true);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

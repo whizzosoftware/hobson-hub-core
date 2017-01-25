@@ -88,7 +88,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence entity: {}", pe.getContext().toString());
-            persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db), pe);
+            persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db), pe, true);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -147,7 +147,7 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence location: {}", pel.getContext().toString());
-            persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db), pel);
+            persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db), pel, true);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);

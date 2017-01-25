@@ -116,7 +116,7 @@ public class MapDBTaskStore implements TaskStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding task: {}", task.getContext().toString());
-            persister.saveTask(new MapDBCollectionPersistenceContext(db), task);
+            persister.saveTask(new MapDBCollectionPersistenceContext(db), task, true);
             return task;
 
         } finally {
