@@ -366,8 +366,10 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
 
     @Override
     public LineRange getLog(HubContext ctx, long startLine, long endLine, Appendable appendable) {
-        String path = getLogFilePath();
+        return getLog(ctx, getLogFilePath(), startLine, endLine, appendable);
+    }
 
+    protected LineRange getLog(HubContext ctx, String path, long startLine, long endLine, Appendable appendable) {
         try {
             ReversedLinesFileReader reader = new ReversedLinesFileReader(new File(path));
 
@@ -387,6 +389,9 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
                     break;
                 } else if (count > 0) {
                     appendable.append(",");
+                }
+                if (s.charAt(0) != '{') {
+                    s = "{\"message\":\"" + s + "\"}";
                 }
                 appendable.append("{\"item\":").append(s).append("}");
             }

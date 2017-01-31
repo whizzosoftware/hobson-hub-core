@@ -14,12 +14,19 @@ import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.mail.Message;
 
+import java.io.File;
+import java.io.FileWriter;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 
 public class OSGIHubManagerTest {
@@ -73,5 +80,35 @@ public class OSGIHubManagerTest {
         assertEquals("bar@foo.com", m.getAllRecipients()[0].toString());
         assertEquals("Subject", m.getSubject());
         assertEquals("Message", m.getContent());
+    }
+
+    @Test
+    public void testGetLogWithInvalidJSONLines() throws Exception {
+        File file = File.createTempFile("test", "log");
+        String path = file.getAbsolutePath();
+        file.deleteOnExit();
+
+        FileWriter writer = new FileWriter(path);
+        writer.write("{\"time\":\"1485891491094\",\"thread\":\"localEventLoopGroup-4-1\",\"level\":\"ERROR\",\"message\":\"Test!\"}\n");
+        writer.write("----\n");
+        writer.close();
+
+        OSGIHubManager a = new OSGIHubManager();
+        StringBuilder appendable = new StringBuilder();
+        a.getLog(HubContext.createLocal(), path, 0, 2, appendable);
+
+        JSONArray array = new JSONArray(new JSONTokener(appendable.toString()));
+        assertEquals(2, array.length());
+        JSONObject json = array.getJSONObject(0).getJSONObject("item");
+        assertFalse(json.has("time"));
+        assertFalse(json.has("thread"));
+        assertFalse(json.has("level"));
+        assertEquals("----", json.getString("message"));
+
+        json = array.getJSONObject(1).getJSONObject("item");
+        assertEquals("1485891491094", json.getString("time"));
+        assertEquals("localEventLoopGroup-4-1", json.getString("thread"));
+        assertEquals("ERROR", json.getString("level"));
+        assertEquals("Test!", json.getString("message"));
     }
 }
