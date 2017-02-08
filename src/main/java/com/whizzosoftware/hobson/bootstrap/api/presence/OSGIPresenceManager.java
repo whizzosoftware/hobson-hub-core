@@ -13,6 +13,7 @@ import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.presence.PresenceEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateNotificationEvent;
 import com.whizzosoftware.hobson.api.event.presence.PresenceUpdateRequestEvent;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
@@ -20,8 +21,14 @@ import com.whizzosoftware.hobson.api.presence.*;
 import com.whizzosoftware.hobson.api.presence.store.PresenceStore;
 import com.whizzosoftware.hobson.bootstrap.api.presence.store.MapDBPresenceStore;
 import org.osgi.framework.FrameworkUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.*;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An OSGi implementation of PresenceManager.
@@ -29,11 +36,18 @@ import java.util.*;
  * @author Dan Noguerol
  */
 public class OSGIPresenceManager implements PresenceManager {
+    private static final Logger logger = LoggerFactory.getLogger(OSGIPresenceManager.class);
+
+    @Inject
+    private volatile PluginManager pluginManager;
+    @Inject
+    private volatile EventManager eventManager;
+    @Inject
+    private volatile ExecutorManager executorManager;
+
     private PresenceStore presenceStore;
     private Map<PresenceEntityContext,PresenceLocationContext> entityLocations = new HashMap<>();
-
-    private volatile PluginManager pluginManager;
-    private volatile EventManager eventManager;
+    private Future housekeepingFuture;
 
     public void start() {
         // listen for presence events
@@ -44,11 +58,34 @@ public class OSGIPresenceManager implements PresenceManager {
             this.presenceStore = new MapDBPresenceStore(
                 pluginManager.getDataFile(
                     PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
-                    "presenceEntities"
+                    "presence"
                 )
             );
         }
 
+        // schedule housekeeping
+        if (executorManager != null) {
+            housekeepingFuture = executorManager.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        presenceStore.performHousekeeping();
+                    } catch (Throwable t) {
+                        logger.error("Error performing presence store housekeeping", t);
+                    }
+                }
+            }, 1440 - ThreadLocalRandom.current().nextInt(0, 121), 1440, TimeUnit.MINUTES);
+        } else {
+            logger.error("No executor manager available to perform presence store housekeeping");
+        }
+    }
+
+    public void stop() {
+        if (housekeepingFuture != null && executorManager != null) {
+            executorManager.cancel(housekeepingFuture);
+        }
+
+        eventManager.removeListener(HubContext.createLocal(), this);
     }
 
     @EventHandler
@@ -57,10 +94,6 @@ public class OSGIPresenceManager implements PresenceManager {
             PresenceUpdateRequestEvent pure = (PresenceUpdateRequestEvent)event;
             updatePresenceEntityLocation(pure.getEntityContext(), pure.getLocation());
         }
-    }
-
-    public void stop() {
-        eventManager.removeListener(HubContext.createLocal(), this);
     }
 
     public void setPresenceStore(PresenceStore presenceStore) {

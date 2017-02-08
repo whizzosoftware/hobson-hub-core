@@ -321,6 +321,7 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIPresenceManager.class);
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

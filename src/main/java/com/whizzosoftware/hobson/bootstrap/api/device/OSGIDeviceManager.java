@@ -87,7 +87,6 @@ public class OSGIDeviceManager implements DeviceManager {
             housekeepingFuture = executorManager.schedule(new Runnable() {
                 @Override
                 public void run() {
-                    System.out.println("Performing device store housekeeping");
                     try {
                         deviceStore.performHousekeeping();
                     } catch (Throwable t) {

@@ -31,7 +31,7 @@ import java.util.List;
 public class MapDBPresenceStore implements PresenceStore {
     private static final Logger logger = LoggerFactory.getLogger(MapDBPresenceStore.class);
 
-    private DB db;
+    final private DB db;
     private ContextPathIdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister(new ContextPathIdProvider());
 
@@ -88,8 +88,9 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence entity: {}", pe.getContext().toString());
-            persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db), pe, true);
-
+            synchronized (db) {
+                persister.savePresenceEntity(new MapDBCollectionPersistenceContext(db), pe, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -102,7 +103,9 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting presence entity: {}", ctx.toString());
-            persister.deletePresenceEntity(new MapDBCollectionPersistenceContext(db), ctx);
+            synchronized (db) {
+                persister.deletePresenceEntity(new MapDBCollectionPersistenceContext(db), ctx);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -141,14 +144,23 @@ public class MapDBPresenceStore implements PresenceStore {
     }
 
     @Override
+    public void performHousekeeping() {
+        synchronized (db) {
+            db.commit();
+            db.compact();
+        }
+    }
+
+    @Override
     public void savePresenceLocation(PresenceLocation pel) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding presence location: {}", pel.getContext().toString());
-            persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db), pel, true);
-
+            synchronized (db) {
+                persister.savePresenceLocation(new MapDBCollectionPersistenceContext(db), pel, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -161,7 +173,9 @@ public class MapDBPresenceStore implements PresenceStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting presence location: {}", ctx.toString());
-            persister.deletePresenceLocation(new MapDBCollectionPersistenceContext(db), ctx);
+            synchronized (db) {
+                persister.deletePresenceLocation(new MapDBCollectionPersistenceContext(db), ctx);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
