@@ -13,7 +13,6 @@ import com.whizzosoftware.hobson.api.action.ActionManager;
 import com.whizzosoftware.hobson.api.action.ActionProvider;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
-import com.whizzosoftware.hobson.api.device.proxy.HobsonDeviceProxy;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.*;
 import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
@@ -23,6 +22,7 @@ import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.task.TaskProvider;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableDescriptor;
 import com.whizzosoftware.hobson.api.variable.DeviceVariableState;
 import io.netty.util.concurrent.Future;
 import org.osgi.framework.FrameworkUtil;
@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -291,8 +292,8 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
-    public void onDeviceUpdate(HobsonDeviceProxy device) {
-        plugin.onDeviceUpdate(device);
+    public void onDeviceVariablesUpdate(Collection<DeviceVariableDescriptor> vars) {
+        plugin.onDeviceVariablesUpdate(vars);
     }
 
     @Override

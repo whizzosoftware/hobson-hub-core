@@ -13,6 +13,7 @@ import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
+import com.whizzosoftware.hobson.api.variable.DeviceVariableDescriptor;
 
 import java.util.Collection;
 import java.util.Set;
@@ -24,14 +25,11 @@ import java.util.Set;
  */
 public interface DeviceStore {
     /**
-     * Start the device store.
+     * Unpublishes a specific device.
+     *
+     * @param ctx the device context
      */
-    void start();
-
-    /**
-     * Stop the device store.
-     */
-    void stop();
+    void deleteDevice(DeviceContext ctx);
 
     /**
      * Retrieve a list of all published devices.
@@ -50,15 +48,6 @@ public interface DeviceStore {
      * @return a Collection of HobsonDeviceDescription instances
      */
     Collection<HobsonDeviceDescriptor> getAllDevices(PluginContext ctx);
-
-    /**
-     * Indicates whether a particular device context has been published.
-     *
-     * @param ctx a device context
-     *
-     * @return a boolean
-     */
-    boolean hasDevice(DeviceContext ctx);
 
     /**
      * Retrieves a specific device.
@@ -88,11 +77,32 @@ public interface DeviceStore {
     Set<String> getDeviceTags(DeviceContext ctx);
 
     /**
+     * Indicates whether a particular device context has been published.
+     *
+     * @param ctx a device context
+     *
+     * @return a boolean
+     */
+    boolean hasDevice(DeviceContext ctx);
+
+    /**
+     * Allows the device store to perform whatever implementation-specific housekeeping tasks are needed.
+     */
+    void performHousekeeping();
+
+    /**
      * Publishes a new device.
      *
      * @param device the device to publish
      */
     void saveDevice(HobsonDeviceDescriptor device);
+
+    /**
+     * Saves a device variable descriptor.
+     *
+     * @param dvd the device variable descriptor
+     */
+    void saveDeviceVariable(DeviceVariableDescriptor dvd);
 
     /**
      * Sets a device's name.
@@ -111,9 +121,12 @@ public interface DeviceStore {
     void setDeviceTags(DeviceContext ctx, Set<String> tags);
 
     /**
-     * Unpublishes a specific device.
-     *
-     * @param ctx the device context
+     * Start the device store.
      */
-    void deleteDevice(DeviceContext ctx);
+    void start();
+
+    /**
+     * Stop the device store.
+     */
+    void stop();
 }

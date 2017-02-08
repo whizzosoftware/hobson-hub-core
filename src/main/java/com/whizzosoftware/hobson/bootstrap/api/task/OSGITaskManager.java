@@ -19,6 +19,7 @@ import com.whizzosoftware.hobson.api.event.plugin.PluginStatusChangeEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskDeletedEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskExecutionEvent;
 import com.whizzosoftware.hobson.api.event.task.TaskUpdatedEvent;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
@@ -32,8 +33,11 @@ import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.*;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * An OSGi implementation of TaskManager.
@@ -43,11 +47,19 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private volatile BundleContext bundleContext;
+    @Inject
     private volatile ActionManager actionManager;
-    private volatile EventManager eventManager;
-    private volatile HubManager hubManager;
+    @Inject
+    private volatile BundleContext bundleContext;
+    @Inject
     private volatile DeviceManager deviceManager;
+    @Inject
+    private volatile EventManager eventManager;
+    @Inject
+    private volatile ExecutorManager executorManager;
+    @Inject
+    private volatile HubManager hubManager;
+    @Inject
     private volatile PluginManager pluginManager;
 
     private TaskStore taskStore;
@@ -57,13 +69,8 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
      * This executor is responsible for registering any unregistered tasks with the plugins that handle
      * their trigger condition. This has do be done asynchronously and monitored continuously because a
      * task can be registered for a plugin that has not yet been started by the runtime (e.g. at system
-     * startup).
-     */
-    private final ScheduledThreadPoolExecutor taskRegistrationPool = new ScheduledThreadPoolExecutor(1);
-    /**
-     * Class that handles the actual check for resolved tasks and makes the plugin call to register them.
-     * It implements the Runnable that the taskRegistrationPool will ultimately invoke. This task is also
-     * responsible for tracking which tasks have/have not been registered.
+     * startup). It implements the Runnable that the taskRegistrationPool will ultimately invoke. This task
+     * is also responsible for tracking which tasks have/have not been registered.
      */
     private TaskRegistrationExecutor taskRegistrationExecutor;
     /**
@@ -71,8 +78,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
      * it requires to do its job.
      */
     private TaskRegistrationContext taskRegistrationContext;
+    private Future housekeepingFuture;
 
-    public void start() {
+    synchronized public void start() {
         try {
             // create the condition class provider if it hasn't already been set
             if (taskConditionClassProvider == null) {
@@ -83,25 +91,41 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
                 taskRegistrationContext = this;
             }
 
+            // create task store housekeeping task (run it starting at random interval between 22 and 24 hours)
+            if (executorManager != null) {
+                housekeepingFuture = executorManager.schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (taskStore != null) {
+                            try {
+                                taskStore.performHousekeeping();
+                            } catch (Throwable e) {
+                                logger.error("Error performing task store housekeeping", e);
+                            }
+                        }
+                    }
+                }, 1440 - ThreadLocalRandom.current().nextInt(0, 121), 1440, TimeUnit.MINUTES);
+            } else {
+                logger.error("No executor manager available to perform task manager housekeeping");
+            }
+
             taskRegistrationExecutor = new TaskRegistrationExecutor(HubContext.createLocal(), eventManager, taskRegistrationContext);
 
-            synchronized (taskRegistrationPool) {
-                // add listener for any plugin startups
-                if (eventManager != null) {
-                    eventManager.addListener(HubContext.createLocal(), this);
-                } else {
-                    logger.error("No event manager available - will not be able to provide tasks to their plugins");
-                }
+            // add listener for any plugin startups
+            if (eventManager != null) {
+                eventManager.addListener(HubContext.createLocal(), this);
+            } else {
+                logger.error("No event manager available - will not be able to provide tasks to their plugins");
+            }
 
-                // if a task store hasn't already been injected, create a default one
-                if (taskStore == null) {
-                    this.taskStore = new MapDBTaskStore(
-                        pluginManager.getDataFile(
-                            PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
-                            "tasks"
-                        )
-                    );
-                }
+            // if a task store hasn't already been injected, create a default one
+            if (taskStore == null) {
+                this.taskStore = new MapDBTaskStore(
+                    pluginManager.getDataFile(
+                        PluginContext.createLocal(FrameworkUtil.getBundle(getClass()).getSymbolicName()),
+                        "tasks"
+                    )
+                );
 
                 // alert any plugins if their tasks are ready for registration
                 queueTaskRegistration();
@@ -121,7 +145,9 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
     }
 
     public void stop() {
-        taskRegistrationPool.shutdown();
+        if (executorManager != null && housekeepingFuture != null) {
+            executorManager.cancel(housekeepingFuture);
+        }
         if (eventManager != null) {
             eventManager.removeListener(HubContext.createLocal(), this);
         }
@@ -133,6 +159,10 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
 
     public void setEventManager(EventManager eventManager) {
         this.eventManager = eventManager;
+    }
+
+    public void setExecutorManager(ExecutorManager executorManager) {
+        this.executorManager = executorManager;
     }
 
     public void setPluginManager(PluginManager pluginManager) {
@@ -155,17 +185,11 @@ public class OSGITaskManager implements TaskManager, TaskRegistrationContext {
         this.taskConditionClassProvider = taskConditionClassProvider;
     }
 
-    protected void queueTaskRegistration() {
-        synchronized (taskRegistrationPool) {
-            if (taskRegistrationExecutor != null) {
-                if (taskRegistrationPool.getQueue().size() < 2) {
-                    taskRegistrationPool.execute(taskRegistrationExecutor);
-                } else {
-                    logger.trace("Skipping queued task execution");
-                }
-            } else {
-                throw new HobsonRuntimeException("No task registration executor defined");
-            }
+    synchronized void queueTaskRegistration() {
+        if (taskRegistrationExecutor != null && executorManager != null) {
+            executorManager.submit(taskRegistrationExecutor);
+        } else {
+            throw new HobsonRuntimeException("No task executor defined");
         }
     }
 

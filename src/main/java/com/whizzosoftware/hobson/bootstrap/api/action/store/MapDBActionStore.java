@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.bootstrap.api.action.store;
 
 import com.whizzosoftware.hobson.api.action.store.ActionStore;
 import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.persist.CollectionPersistenceContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
 import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.persist.IdProvider;
@@ -32,9 +33,10 @@ import java.util.UUID;
  * @author Dan Noguerol
  */
 public class MapDBActionStore implements ActionStore {
-    private DB db;
+    final private DB db;
     private IdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister(idProvider);
+    private CollectionPersistenceContext mctx;
 
     public MapDBActionStore(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
@@ -44,6 +46,7 @@ public class MapDBActionStore implements ActionStore {
             db = DBMaker.newFileDB(file)
                     .closeOnJvmShutdown()
                     .make();
+            mctx = new MapDBCollectionPersistenceContext(db);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -57,7 +60,6 @@ public class MapDBActionStore implements ActionStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             List<PropertyContainerSet> results = new ArrayList<>();
-            MapDBCollectionPersistenceContext mctx = new MapDBCollectionPersistenceContext(db);
             for (Object o : mctx.getSet(idProvider.createActionSetsId(ctx).getId())) {
                 String key = (String)o;
                 String actionSetId = persister.getActionSetIdFromKey(ctx, key);
@@ -77,6 +79,14 @@ public class MapDBActionStore implements ActionStore {
     }
 
     @Override
+    public void performHousekeeping() {
+        synchronized (db) {
+            db.commit();
+            db.compact();
+        }
+    }
+
+    @Override
     public PropertyContainerSet getActionSet(HubContext ctx, String actionSetId) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
@@ -84,7 +94,7 @@ public class MapDBActionStore implements ActionStore {
 
             return persister.restoreActionSet(
                     ctx,
-                    new MapDBCollectionPersistenceContext(db),
+                    mctx,
                     actionSetId
             );
 
@@ -106,12 +116,14 @@ public class MapDBActionStore implements ActionStore {
             }
             tas.setProperties(al);
 
-            persister.saveActionSet(
-                ctx,
-                new MapDBCollectionPersistenceContext(db),
-                tas,
-                true
-            );
+            synchronized (db) {
+                persister.saveActionSet(
+                    ctx,
+                    mctx,
+                    tas,
+                    true
+                );
+            }
 
             return tas;
 

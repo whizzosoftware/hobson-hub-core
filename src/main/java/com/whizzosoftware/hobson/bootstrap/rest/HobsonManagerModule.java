@@ -16,6 +16,7 @@ import com.whizzosoftware.hobson.api.activity.ActivityLogManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.persist.IdProvider;
@@ -25,7 +26,7 @@ import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.data.StubDataStreamManager;
 import com.whizzosoftware.hobson.api.data.DataStreamManager;
 import com.whizzosoftware.hobson.api.user.UserStore;
-import com.whizzosoftware.hobson.bootstrap.api.user.LocalUserStore;
+import com.whizzosoftware.hobson.bootstrap.api.user.MapDBUserStore;
 import com.whizzosoftware.hobson.dto.context.DTOBuildContextFactory;
 import com.whizzosoftware.hobson.rest.v1.util.MediaProxyHandler;
 import com.whizzosoftware.hobson.rest.v1.util.RestResourceIdProvider;
@@ -52,12 +53,18 @@ public class HobsonManagerModule extends AbstractModule {
         bind(IdProvider.class).to(RestResourceIdProvider.class).asEagerSingleton();
         bind(MediaProxyHandler.class).to(LocalDeviceMediaProxyHandler.class).asEagerSingleton();
         bind(DTOBuildContextFactory.class).to(DTOBuildContextFactoryImpl.class);
-        bind(UserStore.class).to(LocalUserStore.class).asEagerSingleton();
+        bind(UserStore.class).to(MapDBUserStore.class).asEagerSingleton();
     }
 
     @Provides
     public ActivityLogManager provideActivityLogManager() {
         return (ActivityLogManager)getManager(ActivityLogManager.class);
+    }
+
+    @Provides
+    public DataStreamManager provideDataStreamManager() {
+        DataStreamManager tm = (DataStreamManager)getManager(DataStreamManager.class);
+        return tm != null ? tm : new StubDataStreamManager();
     }
 
     @Provides
@@ -73,6 +80,11 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public EventManager provideEventManager() {
         return (EventManager)getManager(EventManager.class);
+    }
+
+    @Provides
+    public ExecutorManager provideExecutorManager() {
+        return (ExecutorManager)getManager(ExecutorManager.class);
     }
 
     @Provides
@@ -103,12 +115,6 @@ public class HobsonManagerModule extends AbstractModule {
     @Provides
     public TaskManager provideTaskManager() {
         return (TaskManager)getManager(TaskManager.class);
-    }
-
-    @Provides
-    public DataStreamManager provideDataStreamManager() {
-        DataStreamManager tm = (DataStreamManager)getManager(DataStreamManager.class);
-        return tm != null ? tm : new StubDataStreamManager();
     }
 
     private Object getManager(Class clazz) {

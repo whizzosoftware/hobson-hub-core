@@ -1,6 +1,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.user;
 
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
@@ -21,12 +22,12 @@ import java.util.Map;
 
 import static org.junit.Assert.*;
 
-public class LocalUserStoreTest {
+public class MapDBUserStoreTest {
     @Test
     public void testGetUsers() throws Exception {
         File f = File.createTempFile("users", "db");
         f.deleteOnExit();
-        LocalUserStore s = new LocalUserStore(f);
+        MapDBUserStore s = new MapDBUserStore(f);
         Collection<HobsonUser> users = s.getUsers();
         assertEquals(1, users.size());
         HobsonUser u = users.iterator().next();
@@ -42,7 +43,7 @@ public class LocalUserStoreTest {
         File f = File.createTempFile("users", "db");
         f.deleteOnExit();
 
-        LocalUserStore s = new LocalUserStore(f);
+        MapDBUserStore s = new MapDBUserStore(f);
         s.setHubManager(new MockHubManager(new LocalOIDCConfigProvider()));
 
         // add a new user
@@ -67,7 +68,7 @@ public class LocalUserStoreTest {
         File f = File.createTempFile("users", "db");
         f.deleteOnExit();
 
-        LocalUserStore s = new LocalUserStore(f);
+        MapDBUserStore s = new MapDBUserStore(f);
         s.setHubManager(new MockHubManager(new LocalOIDCConfigProvider()));
 
         UserAuthentication a = s.authenticate("admin", "password");
@@ -241,7 +242,7 @@ public class LocalUserStoreTest {
 
         File f = File.createTempFile("users", "db");
         f.deleteOnExit();
-        LocalUserStore mgr = new LocalUserStore();
+        MapDBUserStore mgr = new MapDBUserStore((ExecutorManager)null);
         mgr.setHubManager(hubManager);
         HobsonUser user = mgr.authenticate("admin", "password").getUser();
         assertNotNull(user);

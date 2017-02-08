@@ -17,6 +17,7 @@ import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
 import com.whizzosoftware.hobson.api.disco.DiscoManager;
 import com.whizzosoftware.hobson.api.event.EventManager;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.hub.HubWebApplication;
 import com.whizzosoftware.hobson.api.image.ImageManager;
@@ -29,6 +30,7 @@ import com.whizzosoftware.hobson.bootstrap.api.config.MapDBConfigurationManager;
 import com.whizzosoftware.hobson.bootstrap.api.device.OSGIDeviceManager;
 import com.whizzosoftware.hobson.bootstrap.api.disco.OSGIDiscoManager;
 import com.whizzosoftware.hobson.bootstrap.api.event.OSGIEventManager;
+import com.whizzosoftware.hobson.bootstrap.api.executor.ScheduledExecutorServiceExecutorManager;
 import com.whizzosoftware.hobson.bootstrap.api.hub.OSGIHubManager;
 import com.whizzosoftware.hobson.bootstrap.api.image.OSGIImageManager;
 import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
@@ -230,6 +232,7 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(ActionManager.class.getName(), null);
         c.setImplementation(OSGIActionManager.class);
         c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
@@ -248,6 +251,7 @@ public class Activator extends DependencyActivatorBase {
         c = manager.createComponent();
         c.setInterface(ConfigurationManager.class.getName(), null);
         c.setImplementation(MapDBConfigurationManager.class);
+        c.add(createServiceDependency().setService(ExecutorManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 
@@ -257,6 +261,7 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIDeviceManager.class);
         c.add(createServiceDependency().setService(ConfigurationManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
@@ -275,6 +280,13 @@ public class Activator extends DependencyActivatorBase {
         c.setInterface(EventManager.class.getName(), null);
         c.setImplementation(OSGIEventManager.class);
         c.add(createServiceDependency().setService(EventAdmin.class).setRequired(true));
+        manager.add(c);
+        registeredComponents.add(c);
+
+        // register executor manager
+        c = manager.createComponent();
+        c.setInterface(ExecutorManager.class.getName(), null);
+        c.setImplementation(ScheduledExecutorServiceExecutorManager.class);
         manager.add(c);
         registeredComponents.add(c);
 
@@ -319,6 +331,7 @@ public class Activator extends DependencyActivatorBase {
         c.add(createServiceDependency().setService(ActionManager.class).setRequired(true));
         c.add(createServiceDependency().setService(PluginManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(ExecutorManager.class).setRequired(true));
         c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
         c.add(createServiceDependency().setService(HubManager.class).setRequired(true));
         manager.add(c);

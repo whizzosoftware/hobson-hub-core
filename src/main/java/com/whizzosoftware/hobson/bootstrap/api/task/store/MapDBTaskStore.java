@@ -10,6 +10,7 @@
 package com.whizzosoftware.hobson.bootstrap.api.task.store;
 
 import com.whizzosoftware.hobson.api.hub.HubContext;
+import com.whizzosoftware.hobson.api.persist.CollectionPersistenceContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersister;
 import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.persist.IdProvider;
@@ -36,9 +37,10 @@ import java.util.*;
 public class MapDBTaskStore implements TaskStore {
     private static final Logger logger = LoggerFactory.getLogger(MapDBTaskStore.class);
 
-    private DB db;
+    final private DB db;
     private IdProvider idProvider = new ContextPathIdProvider();
     private CollectionPersister persister = new CollectionPersister(idProvider);
+    private CollectionPersistenceContext mctx;
 
     public MapDBTaskStore(File file) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
@@ -48,6 +50,7 @@ public class MapDBTaskStore implements TaskStore {
             db = DBMaker.newFileDB(file)
                 .closeOnJvmShutdown()
                 .make();
+            mctx = new MapDBCollectionPersistenceContext(db);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -61,8 +64,7 @@ public class MapDBTaskStore implements TaskStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             List<TaskContext> results = new ArrayList<>();
-            MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createTasksId(hctx).getId())) {
+            for (Object o : mctx.getSet(idProvider.createTasksId(hctx).getId())) {
                 results.add(TaskContext.create(hctx, (String)o));
             }
             return results;
@@ -79,10 +81,9 @@ public class MapDBTaskStore implements TaskStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             List<HobsonTask> results = new ArrayList<>();
-            MapDBCollectionPersistenceContext ctx = new MapDBCollectionPersistenceContext(db);
-            for (Object o : ctx.getSet(idProvider.createTasksId(pctx.getHubContext()).getId())) {
+            for (Object o : mctx.getSet(idProvider.createTasksId(pctx.getHubContext()).getId())) {
                 TaskContext tctx = TaskContext.create(pctx.getHubContext(), (String)o);
-                HobsonTask task = persister.restoreTask(ctx, tctx);
+                HobsonTask task = persister.restoreTask(mctx, tctx);
                 if (task != null && task.hasConditions()) {
                     if (TaskHelper.getTriggerCondition(taskManager, task.getConditions()).getContainerClassContext().getPluginContext().equals(pctx)) {
                         results.add(task);
@@ -102,7 +103,7 @@ public class MapDBTaskStore implements TaskStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            return persister.restoreTask(new MapDBCollectionPersistenceContext(db), context);
+            return persister.restoreTask(mctx, context);
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -116,11 +117,21 @@ public class MapDBTaskStore implements TaskStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Adding task: {}", task.getContext().toString());
-            persister.saveTask(new MapDBCollectionPersistenceContext(db), task, true);
+            synchronized (db) {
+                persister.saveTask(mctx, task, true);
+            }
             return task;
 
         } finally {
             Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
+    public void performHousekeeping() {
+        synchronized (db) {
+            db.commit();
+            db.compact();
         }
     }
 
@@ -131,7 +142,9 @@ public class MapDBTaskStore implements TaskStore {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             logger.debug("Deleting task: {}", context.toString());
-            persister.deleteTask(new MapDBCollectionPersistenceContext(db), context);
+            synchronized (db) {
+                persister.deleteTask(mctx, context);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

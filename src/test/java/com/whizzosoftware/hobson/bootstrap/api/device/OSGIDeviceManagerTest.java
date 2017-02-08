@@ -87,7 +87,9 @@ public class OSGIDeviceManagerTest {
         MockEventManager em = new MockEventManager();
 
         MapDBDeviceStore store = new MapDBDeviceStore(file);
+
         MapDBConfigurationManager cm = new MapDBConfigurationManager(file2);
+        cm.start();
 
         MockPluginManager pm = new MockPluginManager();
         MockHobsonPlugin plugin = new MockHobsonPlugin("plugin", "1.0", "description");

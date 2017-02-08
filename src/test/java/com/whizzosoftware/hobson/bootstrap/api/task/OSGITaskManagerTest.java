@@ -26,6 +26,7 @@ import com.whizzosoftware.hobson.api.task.TaskContext;
 import com.whizzosoftware.hobson.api.task.condition.ConditionClassType;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClass;
 import com.whizzosoftware.hobson.api.task.condition.TaskConditionClassProvider;
+import com.whizzosoftware.hobson.bootstrap.api.executor.ScheduledExecutorServiceExecutorManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.store.MapDBTaskStore;
 import org.junit.Test;
 
@@ -58,6 +59,7 @@ public class OSGITaskManagerTest {
         OSGITaskManager tm = new OSGITaskManager();
         tm.setPluginManager(pm);
         tm.setEventManager(em);
+        tm.setExecutorManager(new ScheduledExecutorServiceExecutorManager());
         tm.setTaskStore(store);
         tm.setTaskRegistrationContext(new TaskRegistrationContext() {
             @Override
@@ -99,9 +101,11 @@ public class OSGITaskManagerTest {
         MockActionManager am = new MockActionManager();
         MockEventManager em = new MockEventManager();
         MockPluginManager pm = new MockPluginManager();
+
         OSGITaskManager tm = new OSGITaskManager();
         tm.setActionManager(am);
         tm.setPluginManager(pm);
+        tm.setExecutorManager(new ScheduledExecutorServiceExecutorManager());
         tm.setTaskStore(store);
         tm.setTaskRegistrationExecutor(new TaskRegistrationExecutor(HubContext.createLocal(), em, null));
         tm.setTaskConditionClassProvider(new TaskConditionClassProvider() {

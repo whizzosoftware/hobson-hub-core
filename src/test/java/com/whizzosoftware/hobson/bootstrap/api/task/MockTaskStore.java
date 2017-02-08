@@ -45,6 +45,11 @@ public class MockTaskStore implements TaskStore {
     }
 
     @Override
+    public void performHousekeeping() {
+
+    }
+
+    @Override
     public void deleteTask(TaskContext context) {
 
     }

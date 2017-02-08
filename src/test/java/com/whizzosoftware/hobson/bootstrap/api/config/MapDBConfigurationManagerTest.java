@@ -27,7 +27,9 @@ public class MapDBConfigurationManagerTest {
     public void testSetHubConfiguration() throws Exception {
         File file = File.createTempFile("foo", ".db");
         file.deleteOnExit();
+
         MapDBConfigurationManager mgr = new MapDBConfigurationManager(file);
+        mgr.start();
 
         Map<String,Object> config = new HashMap<>();
         config.put("adminPassword", "foo");
@@ -46,7 +48,9 @@ public class MapDBConfigurationManagerTest {
     public void testSetLocalPluginConfiguration() throws Exception {
         File file = File.createTempFile("foo", ".db");
         file.deleteOnExit();
+
         MapDBConfigurationManager mgr = new MapDBConfigurationManager(file);
+        mgr.start();
 
         PluginContext pc = PluginContext.createLocal("plugin1");
         PropertyContainerClass pcc = new PropertyContainerClass(PropertyContainerClassContext.create(pc, "configuration"), PropertyContainerClassType.PLUGIN_CONFIG);
@@ -68,7 +72,9 @@ public class MapDBConfigurationManagerTest {
     public void testSetTwoIndividualConfigurationProperties() throws Exception {
         File file = File.createTempFile("foo", ".db");
         file.deleteOnExit();
+
         MapDBConfigurationManager mgr = new MapDBConfigurationManager(file);
+        mgr.start();
 
         DeviceContext dctx = DeviceContext.createLocal("plugin1", "device1");
         PropertyContainerClass pcc = new PropertyContainerClass(PropertyContainerClassContext.create(dctx, "configuration"), PropertyContainerClassType.DEVICE_CONFIG);

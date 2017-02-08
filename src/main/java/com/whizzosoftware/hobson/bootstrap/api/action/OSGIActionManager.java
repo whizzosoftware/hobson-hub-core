@@ -15,6 +15,7 @@ import com.whizzosoftware.hobson.api.action.*;
 import com.whizzosoftware.hobson.api.action.store.ActionStore;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceManager;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.action.job.AsyncJobHandle;
 import com.whizzosoftware.hobson.api.action.job.Job;
@@ -31,6 +32,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 public class OSGIActionManager implements ActionManager {
     private final Logger logger = LoggerFactory.getLogger(getClass());
@@ -42,11 +45,14 @@ public class OSGIActionManager implements ActionManager {
     @Inject
     volatile private DeviceManager deviceManager;
     @Inject
+    volatile private ExecutorManager executorManager;
+    @Inject
     volatile private PluginManager pluginManager;
 
     private ActionStore actionStore;
     private final Map<String,Job> jobMap = Collections.synchronizedMap(new HashMap<String,Job>());
     private int maxJobCount = Integer.parseInt(System.getProperty("maxJobCount", "100"));
+    private java.util.concurrent.Future housekeepingFuture;
 
     public void setMaxJobCount(int maxJobCount) {
         this.maxJobCount = maxJobCount;
@@ -61,6 +67,28 @@ public class OSGIActionManager implements ActionManager {
                         "actions"
                     )
             );
+        }
+
+        // create action store housekeeping task (run it starting at random interval between 22 and 24 hours)
+        if (executorManager != null) {
+            this.housekeepingFuture = executorManager.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        actionStore.performHousekeeping();
+                    } catch (Throwable t) {
+                        logger.error("Error performing action store housekeeping", t);
+                    }
+                }
+            }, 1440 - ThreadLocalRandom.current().nextInt(0, 121), 1440, TimeUnit.MINUTES);
+        } else {
+            logger.error("No executor manager available to perform action manager housekeeping");
+        }
+    }
+
+    public void stop() {
+        if (executorManager != null && housekeepingFuture != null) {
+            executorManager.cancel(housekeepingFuture);
         }
     }
 

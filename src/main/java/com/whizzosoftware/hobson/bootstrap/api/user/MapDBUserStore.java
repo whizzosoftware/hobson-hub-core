@@ -13,6 +13,7 @@ import com.google.inject.Inject;
 import com.whizzosoftware.hobson.api.HobsonAuthenticationException;
 import com.whizzosoftware.hobson.api.HobsonAuthorizationException;
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.hub.PasswordChange;
@@ -29,8 +30,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
-public class LocalUserStore implements UserStore {
+public class MapDBUserStore implements UserStore {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private static final String DEFAULT_USER = "admin";
@@ -40,7 +43,8 @@ public class LocalUserStore implements UserStore {
 
     private DB db;
 
-    LocalUserStore() {
+    @Inject
+    MapDBUserStore(ExecutorManager executorManager) {
         File f = new File(System.getProperty(ConfigurationManager.HOBSON_HOME, "."), "data");
         if (!f.exists()) {
             if (!f.mkdir()) {
@@ -48,10 +52,32 @@ public class LocalUserStore implements UserStore {
                 return;
             }
         }
-        setFile(new File(f, "users"));
+
+        setFile(new File(f, "com.whizzosoftware.hobson.hub.hobson-hub-core$users"));
+
+        // create action store housekeeping task (run it starting at random interval between 22 and 24 hours)
+        if (executorManager != null) {
+            executorManager.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("Running user store housekeeping");
+                    try {
+                        synchronized (db) {
+                            db.commit();
+                            db.compact();
+                        }
+                    } catch (Throwable t) {
+                        logger.error("Error compacting user database", t);
+                    }
+                    System.out.println("User store housekeeping complete");
+                }
+            }, 1440 - ThreadLocalRandom.current().nextInt(0, 121), 1440, TimeUnit.MINUTES);
+        } else {
+            logger.error("No executor manager available to perform user store housekeeping");
+        }
     }
 
-    LocalUserStore(File file) {
+    MapDBUserStore(File file) {
         setFile(file);
     }
 
@@ -65,17 +91,21 @@ public class LocalUserStore implements UserStore {
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
-            Map<String,Object> m = db.createTreeMap(username).makeOrGet();
-            m.put("user", username);
-            m.put("password", DigestUtils.sha256Hex(password));
-            m.put("givenName", givenName);
-            m.put("familyName", familyName);
+            synchronized (db) {
+                Map<String, Object> m = db.createTreeMap(username).makeOrGet();
+                m.put("user", username);
+                m.put("password", DigestUtils.sha256Hex(password));
+                m.put("givenName", givenName);
+                m.put("familyName", familyName);
 
-            List<String> r = new ArrayList<>();
-            for (HobsonRole hr : roles) {
-                r.add(hr.name());
+                List<String> r = new ArrayList<>();
+                for (HobsonRole hr : roles) {
+                    r.add(hr.name());
+                }
+                m.put("roles", r);
+
+                db.commit();
             }
-            m.put("roles", r);
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -107,17 +137,19 @@ public class LocalUserStore implements UserStore {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            Map<String,Object> map = db.getTreeMap(username);
-            if (map != null) {
-                String currentPassword = (String)map.get("password");
-                if (DigestUtils.sha256Hex(change.getCurrentPassword()).equals(currentPassword)) {
-                    map.put("password", DigestUtils.sha256Hex(change.getNewPassword()));
-                    db.commit();
+            synchronized (db) {
+                Map<String, Object> map = db.getTreeMap(username);
+                if (map != null) {
+                    String currentPassword = (String) map.get("password");
+                    if (DigestUtils.sha256Hex(change.getCurrentPassword()).equals(currentPassword)) {
+                        map.put("password", DigestUtils.sha256Hex(change.getNewPassword()));
+                        db.commit();
+                    } else {
+                        throw new HobsonAuthorizationException("Unable to change user password");
+                    }
                 } else {
                     throw new HobsonAuthorizationException("Unable to change user password");
                 }
-            } else {
-                throw new HobsonAuthorizationException("Unable to change user password");
             }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
@@ -189,14 +221,16 @@ public class LocalUserStore implements UserStore {
                     .closeOnJvmShutdown()
                     .make();
 
-            Map<String,Object> m = db.createTreeMap("admin").makeOrGet();
-            if (!m.containsKey("password")) {
-                m.put("user", DEFAULT_USER);
-                m.put("password", DigestUtils.sha256Hex("password"));
-                m.put("givenName", "Administrator");
-                m.put("familyName", "User");
-                m.put("roles", Collections.singletonList(HobsonRole.administrator.name()));
-                db.commit();
+            synchronized (db) {
+                Map<String, Object> m = db.createTreeMap("admin").makeOrGet();
+                if (!m.containsKey("password")) {
+                    m.put("user", DEFAULT_USER);
+                    m.put("password", DigestUtils.sha256Hex("password"));
+                    m.put("givenName", "Administrator");
+                    m.put("familyName", "User");
+                    m.put("roles", Collections.singletonList(HobsonRole.administrator.name()));
+                    db.commit();
+                }
             }
         } finally {
             Thread.currentThread().setContextClassLoader(old);

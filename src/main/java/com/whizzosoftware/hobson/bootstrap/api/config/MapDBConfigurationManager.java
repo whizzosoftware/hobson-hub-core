@@ -11,6 +11,7 @@ package com.whizzosoftware.hobson.bootstrap.api.config;
 
 import com.whizzosoftware.hobson.api.config.ConfigurationManager;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
+import com.whizzosoftware.hobson.api.executor.ExecutorManager;
 import com.whizzosoftware.hobson.api.hub.HubConfigurationClass;
 import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.persist.CollectionPersistenceContext;
@@ -19,15 +20,20 @@ import com.whizzosoftware.hobson.api.persist.ContextPathIdProvider;
 import com.whizzosoftware.hobson.api.plugin.PluginContext;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.bootstrap.util.MapDBCollectionPersistenceContext;
+import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A MapDB implementation of ConfigurationManager.
@@ -37,30 +43,67 @@ import java.util.TreeMap;
 public class MapDBConfigurationManager implements ConfigurationManager {
     private static final Logger logger = LoggerFactory.getLogger(MapDBConfigurationManager.class);
 
+    @Inject
+    volatile private ExecutorManager executorManager;
+
+    private File dbFile;
+    private DB db;
     private CollectionPersister persister;
     private CollectionPersistenceContext cpctx;
+    private Future housekeepingFuture;
 
     public MapDBConfigurationManager() {
-        this(new File(new File(System.getProperty(ConfigurationManager.HOBSON_HOME), "data"), "config"));
+        this(new File(new File(System.getProperty(ConfigurationManager.HOBSON_HOME), "data"), "com.whizzosoftware.hobson.hub.hobson-hub-core$config"));
     }
 
-    public MapDBConfigurationManager(File file) {
+    public MapDBConfigurationManager(File dbFile) {
+        this.dbFile = dbFile;
+    }
+
+    public void start() {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
 
             // make sure parent directory exists
-            if (!file.getParentFile().exists()) {
-                if (!file.getParentFile().mkdirs()) {
-                    logger.error("Unable to create data directory: {}", file.getParentFile());
+            if (!dbFile.getParentFile().exists()) {
+                if (!dbFile.getParentFile().mkdirs()) {
+                    logger.error("Unable to create data directory: {}", dbFile.getParentFile());
                 }
             }
 
             // create the MapDB context
-            this.cpctx = new MapDBCollectionPersistenceContext(DBMaker.newFileDB(file).closeOnJvmShutdown().make());
+            this.db = DBMaker.newFileDB(dbFile).closeOnJvmShutdown().make();
+            this.cpctx = new MapDBCollectionPersistenceContext(db);
             this.persister = new CollectionPersister(new ContextPathIdProvider());
+
+            // create database compaction task (run it starting at random interval between 22 and 24 hours)
+            if (executorManager != null) {
+                housekeepingFuture = executorManager.schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        System.out.println("Performing config store housekeeping");
+                        synchronized (db) {
+                            try {
+                                db.commit();
+                                db.compact();
+                            } catch (Throwable t) {
+                                logger.error("Error compacting configuration database", t);
+                            }
+                        }
+                    }
+                }, 1440 - ThreadLocalRandom.current().nextInt(0, 121), 1440, TimeUnit.MINUTES);
+            } else {
+                logger.error("No executor manager available to perform configuration manager housekeeping");
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    public void stop() {
+        if (executorManager != null && housekeepingFuture != null) {
+            executorManager.cancel(housekeepingFuture);
         }
     }
 
@@ -91,7 +134,9 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.saveHubConfiguration(cpctx, ctx, config, true);
+            synchronized (db) {
+                persister.saveHubConfiguration(cpctx, ctx, config, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -102,7 +147,9 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.deleteHubConfiguration(cpctx, ctx, true);
+            synchronized (db) {
+                persister.deleteHubConfiguration(cpctx, ctx, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -124,8 +171,10 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.deleteLocalPluginConfiguration(cpctx, pctx, false);
-            persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig, true);
+            synchronized (db) {
+                persister.deleteLocalPluginConfiguration(cpctx, pctx, false);
+                persister.saveLocalPluginConfiguration(cpctx, pctx, newConfig, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -136,7 +185,9 @@ public class MapDBConfigurationManager implements ConfigurationManager {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            persister.saveLocalPluginConfiguration(cpctx, ctx, Collections.singletonMap(name, value), true);
+            synchronized (db) {
+                persister.saveLocalPluginConfiguration(cpctx, ctx, Collections.singletonMap(name, value), true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }
@@ -182,8 +233,10 @@ public class MapDBConfigurationManager implements ConfigurationManager {
     public void setDeviceConfigurationProperties(DeviceContext dctx, Map<String, Object> values) {
         ClassLoader old = Thread.currentThread().getContextClassLoader();
         try {
-            persister.deleteDeviceConfiguration(cpctx, dctx, false);
-            persister.saveDeviceConfiguration(cpctx, dctx, values, true);
+            synchronized (db) {
+                persister.deleteDeviceConfiguration(cpctx, dctx, false);
+                persister.saveDeviceConfiguration(cpctx, dctx, values, true);
+            }
         } finally {
             Thread.currentThread().setContextClassLoader(old);
         }

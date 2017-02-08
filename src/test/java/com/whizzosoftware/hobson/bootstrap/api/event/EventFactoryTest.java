@@ -1,10 +1,12 @@
-/*******************************************************************************
+/*
+ *******************************************************************************
  * Copyright (c) 2014 Whizzo Software, LLC.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-v10.html
- *******************************************************************************/
+ *******************************************************************************
+*/
 package com.whizzosoftware.hobson.bootstrap.api.event;
 
 import com.whizzosoftware.hobson.api.device.DeviceContext;
@@ -55,9 +57,10 @@ public class EventFactoryTest {
         DeviceVariablesUpdateEvent vune = (DeviceVariablesUpdateEvent)event;
         assertNotNull(vune.getUpdates());
         assertEquals(1, vune.getUpdates().size());
-        assertEquals("plugin", vune.getUpdates().get(0).getPluginId());
-        assertEquals("name", vune.getUpdates().get(0).getName());
-        assertEquals("value", vune.getUpdates().get(0).getNewValue());
+        DeviceVariableUpdate u = vune.getUpdates().iterator().next();
+        assertEquals("plugin", u.getPluginId());
+        assertEquals("name", u.getName());
+        assertEquals("value", u.getNewValue());
     }
 
     @Test
