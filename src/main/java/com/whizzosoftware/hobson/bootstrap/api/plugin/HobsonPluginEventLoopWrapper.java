@@ -277,6 +277,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     }
 
     @Override
+    public PluginStatus getStatus() {
+        return plugin.getStatus();
+    }
+
+    @Override
     public TaskProvider getTaskProvider() {
         return plugin.getTaskProvider();
     }
