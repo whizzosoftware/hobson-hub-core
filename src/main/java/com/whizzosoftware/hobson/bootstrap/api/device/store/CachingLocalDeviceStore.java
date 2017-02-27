@@ -18,13 +18,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.SoftReference;
-import java.lang.ref.WeakReference;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
- * A DeviceStore implementation that wrappers an existing device store to provide weakly-references caching
+ * A DeviceStore implementation that wrappers an existing device store to provide weakly-referenced caching
  * of HobsonDeviceDescriptor objects. It makes the optimization assumption that it will only be used as the
  * wrapper for a local hub.
  *
@@ -105,6 +104,11 @@ public class CachingLocalDeviceStore implements DeviceStore, Runnable {
         } else {
             return new ArrayList<>();
         }
+    }
+
+    @Override
+    public Collection<DeviceContext> getAllDeviceContextsWithTag(HubContext hctx, String tag) {
+        return deviceStore.getAllDeviceContextsWithTag(hctx, tag);
     }
 
     @Override

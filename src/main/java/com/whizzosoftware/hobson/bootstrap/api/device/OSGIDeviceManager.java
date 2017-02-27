@@ -34,6 +34,7 @@ import javax.inject.Inject;
 import java.io.NotSerializableException;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.Future;
 
 import static com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor.AVAILABILITY_TIMEOUT_INTERVAL;
 
@@ -143,6 +144,15 @@ public class OSGIDeviceManager implements DeviceManager {
     @Override
     public Collection<HobsonDeviceDescriptor> getDevices(HubContext hctx) {
         return deviceStore.getAllDevices(hctx);
+    }
+
+    @Override
+    public Collection<HobsonDeviceDescriptor> getDevices(HubContext hctx, String tag) {
+        List<HobsonDeviceDescriptor> results = new ArrayList<>();
+        for (DeviceContext dctx : deviceStore.getAllDeviceContextsWithTag(hctx, tag)) {
+            results.add(getDevice(dctx));
+        }
+        return results;
     }
 
     @Override

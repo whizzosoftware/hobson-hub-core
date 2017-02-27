@@ -4,6 +4,7 @@ import com.whizzosoftware.hobson.api.action.ActionClass;
 import com.whizzosoftware.hobson.api.device.DeviceContext;
 import com.whizzosoftware.hobson.api.device.DeviceType;
 import com.whizzosoftware.hobson.api.device.HobsonDeviceDescriptor;
+import com.whizzosoftware.hobson.api.hub.HubContext;
 import com.whizzosoftware.hobson.api.property.PropertyConstraintType;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClassContext;
 import com.whizzosoftware.hobson.api.property.TypedProperty;
@@ -146,5 +147,34 @@ public class MapDBDeviceStoreTest {
         it = tags.iterator();
         assertEquals("tag1", it.next());
         assertEquals("tag2", it.next());
+    }
+
+    @Test
+    public void testGetAllDeviceContextsWithTags() throws Exception {
+        File dbFile = File.createTempFile("test", ".mapdb");
+        dbFile.deleteOnExit();
+
+        DeviceContext dctx1 = DeviceContext.createLocal("plugin1", "device1");
+        DeviceContext dctx2 = DeviceContext.createLocal("plugin1", "device2");
+
+        MapDBDeviceStore store = new MapDBDeviceStore(dbFile);
+
+        Set<String> tags = new HashSet<>();
+        tags.add("tag1");
+        store.setDeviceTags(dctx1, tags);
+
+        tags = new HashSet<>();
+        tags.add("tag1");
+        tags.add("tag2");
+        store.setDeviceTags(dctx2, tags);
+
+        Collection<DeviceContext> dctxs = store.getAllDeviceContextsWithTag(HubContext.createLocal(), "tag1");
+        assertEquals(2, dctxs.size());
+        assertTrue(dctxs.contains(dctx1));
+        assertTrue(dctxs.contains(dctx2));
+
+        dctxs = store.getAllDeviceContextsWithTag(HubContext.createLocal(), "tag2");
+        assertEquals(1, dctxs.size());
+        assertTrue(dctxs.contains(dctx2));
     }
 }

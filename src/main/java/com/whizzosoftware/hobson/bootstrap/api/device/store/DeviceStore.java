@@ -50,6 +50,17 @@ public interface DeviceStore {
     Collection<HobsonDeviceDescriptor> getAllDevices(PluginContext ctx);
 
     /**
+     * Retrieve a list of all devices with the specified tags. This will return any devices that have all of the
+     * tags in the set.
+     *
+     * @param ctx a hub context
+     * @param tag a tag name
+     *
+     * @return a Collection of DeviceContext instances
+     */
+    Collection<DeviceContext> getAllDeviceContextsWithTag(HubContext ctx, String tag);
+
+    /**
      * Retrieves a specific device.
      *
      * @param ctx the device context

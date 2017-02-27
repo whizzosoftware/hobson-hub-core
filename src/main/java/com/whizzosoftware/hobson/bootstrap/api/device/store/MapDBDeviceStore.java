@@ -100,6 +100,25 @@ public class MapDBDeviceStore implements DeviceStore {
     }
 
     @Override
+    public Collection<DeviceContext> getAllDeviceContextsWithTag(HubContext hctx, String tag) {
+        ClassLoader old = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+            List<DeviceContext> results = new ArrayList<>();
+            for (Object o : mctx.getSet(idProvider.createDeviceTagNameId(hctx, tag).getId())) {
+                DeviceContext dctx = DeviceContext.create((String)o);
+                if (!results.contains(dctx)) {
+                    results.add(dctx);
+                }
+            }
+            return results;
+        } finally {
+            Thread.currentThread().setContextClassLoader(old);
+        }
+    }
+
+    @Override
     public boolean hasDevice(DeviceContext ctx) {
         return (getDevice(ctx) != null); // TODO: inefficient
     }
