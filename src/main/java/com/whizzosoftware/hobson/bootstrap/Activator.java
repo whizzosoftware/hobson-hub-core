@@ -23,6 +23,7 @@ import com.whizzosoftware.hobson.api.hub.HubWebApplication;
 import com.whizzosoftware.hobson.api.image.ImageManager;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
 import com.whizzosoftware.hobson.api.presence.PresenceManager;
+import com.whizzosoftware.hobson.api.security.AccessManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.bootstrap.api.action.OSGIActionManager;
 import com.whizzosoftware.hobson.bootstrap.api.activity.OSGIActivityLogManager;
@@ -37,7 +38,6 @@ import com.whizzosoftware.hobson.bootstrap.api.plugin.OSGIPluginManager;
 import com.whizzosoftware.hobson.bootstrap.api.presence.OSGIPresenceManager;
 import com.whizzosoftware.hobson.bootstrap.api.task.OSGITaskManager;
 import com.whizzosoftware.hobson.bootstrap.rest.HobsonManagerModule;
-import com.whizzosoftware.hobson.bootstrap.rest.root.RootApplication;
 import com.whizzosoftware.hobson.bootstrap.rest.v1.ApiV1Application;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
@@ -94,6 +94,73 @@ public class Activator extends DependencyActivatorBase {
         System.out.println("Hobson is starting with home directory: " + System.getProperty(ConfigurationManager.HOBSON_HOME));
     }
 
+    public void startHubManager(HubManager hubManager) {
+        // create the dependency injector for all REST resources
+        injector = Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(hubManager));
+
+        // create the Restlet server
+        Engine engine = Engine.getInstance();
+        engine.setLoggerFacade(new Slf4jLoggerFacade());
+        component.getClients().add(Protocol.CLAP);
+        component.getLogService().setEnabled(false);
+
+        // start up the HTTP/HTTPS server
+        List<Protocol> protocols = new ArrayList<>();
+        Server server;
+        if (Boolean.parseBoolean(System.getProperty("useSSL", "false"))) {
+            Engine.getInstance().getRegisteredServers().add(new HttpsServerHelper(null));
+            protocols.add(Protocol.HTTPS);
+            server = new Server(null, protocols, null, 8183, null, "org.restlet.ext.jetty.HttpsServerHelper");
+            component.getServers().add(server);
+            Series<Parameter> parameters = server.getContext().getParameters();
+            parameters.add("keystorePath", "conf/keystore.jks");
+            parameters.add("keystorePassword", "ngZiCkr24ZnbVG");
+            parameters.add("keystoreType", "JKS");
+            parameters.add("keyPassword", "ngZiCkr24ZnbVG");
+        } else {
+            Engine.getInstance().getRegisteredServers().add(new HttpServerHelper(null));
+            protocols.add(Protocol.HTTP);
+            server = new Server(null, protocols, null, 8182, null, "org.restlet.ext.jetty.HttpServerHelper");
+            component.getServers().add(server);
+        }
+
+        try {
+            // register the REST API application
+            registerRestletApplication(injector.getInstance(ApiV1Application.class), ApiV1Application.API_ROOT);
+
+            // start listening for new Restlet applications
+            applicationTracker = new ServiceTracker(getBundleContext(), HubWebApplication.class.getName(), null) {
+                @Override
+                public Object addingService(ServiceReference ref) {
+                    logger.debug("Detected addition of Restlet service: {}", ref);
+                    registerRestletApplication(ref);
+                    return super.addingService(ref);
+                }
+
+                @Override
+                public void removedService(ServiceReference ref, Object service) {
+                    logger.debug("Detected removal of Restlet service: {}", service);
+                    unregisterRestletApplication(ref);
+                    super.removedService(ref, service);
+                }
+            };
+            applicationTracker.open();
+
+            // check for any previously registered web applications
+            ServiceReference[] refs = getBundleContext().getServiceReferences(HubWebApplication.class.getName(), null);
+            if (refs != null) {
+                for (ServiceReference ref2 : refs) {
+                    registerRestletApplication(ref2);
+                }
+            }
+
+            // start the Restlet component
+            component.start();
+        } catch (Exception e) {
+            logger.error("Error starting REST API server", e);
+        }
+    }
+
     @Override
     public void init(BundleContext context, DependencyManager manager) throws Exception {
         // set the Netty log factory
@@ -106,76 +173,7 @@ public class Activator extends DependencyActivatorBase {
         hubManagerTracker = new ServiceTracker(context, HubManager.class.getName(), null) {
             @Override
             public Object addingService(ServiceReference ref) {
-                HubManager hubManager = (HubManager)context.getService(ref);
-
-                // create the dependency injector for all REST resources
-                injector = Guice.createInjector(new SelfInjectingServerResourceModule(), new HobsonManagerModule(hubManager));
-
-                // Create the Restlet server
-                Engine engine = Engine.getInstance();
-                engine.setLoggerFacade(new Slf4jLoggerFacade());
-                component.getClients().add(Protocol.CLAP);
-                component.getLogService().setEnabled(false);
-
-                // start up the HTTP/HTTPS server
-                List<Protocol> protocols = new ArrayList<>();
-                Server server;
-                if (Boolean.parseBoolean(System.getProperty("useSSL", "false"))) {
-                    Engine.getInstance().getRegisteredServers().add(new HttpsServerHelper(null));
-                    protocols.add(Protocol.HTTPS);
-                    server = new Server(null, protocols, null, 8183, null, "org.restlet.ext.jetty.HttpsServerHelper");
-                    component.getServers().add(server);
-                    Series<Parameter> parameters = server.getContext().getParameters();
-                    parameters.add("keystorePath", "conf/keystore.jks");
-                    parameters.add("keystorePassword", "ngZiCkr24ZnbVG");
-                    parameters.add("keystoreType", "JKS");
-                    parameters.add("keyPassword", "ngZiCkr24ZnbVG");
-                } else {
-                    Engine.getInstance().getRegisteredServers().add(new HttpServerHelper(null));
-                    protocols.add(Protocol.HTTP);
-                    server = new Server(null, protocols, null, 8182, null, "org.restlet.ext.jetty.HttpServerHelper");
-                    component.getServers().add(server);
-                }
-
-                try {
-                    // register the root application
-                    registerRestletApplication(injector.getInstance(RootApplication.class), "");
-
-                    // register the REST API application
-                    registerRestletApplication(injector.getInstance(ApiV1Application.class), ApiV1Application.API_ROOT);
-
-                    // start listening for new Restlet applications
-                    applicationTracker = new ServiceTracker(context, HubWebApplication.class.getName(), null) {
-                        @Override
-                        public Object addingService(ServiceReference ref) {
-                            logger.debug("Detected addition of Restlet service: {}", ref);
-                            registerRestletApplication(ref);
-                            return super.addingService(ref);
-                        }
-
-                        @Override
-                        public void removedService(ServiceReference ref, Object service) {
-                            logger.debug("Detected removal of Restlet service: {}", service);
-                            unregisterRestletApplication(ref);
-                            super.removedService(ref, service);
-                        }
-                    };
-                    applicationTracker.open();
-
-                    // check for any previously registered web applications
-                    ServiceReference[] refs = context.getServiceReferences(HubWebApplication.class.getName(), null);
-                    if (refs != null) {
-                        for (ServiceReference ref2 : refs) {
-                            registerRestletApplication(ref2);
-                        }
-                    }
-
-                    // start the Restlet component
-                    component.start();
-                } catch (Exception e) {
-                    logger.error("Error starting REST API server", e);
-                }
-
+                startHubManager((HubManager)context.getService(ref));
                 return null;
             }
         };
@@ -296,6 +294,7 @@ public class Activator extends DependencyActivatorBase {
         c.setImplementation(OSGIHubManager.class);
         c.add(createServiceDependency().setService(ConfigurationManager.class).setRequired(true));
         c.add(createServiceDependency().setService(EventManager.class).setRequired(true));
+        c.add(createServiceDependency().setService(AccessManager.class).setRequired(true));
         manager.add(c);
         registeredComponents.add(c);
 

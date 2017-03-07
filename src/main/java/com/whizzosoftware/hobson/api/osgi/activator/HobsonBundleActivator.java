@@ -15,6 +15,7 @@ import com.whizzosoftware.hobson.api.event.EventManager;
 import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.HobsonPlugin;
 import com.whizzosoftware.hobson.api.plugin.PluginManager;
+import com.whizzosoftware.hobson.api.security.AccessManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import org.apache.felix.dm.Component;
 import org.apache.felix.dm.DependencyActivatorBase;
@@ -51,6 +52,7 @@ public class HobsonBundleActivator extends DependencyActivatorBase {
             props.setProperty("version", context.getBundle().getVersion().toString());
             c.setInterface(HobsonPlugin.class.getName(), props);
             c.setFactory(new HobsonPluginFactory(context, pluginClass, pluginId), "create");
+            c.add(createServiceDependency().setService(AccessManager.class).setRequired(true));
             c.add(createServiceDependency().setService(DeviceManager.class).setRequired(true));
             c.add(createServiceDependency().setService(DiscoManager.class).setRequired(true));
             c.add(createServiceDependency().setService(EventManager.class).setRequired(true));

@@ -20,6 +20,7 @@ import com.whizzosoftware.hobson.api.hub.HubManager;
 import com.whizzosoftware.hobson.api.plugin.*;
 import com.whizzosoftware.hobson.api.property.PropertyContainer;
 import com.whizzosoftware.hobson.api.property.PropertyContainerClass;
+import com.whizzosoftware.hobson.api.security.AccessManager;
 import com.whizzosoftware.hobson.api.task.TaskManager;
 import com.whizzosoftware.hobson.api.task.TaskProvider;
 import com.whizzosoftware.hobson.api.variable.DeviceVariableDescriptor;
@@ -51,6 +52,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     // these will be dependency injected by the OSGi runtime
+    private volatile AccessManager accessManager;
     private volatile DeviceManager deviceManager;
     private volatile DiscoManager discoManager;
     private volatile EventManager eventManager;
@@ -79,6 +81,7 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
         logger.debug("Starting plugin: {}", plugin.getContext());
 
         // inject manager dependencies
+        setAccessManager(accessManager);
         setActionManager(actionManager);
         setDeviceManager(deviceManager);
         setDiscoManager(discoManager);
@@ -185,6 +188,11 @@ public class HobsonPluginEventLoopWrapper implements HobsonPlugin, ServiceListen
     @Override
     public void scheduleAtFixedRateInEventLoop(Runnable runnable, long l, long l1, TimeUnit timeUnit) {
         plugin.scheduleAtFixedRateInEventLoop(runnable, l, l1, timeUnit);
+    }
+
+    @Override
+    public void setAccessManager(AccessManager accessManager) {
+        plugin.setAccessManager(accessManager);
     }
 
     @Override
