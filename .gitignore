@@ -1,5 +1,6 @@
 .idea/
 logs/
+target/*
 yo/node_modules/
 yo/app/bower_components/
 yo/app/styles/
