@@ -38,7 +38,7 @@ public class OSGIRepoPluginListSource implements PluginListSource {
      * Constructor.
      *
      * @param bundleContext the bundle context
-     * @param installedPlugins a Map of plugin id -> version string for all installed plugins
+     * @param installedPlugins a Map of plugin id to version string for all installed plugins
      */
     public OSGIRepoPluginListSource(BundleContext bundleContext, Collection<HobsonPluginDescriptor> installedPlugins) {
         this.bundleContext = bundleContext;

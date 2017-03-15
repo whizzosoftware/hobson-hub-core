@@ -17,6 +17,8 @@ public interface TaskRegistrationContext {
     /**
      * Returns a collection of all tasks that the runtime has not yet registered.
      *
+     * @param ctx a hub context
+     *
      * @return a Collection of HobsonTask instances (or null if there are no unregistered tasks)
      */
     Collection<HobsonTask> getTasks(HubContext ctx);

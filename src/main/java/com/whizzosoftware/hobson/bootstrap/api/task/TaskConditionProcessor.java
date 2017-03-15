@@ -35,6 +35,9 @@ public class TaskConditionProcessor {
      * Evaluates a task's evaluator conditions.
      *
      * @param taskManager the task manager instance to use for evaluation
+     * @param task the task with conditions to evaluate
+     * @param hubManager a hub manager instance
+     * @param deviceManager a device manager instance
      * @param context the context of the task to be evaluated
      *
      * @return a boolean indicating whether any of the task's conditions evaluated to false
