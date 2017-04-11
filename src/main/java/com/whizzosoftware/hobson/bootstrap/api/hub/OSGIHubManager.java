@@ -43,8 +43,11 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.*;
+import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.nio.channels.SocketChannel;
 import java.util.*;
 
 /**
@@ -200,16 +203,41 @@ public class OSGIHubManager implements HubManager, LocalHubManager {
         if (networkInfo == null) {
             String nicString = System.getProperty("force.nic");
             NetworkInterface nic;
-            InetAddress addr;
+            InetAddress addr = null;
             if (nicString != null) {
                 addr = InetAddress.getByName(nicString);
                 nic = NetworkInterface.getByInetAddress(addr);
             } else {
-                addr = InetAddress.getLocalHost();
+                Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+                for (NetworkInterface iface : Collections.list(interfaces)) {
+                    if (!iface.isLoopback() && iface.isUp()) {
+                        Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                        for (InetAddress candidate : Collections.list(addresses)) {
+                            if (!(candidate instanceof Inet6Address) && candidate.isReachable(3000)) {
+                                logger.trace("Checking network interface with address {}", candidate);
+                                try (SocketChannel socket = SocketChannel.open()) {
+                                    socket.socket().setSoTimeout(3000);
+                                    socket.bind(new InetSocketAddress(candidate, 8080));
+                                    socket.connect(new InetSocketAddress("google.com", 80));
+                                    addr = candidate;
+                                    break;
+                                } catch (IOException ignored) {
+                                }
+                            }
+                        }
+                        if (addr != null) {
+                            break;
+                        }
+                    }
+                }
+                if (addr == null) {
+                    logger.error("Unable to find suitable network interface; defaulting to localhost");
+                    addr = InetAddress.getLocalHost();
+                }
                 nic = NetworkInterface.getByInetAddress(addr);
             }
             networkInfo = new NetworkInfo(nic, addr);
-            logger.info("Using network address: " + addr.getHostAddress());
+            logger.info("Using network interface with address: " + addr.getHostAddress());
         }
 
         return networkInfo;
